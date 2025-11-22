@@ -1,0 +1,13 @@
+# INSTRUCCIONES:
+# 1. Copia este contenido
+# 2. Crea un archivo llamado .env.local en la raíz del proyecto
+# 3. Pega este contenido y reemplaza TU_PASSWORD_AQUI con tu contraseña real
+
+MONGODB_URI=mongodb+srv://Leoh741:TU_PASSWORD_AQUI@cluster0.9ihvdgz.mongodb.net/mini-crm?retryWrites=true&w=majority
+NEXT_PUBLIC_BASE_URL=
+
+# IMPORTANTE:
+# - Reemplaza TU_PASSWORD_AQUI con tu contraseña real de MongoDB Atlas
+# - No uses comillas
+# - El nombre de la base de datos es "mini-crm" (puedes cambiarlo si quieres)
+
