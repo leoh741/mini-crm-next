@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "import-backup": "node scripts/importBackup.js"
+    "import-backup": "node scripts/importBackup.js",
+    "create-user": "node scripts/createUser.js"
   },
   "dependencies": {
     "dotenv": "^17.2.3",
