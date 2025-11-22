@@ -26,9 +26,26 @@ export async function GET(request) {
     const usuarios = await User.find({}).sort({ createdAt: -1 }).lean();
     return NextResponse.json({ success: true, data: usuarios });
   } catch (error) {
-    console.error('[API] Error al obtener usuarios:', error);
+    console.error('[API /usuarios] Error completo:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
+    // Mensaje de error más descriptivo
+    let errorMessage = error.message;
+    if (error.message.includes('MONGODB_URI')) {
+      errorMessage = 'Error de configuración: MONGODB_URI no está configurada en Vercel. Ve a Settings → Environment Variables y agrega MONGODB_URI.';
+    } else if (error.message.includes('MongoNetworkError') || error.message.includes('ENOTFOUND')) {
+      errorMessage = 'Error de conexión: No se pudo conectar a MongoDB. Verifica que MONGODB_URI sea correcta y que tu IP esté permitida en MongoDB Atlas.';
+    }
+    
     return NextResponse.json(
-      { success: false, error: error.message },
+      { 
+        success: false, 
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      },
       { status: 500 }
     );
   }
