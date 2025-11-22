@@ -28,20 +28,34 @@ export async function PUT(request, { params }) {
     await connectDB();
     const body = await request.json();
     
-    // Asegurar que los campos booleanos sean explícitos
+    // Preparar objeto de actualización con $set para asegurar que false se guarde correctamente
+    const updateData = {};
+    
+    // Asegurar que los campos booleanos sean explícitos y siempre se incluyan
     if (body.pagado !== undefined) {
-      body.pagado = Boolean(body.pagado);
+      updateData.pagado = Boolean(body.pagado);
     }
     if (body.pagoUnico !== undefined) {
-      body.pagoUnico = Boolean(body.pagoUnico);
+      updateData.pagoUnico = Boolean(body.pagoUnico);
     }
     if (body.pagoMesSiguiente !== undefined) {
-      body.pagoMesSiguiente = Boolean(body.pagoMesSiguiente);
+      updateData.pagoMesSiguiente = Boolean(body.pagoMesSiguiente);
     }
     
+    // Agregar otros campos
+    if (body.nombre !== undefined) updateData.nombre = body.nombre;
+    if (body.rubro !== undefined) updateData.rubro = body.rubro;
+    if (body.ciudad !== undefined) updateData.ciudad = body.ciudad;
+    if (body.email !== undefined) updateData.email = body.email;
+    if (body.montoPago !== undefined) updateData.montoPago = body.montoPago;
+    if (body.fechaPago !== undefined) updateData.fechaPago = body.fechaPago;
+    if (body.servicios !== undefined) updateData.servicios = body.servicios;
+    if (body.observaciones !== undefined) updateData.observaciones = body.observaciones;
+    
+    // Usar $set explícitamente para asegurar que false se guarde
     const cliente = await Client.findByIdAndUpdate(
       params.id,
-      body,
+      { $set: updateData },
       { new: true, runValidators: true }
     );
     
@@ -51,6 +65,8 @@ export async function PUT(request, { params }) {
         { status: 404 }
       );
     }
+    
+    console.log('Cliente actualizado:', { id: cliente._id, pagado: cliente.pagado });
     
     return NextResponse.json({ success: true, data: cliente });
   } catch (error) {

@@ -89,16 +89,12 @@ export default function Header() {
         {/* Botón hamburguesa móvil */}
         <button
           onClick={() => setMenuAbierto(!menuAbierto)}
-          className="md:hidden flex-shrink-0 text-slate-300 hover:text-white active:bg-blue-900/50 rounded transition-colors touch-manipulation"
+          className="md:hidden flex flex-shrink-0 items-center justify-center text-slate-300 hover:text-white active:bg-blue-900/50 rounded transition-colors touch-manipulation"
           aria-label="Toggle menu"
           style={{ 
             width: '44px',
             height: '44px',
             minWidth: '44px',
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
             padding: '10px',
             boxSizing: 'border-box',
             marginLeft: '8px'

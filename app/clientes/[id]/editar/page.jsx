@@ -129,17 +129,25 @@ function EditarClientePageContent() {
     }));
 
     // Preparar datos
-    // Asegurar que pagado sea un booleano explícito
+    // Asegurar que pagado sea un booleano explícito y siempre se envíe (incluso si es false)
     const datosActualizados = {
       nombre: formData.nombre.trim(),
-      rubro: formData.rubro.trim() || undefined,
       servicios: serviciosFormateados,
       fechaPago: formData.pagoUnico ? undefined : parseInt(formData.fechaPago),
       pagoUnico: Boolean(formData.pagoUnico),
-      pagado: Boolean(formData.pagado),
+      pagado: Boolean(formData.pagado), // Siempre enviar, incluso si es false
       pagoMesSiguiente: Boolean(formData.pagoMesSiguiente && !formData.pagoUnico),
-      observaciones: formData.observaciones.trim() || undefined
     };
+    
+    // Solo agregar campos opcionales si tienen valor
+    if (formData.rubro.trim()) {
+      datosActualizados.rubro = formData.rubro.trim();
+    }
+    if (formData.observaciones.trim()) {
+      datosActualizados.observaciones = formData.observaciones.trim();
+    }
+    
+    console.log('Datos a actualizar:', datosActualizados);
 
     // Actualizar cliente
     const resultado = await actualizarCliente(id, datosActualizados);
