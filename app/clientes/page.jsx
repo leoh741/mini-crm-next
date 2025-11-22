@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { getClientes } from "../../lib/clientesUtils";
 import ClientList from "../../components/ClientList";
@@ -30,16 +30,22 @@ function ClientesPageContent() {
     cargarClientes();
   }, []);
 
-  // Filtrar clientes basado en la búsqueda
-  const clientesFiltrados = clientes.filter(cliente => {
-    if (!busqueda.trim()) return true;
+  // Filtrar clientes basado en la búsqueda (memoizado)
+  const clientesFiltrados = useMemo(() => {
+    if (!busqueda.trim()) return clientes;
     
     const termino = busqueda.toLowerCase();
-    const nombreMatch = cliente.nombre?.toLowerCase().includes(termino);
-    const rubroMatch = cliente.rubro?.toLowerCase().includes(termino);
-    
-    return nombreMatch || rubroMatch;
-  });
+    return clientes.filter(cliente => {
+      const nombreMatch = cliente.nombre?.toLowerCase().includes(termino);
+      const rubroMatch = cliente.rubro?.toLowerCase().includes(termino);
+      return nombreMatch || rubroMatch;
+    });
+  }, [clientes, busqueda]);
+
+  // Debounce para la búsqueda (mejora rendimiento)
+  const handleBusquedaChange = useCallback((e) => {
+    setBusqueda(e.target.value);
+  }, []);
 
   if (loading) {
     return (
@@ -88,7 +94,7 @@ function ClientesPageContent() {
         <input
           type="text"
           value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
+          onChange={handleBusquedaChange}
           placeholder="Buscar por nombre o rubro..."
           className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-blue-500 placeholder:text-slate-500"
         />

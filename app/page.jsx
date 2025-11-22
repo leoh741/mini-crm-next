@@ -55,7 +55,7 @@ function HomePageContent() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Link href="/clientes" className="group">
+        <Link href="/clientes" className="group" prefetch={true}>
           <div className="relative w-full min-h-[140px] p-4 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-blue-500/20 flex flex-col justify-between">
             <div className="flex items-start justify-between mb-2">
               <div className="text-3xl group-hover:scale-110 transition-transform duration-300">👥</div>
@@ -69,7 +69,7 @@ function HomePageContent() {
           </div>
         </Link>
 
-        <Link href="/pagos" className="group">
+        <Link href="/pagos" className="group" prefetch={true}>
           <div className="relative w-full min-h-[140px] p-4 bg-gradient-to-br from-green-600 via-green-700 to-green-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-green-500/20 flex flex-col justify-between">
             <div className="flex items-start justify-between mb-2">
               <div className="text-3xl group-hover:scale-110 transition-transform duration-300">💰</div>
@@ -83,7 +83,7 @@ function HomePageContent() {
           </div>
         </Link>
 
-        <Link href="/clientes/nuevo" className="group">
+        <Link href="/clientes/nuevo" className="group" prefetch={true}>
           <div className="relative w-full min-h-[140px] p-4 bg-gradient-to-br from-purple-600 via-purple-700 to-purple-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-purple-500/20 flex flex-col justify-between">
             <div className="flex items-start justify-between mb-2">
               <div className="text-3xl group-hover:scale-110 transition-transform duration-300">➕</div>
@@ -97,7 +97,7 @@ function HomePageContent() {
           </div>
         </Link>
 
-        <Link href="/balance" className="group">
+        <Link href="/balance" className="group" prefetch={true}>
           <div className="relative w-full min-h-[140px] p-4 bg-gradient-to-br from-orange-600 via-orange-700 to-orange-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-orange-500/20 flex flex-col justify-between">
             <div className="flex items-start justify-between mb-2">
               <div className="text-3xl group-hover:scale-110 transition-transform duration-300">📊</div>

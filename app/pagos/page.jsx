@@ -337,6 +337,7 @@ function PagosPageContent() {
               onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar por nombre o rubro..."
               className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-blue-500 placeholder:text-slate-500"
+              autoComplete="off"
             />
           </div>
 

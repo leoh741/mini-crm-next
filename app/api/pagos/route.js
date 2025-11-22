@@ -19,8 +19,16 @@ export async function GET(request) {
       query.crmClientId = { $in: idsArray };
     }
     
-    const pagos = await MonthlyPayment.find(query).sort({ mes: -1, createdAt: -1 });
-    return NextResponse.json({ success: true, data: pagos });
+    const pagos = await MonthlyPayment.find(query)
+      .select('mes crmClientId pagado fechaActualizacion createdAt updatedAt')
+      .sort({ mes: -1, createdAt: -1 })
+      .lean();
+    
+    return NextResponse.json({ success: true, data: pagos }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120'
+      }
+    });
   } catch (error) {
     return NextResponse.json(
       { success: false, error: error.message },

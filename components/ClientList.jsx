@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { memo } from "react";
 
-export default function ClientList({ clientes }) {
+function ClientList({ clientes }) {
   return (
     <div className="space-y-2">
       {clientes.map((cliente) => (
@@ -16,4 +17,7 @@ export default function ClientList({ clientes }) {
     </div>
   );
 }
+
+// Memoizar para evitar re-renders innecesarios
+export default memo(ClientList);
 

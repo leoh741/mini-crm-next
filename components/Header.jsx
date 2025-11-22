@@ -46,6 +46,8 @@ export default function Header() {
               width={150}
               height={50}
               className="h-6 md:h-8 w-auto cursor-pointer"
+              priority
+              loading="eager"
             />
           </Link>
         </div>
