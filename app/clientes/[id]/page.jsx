@@ -83,35 +83,39 @@ function ClienteDetailPageContent() {
     setActualizandoPago(true);
     
     try {
-      // Limpiar caché antes de actualizar
-      limpiarCacheClientes();
-      
-      // Actualizar en la base de datos
       const hoy = new Date();
       const mesActual = hoy.getMonth();
       const añoActual = hoy.getFullYear();
       const clienteId = cliente._id || cliente.id || cliente.crmId;
       
-      // Guardar estado mensual
-      const resultado = await guardarEstadoPagoMes(clienteId, mesActual, añoActual, nuevoEstado);
+      // Actualizar ambas cosas en paralelo para mayor velocidad (sin limpiar caché dentro de la función)
+      const { actualizarCliente } = await import('../../../lib/clientesUtils');
       
-      if (!resultado) {
-        // Revertir cambio si falló
+      const [resultadoMensual, resultadoCliente] = await Promise.allSettled([
+        guardarEstadoPagoMes(clienteId, mesActual, añoActual, nuevoEstado),
+        actualizarCliente(id, { pagado: nuevoEstado }, false) // false = no limpiar caché aquí
+      ]);
+      
+      // Verificar si al menos una actualización fue exitosa
+      const mensualExitoso = resultadoMensual.status === 'fulfilled' && resultadoMensual.value === true;
+      const clienteExitoso = resultadoCliente.status === 'fulfilled' && resultadoCliente.value === true;
+      
+      if (!mensualExitoso && !clienteExitoso) {
+        // Revertir cambio si ambas fallaron
         setCliente(prev => prev ? { ...prev, pagado: !nuevoEstado } : null);
         alert("Error al actualizar el estado de pago. Por favor, intenta nuevamente.");
         return;
       }
       
-      // Actualizar también el estado del cliente directamente para sincronización
-      try {
-        const { actualizarCliente } = await import('../../../lib/clientesUtils');
-        await actualizarCliente(id, { pagado: nuevoEstado });
-      } catch (err) {
-        console.error('Error al actualizar estado del cliente:', err);
-        // No revertir porque el estado mensual ya se guardó correctamente
+      // Si solo una falló, registrar pero no revertir
+      if (!mensualExitoso) {
+        console.error('Error al actualizar estado mensual:', resultadoMensual.reason);
+      }
+      if (!clienteExitoso) {
+        console.error('Error al actualizar estado del cliente:', resultadoCliente.reason);
       }
       
-      // Limpiar caché después de actualizar
+      // Limpiar caché solo una vez después de actualizar
       limpiarCacheClientes();
     } catch (err) {
       console.error('Error al actualizar estado de pago:', err);

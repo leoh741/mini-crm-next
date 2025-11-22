@@ -226,17 +226,43 @@ function PagosPageContent() {
     setActualizandoClientes(prev => new Set(prev).add(clienteKey));
     
     try {
-      // Limpiar caché antes de actualizar
-      limpiarCacheClientes();
-      
       // Obtener mes y año seleccionado
       const [añoSeleccionado, mesSeleccionadoNum] = mesSeleccionado.split('-').map(Number);
       const mesIndex = mesSeleccionadoNum - 1;
       
-      // Guardar estado mensual
-      const resultado = await guardarEstadoPagoMes(clienteId, mesIndex, añoSeleccionado, nuevoEstado);
+      // Actualizar también la lista de clientes base inmediatamente para mejor UX
+      const hoy = new Date();
+      const mesActual = hoy.getMonth();
+      const añoActual = hoy.getFullYear();
+      const esMesActual = añoSeleccionado === añoActual && mesIndex === mesActual;
       
-      if (!resultado) {
+      if (esMesActual) {
+        setClientes(prev => prev.map(c => {
+          const cId = c._id || c.id || c.crmId;
+          if (cId === clienteId) {
+            return { ...c, pagado: nuevoEstado };
+          }
+          return c;
+        }));
+      }
+      
+      // Actualizar ambas cosas en paralelo para mayor velocidad
+      const promesas = [
+        guardarEstadoPagoMes(clienteId, mesIndex, añoSeleccionado, nuevoEstado)
+      ];
+      
+      // Solo actualizar cliente si es mes actual (sin limpiar caché dentro de la función)
+      if (esMesActual) {
+        promesas.push(actualizarCliente(clienteId, { pagado: nuevoEstado }, false)); // false = no limpiar caché aquí
+      }
+      
+      const resultados = await Promise.allSettled(promesas);
+      
+      // Verificar si la actualización mensual fue exitosa (es la más importante)
+      const resultadoMensual = resultados[0];
+      const mensualExitoso = resultadoMensual.status === 'fulfilled' && resultadoMensual.value === true;
+      
+      if (!mensualExitoso) {
         // Revertir cambio si falló
         setClientesConEstado(prev => prev.map(c => {
           const cId = c._id || c.id || c.crmId;
@@ -245,35 +271,27 @@ function PagosPageContent() {
           }
           return c;
         }));
+        
+        if (esMesActual) {
+          setClientes(prev => prev.map(c => {
+            const cId = c._id || c.id || c.crmId;
+            if (cId === clienteId) {
+              return { ...c, pagado: !nuevoEstado };
+            }
+            return c;
+          }));
+        }
+        
         alert("Error al actualizar el estado de pago. Por favor, intenta nuevamente.");
         return;
       }
       
-      // Actualizar también el estado del cliente directamente (para el mes actual)
-      const hoy = new Date();
-      const mesActual = hoy.getMonth();
-      const añoActual = hoy.getFullYear();
-      const esMesActual = añoSeleccionado === añoActual && mesIndex === mesActual;
-      
-      if (esMesActual) {
-        try {
-          await actualizarCliente(clienteId, { pagado: nuevoEstado });
-          
-          // Actualizar también la lista de clientes base para mantener consistencia
-          setClientes(prev => prev.map(c => {
-            const cId = c._id || c.id || c.crmId;
-            if (cId === clienteId) {
-              return { ...c, pagado: nuevoEstado };
-            }
-            return c;
-          }));
-        } catch (err) {
-          console.error('Error al actualizar estado del cliente:', err);
-          // No revertir porque el estado mensual ya se guardó correctamente
-        }
+      // Si la actualización del cliente falló pero la mensual fue exitosa, registrar pero no revertir
+      if (esMesActual && resultados[1] && resultados[1].status === 'rejected') {
+        console.error('Error al actualizar estado del cliente:', resultados[1].reason);
       }
       
-      // Limpiar caché después de actualizar
+      // Limpiar caché solo una vez después de actualizar
       limpiarCacheClientes();
     } catch (err) {
       console.error('Error al actualizar estado de pago:', err);
