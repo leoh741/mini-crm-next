@@ -10,15 +10,34 @@ export async function GET(request) {
     
     // Si se busca por email, devolver solo ese usuario (case-insensitive)
     if (email) {
-      const usuario = await User.findOne({ 
-        email: { $regex: new RegExp(`^${email}$`, 'i') } 
+      // Limpiar y normalizar el email
+      const emailLimpio = email.trim().toLowerCase();
+      
+      // Escapar caracteres especiales para regex
+      const emailEscapado = emailLimpio.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      
+      // Intentar buscar de múltiples formas
+      let usuario = await User.findOne({ 
+        email: { $regex: new RegExp(`^${emailEscapado}$`, 'i') } 
       }).lean();
+      
+      // Si no se encuentra con regex, intentar búsqueda exacta (case-insensitive)
       if (!usuario) {
-        return NextResponse.json(
-          { success: false, error: 'Usuario no encontrado' },
-          { status: 404 }
+        // Buscar todos los usuarios y filtrar en memoria (fallback)
+        const todosUsuarios = await User.find({}).lean();
+        usuario = todosUsuarios.find(u => 
+          u.email && u.email.trim().toLowerCase() === emailLimpio
         );
       }
+      
+      if (!usuario) {
+        // Devolver success: false pero con status 200 para que el frontend pueda manejarlo
+        return NextResponse.json(
+          { success: false, error: 'Usuario no encontrado' },
+          { status: 200 }
+        );
+      }
+      
       return NextResponse.json({ success: true, data: usuario });
     }
     
