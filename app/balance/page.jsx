@@ -476,17 +476,17 @@ function BalancePageContent() {
           </div>
         </div>
 
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-          <div className="text-sm text-slate-400 mb-1">Gastos Totales</div>
-          <div className="text-2xl font-bold text-red-400">{formatearMoneda(totalGastos)}</div>
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 md:p-6">
+          <div className="text-xs md:text-sm text-slate-400 mb-1">Gastos Totales</div>
+          <div className="text-lg md:text-2xl font-bold text-red-400 break-words">{formatearMoneda(totalGastos)}</div>
           <div className="text-xs text-slate-500 mt-2">
             {gastos.length} gasto(s) registrado(s)
           </div>
         </div>
 
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-          <div className="text-sm text-slate-400 mb-1">Utilidad Neta</div>
-          <div className={`text-2xl font-bold ${utilidadNeta >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 md:p-6">
+          <div className="text-xs md:text-sm text-slate-400 mb-1">Utilidad Neta</div>
+          <div className={`text-lg md:text-2xl font-bold break-words ${utilidadNeta >= 0 ? 'text-green-400' : 'text-red-400'}`}>
             {formatearMoneda(utilidadNeta)}
           </div>
           <div className={`text-xs mt-2 ${utilidadNeta >= 0 ? 'text-green-500' : 'text-red-500'}`}>
