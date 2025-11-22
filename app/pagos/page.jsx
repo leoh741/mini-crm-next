@@ -261,17 +261,7 @@ function PagosPageContent() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-xl md:text-2xl font-semibold">Pagos</h2>
-        <div className="w-full sm:w-auto">
-          <select
-            value={mesSeleccionado}
-            onChange={(e) => setMesSeleccionado(e.target.value)}
-            className="w-full sm:w-auto px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-blue-500 text-sm"
-          >
-            {opcionesMeses.map(opcion => (
-              <option key={opcion.value} value={opcion.value}>{opcion.label}</option>
-            ))}
-          </select>
-        </div>
+        
       </div>
 
       {/* Métricas del mes */}
