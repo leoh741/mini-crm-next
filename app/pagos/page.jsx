@@ -64,6 +64,9 @@ function PagosPageContent() {
       try {
         setLoading(true);
         setError("");
+        // Limpiar caché para obtener datos frescos
+        const { limpiarCacheClientes } = await import('../../lib/clientesUtils');
+        limpiarCacheClientes();
         const clientesData = await getClientes();
         setClientes(clientesData || []);
         

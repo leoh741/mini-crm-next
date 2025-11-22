@@ -153,6 +153,22 @@ function EditarClientePageContent() {
     const resultado = await actualizarCliente(id, datosActualizados);
 
     if (resultado) {
+      // Si se cambió el estado de pagado, también actualizar el registro mensual para el mes actual
+      if (cliente && formData.pagado !== cliente.pagado) {
+        try {
+          const hoy = new Date();
+          const mesActual = hoy.getMonth();
+          const añoActual = hoy.getFullYear();
+          const { guardarEstadoPagoMes } = await import('../../../../lib/clientesUtils');
+          // Obtener el ID correcto del cliente (puede ser _id o crmId)
+          const clienteId = cliente._id || cliente.id || cliente.crmId;
+          await guardarEstadoPagoMes(clienteId, mesActual, añoActual, formData.pagado);
+        } catch (err) {
+          console.error('Error al actualizar estado mensual de pago:', err);
+          // No fallar la actualización si hay error al actualizar el estado mensual
+        }
+      }
+      
       setSuccess(true);
       // Limpiar caché antes de redirigir
       const { limpiarCacheClientes } = await import('../../../../lib/clientesUtils');
