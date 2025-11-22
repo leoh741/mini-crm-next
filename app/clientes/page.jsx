@@ -65,10 +65,10 @@ function ClientesPageContent() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
         <div>
-          <h2 className="text-xl">Clientes</h2>
-          <p className="text-sm text-slate-400 mt-1">
+          <h2 className="text-lg md:text-xl">Clientes</h2>
+          <p className="text-xs md:text-sm text-slate-400 mt-1">
             {busqueda.trim() 
               ? `${clientesFiltrados.length} de ${clientes.length} ${clientes.length === 1 ? 'cliente' : 'clientes'}`
               : `Total: ${clientes.length} ${clientes.length === 1 ? 'cliente' : 'clientes'}`
@@ -77,7 +77,7 @@ function ClientesPageContent() {
         </div>
         <Link
           href="/clientes/nuevo"
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium"
+          className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium text-center"
         >
           + Agregar Cliente
         </Link>

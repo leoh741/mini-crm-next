@@ -11,8 +11,8 @@ export default function Footer() {
   }
 
   return (
-    <footer className="fixed bottom-0 left-0 right-0 z-50 p-3 bg-slate-800 border-t border-slate-700">
-      <div className="max-w-4xl mx-auto text-center">
+    <footer className="fixed bottom-0 left-0 right-0 z-50 p-2 md:p-3 bg-slate-800 border-t border-slate-700">
+      <div className="max-w-4xl mx-auto text-center px-3">
         <p className="text-xs text-slate-400">
           Digital Space CRM Copyright © 2025 - Todos los derechos reservados
         </p>

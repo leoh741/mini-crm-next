@@ -39,22 +39,22 @@ function HomePageContent() {
   return (
     <div className="flex flex-col max-h-[calc(100vh-180px)]">
       <div className="flex-shrink-0 mb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <div>
-            <h2 className="text-xl font-semibold">Bienvenido 👋</h2>
-            <p className="text-sm text-slate-400">
+            <h2 className="text-lg md:text-xl font-semibold">Bienvenido 👋</h2>
+            <p className="text-xs md:text-sm text-slate-400">
               Digital Space CRM
             </p>
           </div>
-          <div className="px-3 py-1.5 bg-slate-800 rounded-lg border border-slate-700">
-            <p className="text-xs text-slate-300 font-medium" suppressHydrationWarning>
+          <div className="px-3 py-1.5 bg-slate-800 rounded-lg border border-slate-700 w-full sm:w-auto">
+            <p className="text-xs text-slate-300 font-medium text-center sm:text-left" suppressHydrationWarning>
               {formatDate(dateTime)}
             </p>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 grid grid-cols-2 gap-3 overflow-hidden">
+      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-hidden">
         <Link href="/clientes" className="group">
           <div className="relative w-full h-full p-4 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-blue-500/20 flex flex-col justify-between">
             <div className="flex items-start justify-between mb-2">
@@ -113,21 +113,21 @@ function HomePageContent() {
       </div>
 
       <div className="flex-shrink-0 mt-3 pt-3 border-t border-slate-700">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <h3 className="text-sm font-semibold text-slate-300">Respaldo</h3>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             <button
               onClick={descargarBackup}
-              className="group relative px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-indigo-500/30 overflow-hidden"
+              className="group relative flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-indigo-500/30 overflow-hidden"
             >
-              <span className="relative z-10 flex items-center gap-1.5">
+              <span className="relative z-10 flex items-center justify-center gap-1.5">
                 <span className="text-sm">📥</span>
                 <span>Exportar</span>
               </span>
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
             </button>
-            <label className="group relative px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-indigo-500/30 cursor-pointer overflow-hidden">
-              <span className="relative z-10 flex items-center gap-1.5">
+            <label className="group relative flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-indigo-500/30 cursor-pointer overflow-hidden">
+              <span className="relative z-10 flex items-center justify-center gap-1.5">
                 <span className="text-sm">📤</span>
                 <span>Importar</span>
               </span>
@@ -159,11 +159,11 @@ function HomePageContent() {
 
       {isAdmin && (
         <div className="flex-shrink-0 mt-3 pt-3 border-t border-slate-700">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <h3 className="text-sm font-semibold text-slate-300">Usuarios</h3>
             <Link
               href="/admin/usuarios"
-              className="group relative px-4 py-2 bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-pink-500/30 overflow-hidden"
+              className="group relative w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-pink-500/30 overflow-hidden text-center"
             >
               <span className="relative z-10 flex items-center gap-1.5">
                 <span className="text-sm">👤</span>

@@ -241,9 +241,20 @@ function PagosPageContent() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center flex-wrap gap-4">
-        <h2 className="text-2xl font-semibold">Pagos</h2>
-    </div>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h2 className="text-xl md:text-2xl font-semibold">Pagos</h2>
+        <div className="w-full sm:w-auto">
+          <select
+            value={mesSeleccionado}
+            onChange={(e) => setMesSeleccionado(e.target.value)}
+            className="w-full sm:w-auto px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-blue-500 text-sm"
+          >
+            {opcionesMeses.map(opcion => (
+              <option key={opcion.value} value={opcion.value}>{opcion.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       {/* Métricas del mes */}
       <div>
@@ -251,25 +262,25 @@ function PagosPageContent() {
           Métricas de {new Date(añoSeleccionado, mesIndex, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
           {!esMesActual && <span className="ml-2 text-xs text-slate-500">(Histórico)</span>}
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
-          <p className="text-sm text-slate-400 mb-1">Total Esperado</p>
-          <p className="text-2xl font-bold text-blue-400">{formatearMoneda(totalEsperado)}</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <div className="p-3 md:p-4 bg-slate-800 rounded-lg border border-slate-700">
+          <p className="text-xs md:text-sm text-slate-400 mb-1">Total Esperado</p>
+          <p className="text-lg md:text-2xl font-bold text-blue-400 break-words">{formatearMoneda(totalEsperado)}</p>
         </div>
         
-        <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
-          <p className="text-sm text-slate-400 mb-1">Total Pagado</p>
-          <p className="text-2xl font-bold text-green-400">{formatearMoneda(totalPagado)}</p>
+        <div className="p-3 md:p-4 bg-slate-800 rounded-lg border border-slate-700">
+          <p className="text-xs md:text-sm text-slate-400 mb-1">Total Pagado</p>
+          <p className="text-lg md:text-2xl font-bold text-green-400 break-words">{formatearMoneda(totalPagado)}</p>
         </div>
         
-        <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
-          <p className="text-sm text-slate-400 mb-1">Total Pendiente</p>
-          <p className="text-2xl font-bold text-orange-400">{formatearMoneda(totalPendiente)}</p>
+        <div className="p-3 md:p-4 bg-slate-800 rounded-lg border border-slate-700">
+          <p className="text-xs md:text-sm text-slate-400 mb-1">Total Pendiente</p>
+          <p className="text-lg md:text-2xl font-bold text-orange-400 break-words">{formatearMoneda(totalPendiente)}</p>
         </div>
         
-        <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
-          <p className="text-sm text-slate-400 mb-1">Clientes</p>
-          <p className="text-2xl font-bold text-slate-300">
+        <div className="p-3 md:p-4 bg-slate-800 rounded-lg border border-slate-700">
+          <p className="text-xs md:text-sm text-slate-400 mb-1">Clientes</p>
+          <p className="text-lg md:text-2xl font-bold text-slate-300">
             <span className="text-green-400">{cantidadPagados}</span>
             <span className="text-slate-500 mx-1">/</span>
             <span className="text-orange-400">{cantidadPendientes}</span>
@@ -362,17 +373,17 @@ function PagosPageContent() {
               <Link
                 key={cliente.id}
                 href={`/clientes/${cliente.id}?from=pagos`}
-                className={`block p-4 rounded-lg border ${estado.border} ${estado.bg} flex justify-between items-center hover:opacity-90 transition-opacity cursor-pointer`}
+                className={`block p-3 md:p-4 rounded-lg border ${estado.border} ${estado.bg} flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:opacity-90 transition-opacity cursor-pointer`}
               >
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h4 className="font-semibold text-lg">{cliente.nombre}</h4>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${estado.color} ${estado.bg}`}>
+                <div className="flex-1 w-full sm:w-auto">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                    <h4 className="font-semibold text-base md:text-lg">{cliente.nombre}</h4>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${estado.color} ${estado.bg} self-start sm:self-auto`}>
                       {estado.texto}
                     </span>
                   </div>
-                  {cliente.rubro && <p className="text-sm text-slate-400">{cliente.rubro}</p>}
-                  <p className="text-sm text-slate-400 mt-1">
+                  {cliente.rubro && <p className="text-xs md:text-sm text-slate-400">{cliente.rubro}</p>}
+                  <p className="text-xs md:text-sm text-slate-400 mt-1">
                     {cliente.pagoUnico 
                       ? "Pago único - No recurrente"
                       : cliente.pagoMesSiguiente
@@ -381,8 +392,8 @@ function PagosPageContent() {
                     }
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-slate-200">
+                <div className="text-left sm:text-right w-full sm:w-auto">
+                  <p className="text-xl md:text-2xl font-bold text-slate-200">
                     {formatearMoneda(getTotalCliente(cliente))}
                   </p>
                   {cliente.servicios && cliente.servicios.length > 1 && (

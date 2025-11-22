@@ -284,14 +284,14 @@ function BalancePageContent() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Balance</h1>
-        <div className="flex gap-4 items-center">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <h1 className="text-2xl md:text-3xl font-bold">Balance</h1>
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
           <select
             value={mesSeleccionado}
             onChange={(e) => setMesSeleccionado(e.target.value)}
-            className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm"
+            className="w-full sm:w-auto bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-100"
           >
             {opcionesMeses.map(opcion => (
               <option key={opcion.value} value={opcion.value}>
@@ -299,24 +299,26 @@ function BalancePageContent() {
               </option>
             ))}
           </select>
-          <button
-            onClick={() => {
-              setMostrarFormularioIngreso(false);
-              setMostrarFormularioGasto(!mostrarFormularioGasto);
-            }}
-            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-medium"
-          >
-            {mostrarFormularioGasto ? 'Cancelar' : '+ Agregar Gasto'}
-          </button>
-          <button
-            onClick={() => {
-              setMostrarFormularioGasto(false);
-              setMostrarFormularioIngreso(!mostrarFormularioIngreso);
-            }}
-            className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-sm font-medium"
-          >
-            {mostrarFormularioIngreso ? 'Cancelar' : '+ Agregar Ingreso'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setMostrarFormularioIngreso(false);
+                setMostrarFormularioGasto(!mostrarFormularioGasto);
+              }}
+              className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-medium"
+            >
+              {mostrarFormularioGasto ? 'Cancelar' : '+ Gasto'}
+            </button>
+            <button
+              onClick={() => {
+                setMostrarFormularioGasto(false);
+                setMostrarFormularioIngreso(!mostrarFormularioIngreso);
+              }}
+              className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-sm font-medium"
+            >
+              {mostrarFormularioIngreso ? 'Cancelar' : '+ Ingreso'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -455,10 +457,10 @@ function BalancePageContent() {
       )}
 
       {/* Métricas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-          <div className="text-sm text-slate-400 mb-1">Ingresos Totales</div>
-          <div className="text-2xl font-bold text-green-400">{formatearMoneda(totalIngresos)}</div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 md:p-6">
+          <div className="text-xs md:text-sm text-slate-400 mb-1">Ingresos Totales</div>
+          <div className="text-lg md:text-2xl font-bold text-green-400 break-words">{formatearMoneda(totalIngresos)}</div>
           <div className="text-xs text-slate-500 mt-2">
             {clientesConEstado.filter(c => c.pagado).length} cliente(s) pagado(s)
             {ingresosManuales > 0 && ` + ${ingresos.length} ingreso(s) manual(es)`}
@@ -483,9 +485,9 @@ function BalancePageContent() {
           </div>
         </div>
 
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-          <div className="text-sm text-slate-400 mb-1">Margen de Utilidad</div>
-          <div className={`text-2xl font-bold ${parseFloat(porcentajeUtilidad) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 md:p-6 col-span-2 md:col-span-1">
+          <div className="text-xs md:text-sm text-slate-400 mb-1">Margen de Utilidad</div>
+          <div className={`text-lg md:text-2xl font-bold ${parseFloat(porcentajeUtilidad) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
             {porcentajeUtilidad}%
           </div>
           <div className="text-xs text-slate-500 mt-2">
@@ -496,10 +498,10 @@ function BalancePageContent() {
 
       {/* Lista de ingresos manuales */}
       {ingresos.length > 0 && (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Ingresos Manuales del Mes</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full">
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 md:p-6">
+          <h2 className="text-lg md:text-xl font-semibold mb-4">Ingresos Manuales del Mes</h2>
+          <div className="overflow-x-auto -mx-4 md:mx-0">
+            <table className="w-full min-w-[600px] md:min-w-0">
               <thead>
                 <tr className="border-b border-slate-700">
                   <th className="text-left py-3 px-4 text-sm font-medium text-slate-400">Fecha</th>
@@ -555,14 +557,14 @@ function BalancePageContent() {
 
       {/* Lista de gastos */}
       <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-        <h2 className="text-xl font-semibold mb-4">Gastos del Mes</h2>
+        <h2 className="text-lg md:text-xl font-semibold mb-4">Gastos del Mes</h2>
         {gastos.length === 0 ? (
           <div className="text-center py-8 text-slate-400">
             No hay gastos registrados para este mes
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <div className="overflow-x-auto -mx-4 md:mx-0">
+            <table className="w-full min-w-[600px] md:min-w-0">
               <thead>
                 <tr className="border-b border-slate-700">
                   <th className="text-left py-3 px-4 text-sm font-medium text-slate-400">Fecha</th>
