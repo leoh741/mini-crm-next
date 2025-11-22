@@ -28,11 +28,12 @@ function UsuariosAdminContent() {
     cargarUsuarios();
   }, [router]);
 
-  const cargarUsuarios = () => {
-    setUsuarios(getUsuarios());
+  const cargarUsuarios = async () => {
+    const usuariosData = await getUsuarios();
+    setUsuarios(usuariosData);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setExito("");
@@ -47,25 +48,26 @@ function UsuariosAdminContent() {
         };
         
         if (formData.password) {
-          cambiarPassword(usuarioEditando.id, formData.password);
+          await cambiarPassword(usuarioEditando.id, formData.password);
         }
         
-        actualizarUsuario(usuarioEditando.id, datosActualizados);
+        await actualizarUsuario(usuarioEditando.id, datosActualizados);
         setExito("Usuario actualizado correctamente");
       } else {
         // Crear nuevo usuario
         if (!formData.password) {
           setError("La contraseña es requerida para nuevos usuarios");
+          setLoading(false);
           return;
         }
-        crearUsuario(formData);
+        await crearUsuario(formData);
         setExito("Usuario creado correctamente");
       }
 
       setFormData({ nombre: "", email: "", password: "", rol: "usuario" });
       setMostrarFormulario(false);
       setUsuarioEditando(null);
-      cargarUsuarios();
+      await cargarUsuarios();
     } catch (err) {
       setError(err.message || "Error al guardar el usuario");
     }
@@ -84,15 +86,15 @@ function UsuariosAdminContent() {
     setExito("");
   };
 
-  const handleEliminar = (id, nombre) => {
+  const handleEliminar = async (id, nombre) => {
     if (!confirm(`¿Estás seguro de eliminar al usuario "${nombre}"?`)) {
       return;
     }
 
     try {
-      eliminarUsuario(id);
+      await eliminarUsuario(id);
       setExito("Usuario eliminado correctamente");
-      cargarUsuarios();
+      await cargarUsuarios();
     } catch (err) {
       setError(err.message || "Error al eliminar el usuario");
     }

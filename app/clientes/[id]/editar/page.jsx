@@ -27,8 +27,9 @@ function EditarClientePageContent() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const clienteData = getClienteById(id);
-    if (clienteData) {
+    const cargarCliente = async () => {
+      const clienteData = await getClienteById(id);
+      if (clienteData) {
       setCliente(clienteData);
       setFormData({
         nombre: clienteData.nombre || "",
@@ -53,7 +54,9 @@ function EditarClientePageContent() {
           precio: clienteData.montoPago.toString()
         }]);
       }
-    }
+      }
+    };
+    cargarCliente();
   }, [id]);
 
   const handleChange = (e) => {
@@ -138,7 +141,7 @@ function EditarClientePageContent() {
     };
 
     // Actualizar cliente
-    const resultado = actualizarCliente(id, datosActualizados);
+    const resultado = await actualizarCliente(id, datosActualizados);
 
     if (resultado) {
       setSuccess(true);

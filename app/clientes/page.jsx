@@ -11,7 +11,11 @@ function ClientesPageContent() {
   const [busqueda, setBusqueda] = useState("");
 
   useEffect(() => {
-    setClientes(getClientes());
+    const cargarClientes = async () => {
+      const clientesData = await getClientes();
+      setClientes(clientesData);
+    };
+    cargarClientes();
   }, []);
 
   // Filtrar clientes basado en la búsqueda

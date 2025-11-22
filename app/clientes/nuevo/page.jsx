@@ -105,7 +105,7 @@ function NuevoClientePageContent() {
     };
 
     // Guardar cliente
-    const resultado = agregarCliente(nuevoCliente);
+    const resultado = await agregarCliente(nuevoCliente);
 
     if (resultado) {
       setSuccess(true);

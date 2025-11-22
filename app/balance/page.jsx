@@ -32,7 +32,18 @@ function BalancePageContent() {
   });
 
   useEffect(() => {
-    setClientes(getClientes());
+    const cargarDatos = async () => {
+      const clientesData = await getClientes();
+      setClientes(clientesData);
+      
+      const [año, mes] = mesSeleccionado.split('-').map(Number);
+      const mesIndex = mes - 1;
+      const gastosData = await getGastosMes(mesIndex, año);
+      const ingresosData = await getIngresosMes(mesIndex, año);
+      setGastos(gastosData);
+      setIngresos(ingresosData);
+    };
+    
     cargarDatos();
     const timer = setInterval(() => {
       setFechaActual(new Date());
@@ -40,27 +51,34 @@ function BalancePageContent() {
     return () => clearInterval(timer);
   }, [mesSeleccionado]);
 
-  const cargarDatos = () => {
-    const [año, mes] = mesSeleccionado.split('-').map(Number);
-    const mesIndex = mes - 1;
-    setGastos(getGastosMes(mesIndex, año));
-    setIngresos(getIngresosMes(mesIndex, año));
-  };
-
   // Parsear mes seleccionado
   const [añoSeleccionado, mesSeleccionadoNum] = mesSeleccionado.split('-').map(Number);
   const mesIndex = mesSeleccionadoNum - 1;
 
-  // Calcular ingresos del mes (clientes pagados)
-  const clientesConEstado = clientes.map(cliente => {
-    const estadoMes = getEstadoPagoMes(cliente.id, mesIndex, añoSeleccionado);
-    const esMesActual = añoSeleccionado === fechaActual.getFullYear() && 
-                       mesIndex === fechaActual.getMonth();
-    return {
-      ...cliente,
-      pagado: estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false)
+  const [clientesConEstado, setClientesConEstado] = useState([]);
+
+  useEffect(() => {
+    const cargarEstadosPago = async () => {
+      const [año, mes] = mesSeleccionado.split('-').map(Number);
+      const mesIndex = mes - 1;
+      const esMesActual = año === fechaActual.getFullYear() && mesIndex === fechaActual.getMonth();
+      
+      const clientesConEstados = await Promise.all(
+        clientes.map(async (cliente) => {
+          const estadoMes = await getEstadoPagoMes(cliente.id, mesIndex, año);
+          return {
+            ...cliente,
+            pagado: estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false)
+          };
+        })
+      );
+      setClientesConEstado(clientesConEstados);
     };
-  });
+    
+    if (clientes.length > 0) {
+      cargarEstadosPago();
+    }
+  }, [clientes, mesSeleccionado, fechaActual]);
 
   // Ingresos calculados automáticamente (clientes pagados)
   const ingresosAutomaticos = clientesConEstado
@@ -81,10 +99,10 @@ function BalancePageContent() {
   const porcentajeUtilidad = totalIngresos > 0 ? ((utilidadNeta / totalIngresos) * 100).toFixed(1) : 0;
 
   // Generar opciones de meses
-  const generarOpcionesMeses = () => {
+  const generarOpcionesMeses = async () => {
     const opciones = [];
     const hoy = new Date();
-    const mesesConRegistros = getMesesConGastos();
+    const mesesConRegistros = await getMesesConGastos();
     
     // Agregar últimos 12 meses
     for (let i = 0; i < 12; i++) {
@@ -120,15 +138,19 @@ function BalancePageContent() {
     }).format(monto);
   };
 
-  const handleSubmitGasto = (e) => {
+  const handleSubmitGasto = async (e) => {
     e.preventDefault();
     if (!formGasto.descripcion || !formGasto.monto) {
       alert('Por favor completa la descripción y el monto');
       return;
     }
 
-    if (agregarGasto(formGasto)) {
-      cargarDatos();
+    const resultado = await agregarGasto(formGasto);
+    if (resultado) {
+      const [año, mes] = mesSeleccionado.split('-').map(Number);
+      const mesIndex = mes - 1;
+      const gastosData = await getGastosMes(mesIndex, año);
+      setGastos(gastosData);
       setFormGasto({
         descripcion: '',
         monto: '',
@@ -141,15 +163,19 @@ function BalancePageContent() {
     }
   };
 
-  const handleSubmitIngreso = (e) => {
+  const handleSubmitIngreso = async (e) => {
     e.preventDefault();
     if (!formIngreso.descripcion || !formIngreso.monto) {
       alert('Por favor completa la descripción y el monto');
       return;
     }
 
-    if (agregarIngreso(formIngreso)) {
-      cargarDatos();
+    const resultado = await agregarIngreso(formIngreso);
+    if (resultado) {
+      const [año, mes] = mesSeleccionado.split('-').map(Number);
+      const mesIndex = mes - 1;
+      const ingresosData = await getIngresosMes(mesIndex, año);
+      setIngresos(ingresosData);
       setFormIngreso({
         descripcion: '',
         monto: '',
@@ -162,20 +188,28 @@ function BalancePageContent() {
     }
   };
 
-  const handleEliminarGasto = (gastoId) => {
+  const handleEliminarGasto = async (gastoId) => {
     if (confirm('¿Estás seguro de eliminar este gasto?')) {
-      if (eliminarGasto(gastoId, mesIndex, añoSeleccionado)) {
-        cargarDatos();
+      const resultado = await eliminarGasto(gastoId, mesIndex, añoSeleccionado);
+      if (resultado) {
+        const [año, mes] = mesSeleccionado.split('-').map(Number);
+        const mesIdx = mes - 1;
+        const gastosData = await getGastosMes(mesIdx, año);
+        setGastos(gastosData);
       } else {
         alert('Error al eliminar el gasto');
       }
     }
   };
 
-  const handleEliminarIngreso = (ingresoId) => {
+  const handleEliminarIngreso = async (ingresoId) => {
     if (confirm('¿Estás seguro de eliminar este ingreso?')) {
-      if (eliminarIngreso(ingresoId, mesIndex, añoSeleccionado)) {
-        cargarDatos();
+      const resultado = await eliminarIngreso(ingresoId, mesIndex, añoSeleccionado);
+      if (resultado) {
+        const [año, mes] = mesSeleccionado.split('-').map(Number);
+        const mesIdx = mes - 1;
+        const ingresosData = await getIngresosMes(mesIdx, año);
+        setIngresos(ingresosData);
       } else {
         alert('Error al eliminar el ingreso');
       }

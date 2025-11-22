@@ -16,13 +16,38 @@ function PagosPageContent() {
     return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
   });
 
+  const [clientesConEstado, setClientesConEstado] = useState([]);
+
   useEffect(() => {
-    setClientes(getClientes());
+    const cargarDatos = async () => {
+      const clientesData = await getClientes();
+      setClientes(clientesData);
+      
+      // Cargar estados de pago para cada cliente
+      const [añoSeleccionado, mesSeleccionadoNum] = mesSeleccionado.split('-').map(Number);
+      const mesIndex = mesSeleccionadoNum - 1;
+      const mesActual = fechaActual.getMonth();
+      const añoActual = fechaActual.getFullYear();
+      const esMesActual = añoSeleccionado === añoActual && mesIndex === mesActual;
+      
+      const clientesConEstados = await Promise.all(
+        clientesData.map(async (cliente) => {
+          const estadoMes = await getEstadoPagoMes(cliente.id, mesIndex, añoSeleccionado);
+          return {
+            ...cliente,
+            pagado: estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false)
+          };
+        })
+      );
+      setClientesConEstado(clientesConEstados);
+    };
+    
+    cargarDatos();
     const timer = setInterval(() => {
       setFechaActual(new Date());
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [mesSeleccionado]);
 
   // Parsear mes seleccionado
   const [añoSeleccionado, mesSeleccionadoNum] = mesSeleccionado.split('-').map(Number);
@@ -35,15 +60,6 @@ function PagosPageContent() {
   
   // Determinar si estamos viendo el mes actual
   const esMesActual = añoSeleccionado === añoActual && mesIndex === mesActual;
-  
-  // Obtener clientes con estado de pago del mes seleccionado
-  const clientesConEstado = clientes.map(cliente => {
-    const estadoMes = getEstadoPagoMes(cliente.id, mesIndex, añoSeleccionado);
-    return {
-      ...cliente,
-      pagado: estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false)
-    };
-  });
 
   // Separar clientes mensuales de pago único solo para alertas
   const clientesMensuales = clientesConEstado.filter(cliente => !cliente.pagoUnico);
@@ -58,6 +74,7 @@ function PagosPageContent() {
   const cantidadPendientes = clientesConEstado.length - cantidadPagados;
 
   // Clientes con fecha de pago próxima o vencida (solo mensuales y solo en mes actual)
+  const clientesMensuales = clientesConEstado.filter(cliente => !cliente.pagoUnico);
   const clientesConAlerta = esMesActual ? clientesMensuales.filter(cliente => {
     if (cliente.pagado) return false;
     
@@ -73,10 +90,10 @@ function PagosPageContent() {
   }) : [];
 
   // Generar opciones de meses (últimos 12 meses + meses con registros)
-  const generarOpcionesMeses = () => {
+  const generarOpcionesMeses = async () => {
     const opciones = [];
     const hoy = new Date();
-    const mesesConRegistros = getMesesConRegistros();
+    const mesesConRegistros = await getMesesConRegistros();
     
     // Agregar últimos 12 meses
     for (let i = 0; i < 12; i++) {

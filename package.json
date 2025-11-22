@@ -6,10 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "import-backup": "node scripts/importBackup.js"
   },
   "dependencies": {
+    "dotenv": "^17.2.3",
     "jspdf": "^3.0.4",
+    "mongoose": "^9.0.0",
     "next": "^14",
     "react": "^18",
     "react-dom": "^18"

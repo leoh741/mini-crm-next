@@ -20,12 +20,16 @@ function ClienteDetailPageContent() {
   const fromPagos = searchParams.get('from') === 'pagos';
 
   useEffect(() => {
-    setCliente(getClienteById(id));
+    const cargarCliente = async () => {
+      const clienteData = await getClienteById(id);
+      setCliente(clienteData);
+    };
+    cargarCliente();
   }, [id]);
 
   const handleEliminar = async () => {
     setEliminando(true);
-    const resultado = eliminarCliente(id);
+    const resultado = await eliminarCliente(id);
     
     if (resultado) {
       router.push(fromPagos ? "/pagos" : "/clientes");
