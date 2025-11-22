@@ -5,8 +5,17 @@ import Client from '../../../models/Client';
 export async function GET() {
   try {
     await connectDB();
-    const clientes = await Client.find({}).sort({ createdAt: -1 });
-    return NextResponse.json({ success: true, data: clientes });
+    // Optimización: traer solo los campos necesarios y limitar resultados si es necesario
+    const clientes = await Client.find({})
+      .select('crmId nombre rubro ciudad email montoPago fechaPago pagado pagoUnico pagoMesSiguiente servicios observaciones createdAt updatedAt')
+      .sort({ createdAt: -1 })
+      .lean(); // Usar lean() para obtener objetos planos (más rápido)
+    
+    return NextResponse.json({ success: true, data: clientes }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60'
+      }
+    });
   } catch (error) {
     return NextResponse.json(
       { success: false, error: error.message },

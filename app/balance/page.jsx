@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { getClientes, getEstadoPagoMes } from "../../lib/clientesUtils";
+import { useState, useEffect, useMemo } from "react";
+import { getClientes, getEstadosPagoMes } from "../../lib/clientesUtils";
 import { getTotalCliente } from "../../lib/clienteHelpers";
 import { getGastosMes, agregarGasto, eliminarGasto, getMesesConGastos } from "../../lib/gastosUtils";
 import { getIngresosMes, agregarIngreso, eliminarIngreso } from "../../lib/ingresosUtils";
@@ -39,6 +39,57 @@ function BalancePageContent() {
   const [clientesConEstado, setClientesConEstado] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [opcionesMeses, setOpcionesMeses] = useState([]);
+
+  useEffect(() => {
+    const cargarOpcionesMeses = async () => {
+      try {
+        const opciones = [];
+        const hoy = new Date();
+        const mesesConRegistros = await getMesesConGastos();
+        
+        // Agregar últimos 12 meses
+        for (let i = 0; i < 12; i++) {
+          const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+          const año = fecha.getFullYear();
+          const mes = fecha.getMonth() + 1;
+          const valor = `${año}-${String(mes).padStart(2, '0')}`;
+          const nombreMes = fecha.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+          
+          if (!opciones.find(o => o.value === valor)) {
+            opciones.push({ value: valor, label: nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1) });
+          }
+        }
+        
+        // Agregar meses con registros que no estén en los últimos 12
+        mesesConRegistros.forEach(mesKey => {
+          if (!opciones.find(o => o.value === mesKey)) {
+            const [año, mes] = mesKey.split('-');
+            const fecha = new Date(parseInt(año), parseInt(mes) - 1, 1);
+            const nombreMes = fecha.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+            opciones.push({ value: mesKey, label: nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1) });
+          }
+        });
+        
+        setOpcionesMeses(opciones.sort((a, b) => b.value.localeCompare(a.value)));
+      } catch (err) {
+        console.error('Error al cargar opciones de meses:', err);
+        // Si falla, al menos mostrar los últimos 12 meses
+        const opciones = [];
+        const hoy = new Date();
+        for (let i = 0; i < 12; i++) {
+          const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+          const año = fecha.getFullYear();
+          const mes = fecha.getMonth() + 1;
+          const valor = `${año}-${String(mes).padStart(2, '0')}`;
+          const nombreMes = fecha.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+          opciones.push({ value: valor, label: nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1) });
+        }
+        setOpcionesMeses(opciones);
+      }
+    };
+    cargarOpcionesMeses();
+  }, []);
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -55,25 +106,19 @@ function BalancePageContent() {
         setGastos(gastosData || []);
         setIngresos(ingresosData || []);
         
-        // Cargar estados de pago
+        // Cargar estados de pago (optimizado: una sola llamada)
         const esMesActual = año === fechaActual.getFullYear() && mesIndex === fechaActual.getMonth();
-        const clientesConEstados = await Promise.all(
-          (clientesData || []).map(async (cliente) => {
-            try {
-              const estadoMes = await getEstadoPagoMes(cliente.id, mesIndex, año);
-              return {
-                ...cliente,
-                pagado: estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false)
-              };
-            } catch (err) {
-              console.error(`Error al cargar estado de pago para cliente ${cliente.id}:`, err);
-              return {
-                ...cliente,
-                pagado: esMesActual ? cliente.pagado : false
-              };
-            }
-          })
-        );
+        const clientesIds = (clientesData || []).map(c => c._id || c.id);
+        const estadosMap = await getEstadosPagoMes(clientesIds, mesIndex, año);
+        
+        const clientesConEstados = (clientesData || []).map(cliente => {
+          const clienteId = cliente._id || cliente.id;
+          const estadoMes = estadosMap[clienteId];
+          return {
+            ...cliente,
+            pagado: estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false)
+          };
+        });
         setClientesConEstado(clientesConEstados);
       } catch (err) {
         console.error('Error al cargar datos de balance:', err);
@@ -88,29 +133,37 @@ function BalancePageContent() {
     };
     
     cargarDatos();
+    // Optimización: actualizar fecha cada 10 segundos en lugar de cada segundo
     const timer = setInterval(() => {
       setFechaActual(new Date());
-    }, 1000);
+    }, 10000);
     return () => clearInterval(timer);
   }, [mesSeleccionado]);
 
-  // Ingresos calculados automáticamente (clientes pagados)
-  const ingresosAutomaticos = clientesConEstado
-    .filter(cliente => cliente.pagado)
-    .reduce((sum, cliente) => sum + getTotalCliente(cliente), 0);
-  
-  // Ingresos manuales
-  const ingresosManuales = ingresos.reduce((sum, ingreso) => sum + (parseFloat(ingreso.monto) || 0), 0);
-  
-  // Total de ingresos (automáticos + manuales)
-  const totalIngresos = ingresosAutomaticos + ingresosManuales;
-
-  // Calcular gastos
-  const totalGastos = gastos.reduce((sum, gasto) => sum + (parseFloat(gasto.monto) || 0), 0);
-
-  // Utilidad neta
-  const utilidadNeta = totalIngresos - totalGastos;
-  const porcentajeUtilidad = totalIngresos > 0 ? ((utilidadNeta / totalIngresos) * 100).toFixed(1) : 0;
+  // Ingresos calculados automáticamente (clientes pagados) - memoizado
+  const { ingresosAutomaticos, ingresosManuales, totalIngresos, totalGastos, utilidadNeta, porcentajeUtilidad } = useMemo(() => {
+    const ingresosAuto = clientesConEstado
+      .filter(cliente => cliente.pagado)
+      .reduce((sum, cliente) => sum + getTotalCliente(cliente), 0);
+    
+    const ingresosMan = ingresos.reduce((sum, ingreso) => sum + (parseFloat(ingreso.monto) || 0), 0);
+    
+    const totalIng = ingresosAuto + ingresosMan;
+    
+    const totalGast = gastos.reduce((sum, gasto) => sum + (parseFloat(gasto.monto) || 0), 0);
+    
+    const utilidad = totalIng - totalGast;
+    const porcentaje = totalIng > 0 ? ((utilidad / totalIng) * 100).toFixed(1) : 0;
+    
+    return {
+      ingresosAutomaticos: ingresosAuto,
+      ingresosManuales: ingresosMan,
+      totalIngresos: totalIng,
+      totalGastos: totalGast,
+      utilidadNeta: utilidad,
+      porcentajeUtilidad: porcentaje
+    };
+  }, [clientesConEstado, ingresos, gastos]);
 
   // Generar opciones de meses
   const generarOpcionesMeses = async () => {

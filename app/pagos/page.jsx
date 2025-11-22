@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { getClientes, getEstadoPagoMes, guardarEstadoPagoMes, getMesesConRegistros } from "../../lib/clientesUtils";
+import { getClientes, getEstadosPagoMes, guardarEstadoPagoMes, getMesesConRegistros } from "../../lib/clientesUtils";
 import { getTotalCliente } from "../../lib/clienteHelpers";
 import ProtectedRoute from "../../components/ProtectedRoute";
 
@@ -74,25 +74,18 @@ function PagosPageContent() {
         const añoActual = fechaActual.getFullYear();
         const esMesActual = añoSeleccionado === añoActual && mesIndex === mesActual;
         
-        const clientesConEstados = await Promise.all(
-          (clientesData || []).map(async (cliente) => {
-            try {
-              // Usar _id si está disponible, sino usar id
-              const clienteId = cliente._id || cliente.id;
-              const estadoMes = await getEstadoPagoMes(clienteId, mesIndex, añoSeleccionado);
-              return {
-                ...cliente,
-                pagado: estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false)
-              };
-            } catch (err) {
-              console.error(`Error al cargar estado de pago para cliente ${cliente.id || cliente._id}:`, err);
-              return {
-                ...cliente,
-                pagado: esMesActual ? cliente.pagado : false
-              };
-            }
-          })
-        );
+        // Optimización: obtener todos los estados de pago en una sola llamada
+        const clientesIds = (clientesData || []).map(c => c._id || c.id);
+        const estadosMap = await getEstadosPagoMes(clientesIds, mesIndex, añoSeleccionado);
+        
+        const clientesConEstados = (clientesData || []).map(cliente => {
+          const clienteId = cliente._id || cliente.id;
+          const estadoMes = estadosMap[clienteId];
+          return {
+            ...cliente,
+            pagado: estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false)
+          };
+        });
         setClientesConEstado(clientesConEstados);
       } catch (err) {
         console.error('Error al cargar datos de pagos:', err);
@@ -105,9 +98,10 @@ function PagosPageContent() {
     };
     
     cargarDatos();
+    // Optimización: actualizar fecha cada 10 segundos en lugar de cada segundo
     const timer = setInterval(() => {
       setFechaActual(new Date());
-    }, 1000);
+    }, 10000);
     return () => clearInterval(timer);
   }, [mesSeleccionado]);
 
@@ -195,8 +189,9 @@ function PagosPageContent() {
     }
   };
 
-  // Filtrar clientes por estado y búsqueda
-  const clientesFiltrados = clientesConEstado.filter(cliente => {
+  // Filtrar clientes por estado y búsqueda (memoizado)
+  const clientesFiltrados = useMemo(() => {
+    return clientesConEstado.filter(cliente => {
     // Filtro por estado
     if (filtroEstado !== "todos") {
       const estado = getEstadoPago(cliente);
@@ -219,7 +214,8 @@ function PagosPageContent() {
     }
     
     return true;
-  });
+    });
+  }, [clientesConEstado, filtroEstado, busqueda, añoSeleccionado, mesIndex, diaActual, añoActual, mesActual]);
 
   if (loading) {
     return (

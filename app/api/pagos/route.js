@@ -8,10 +8,16 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const mes = searchParams.get('mes');
     const crmClientId = searchParams.get('crmClientId');
+    const clientesIds = searchParams.get('clientesIds'); // Para obtener múltiples estados a la vez
     
     const query = {};
     if (mes) query.mes = mes;
     if (crmClientId) query.crmClientId = crmClientId;
+    // Si se pasan múltiples IDs, buscar todos a la vez
+    if (clientesIds) {
+      const idsArray = clientesIds.split(',');
+      query.crmClientId = { $in: idsArray };
+    }
     
     const pagos = await MonthlyPayment.find(query).sort({ mes: -1, createdAt: -1 });
     return NextResponse.json({ success: true, data: pagos });

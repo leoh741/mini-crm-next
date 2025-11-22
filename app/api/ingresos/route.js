@@ -11,8 +11,16 @@ export async function GET(request) {
     const query = {};
     if (periodo) query.periodo = periodo;
     
-    const ingresos = await Income.find(query).sort({ periodo: -1, createdAt: -1 });
-    return NextResponse.json({ success: true, data: ingresos });
+    const ingresos = await Income.find(query)
+      .select('crmId descripcion monto fecha categoria fechaCreacion createdAt updatedAt')
+      .sort({ periodo: -1, createdAt: -1 })
+      .lean();
+    
+    return NextResponse.json({ success: true, data: ingresos }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60'
+      }
+    });
   } catch (error) {
     return NextResponse.json(
       { success: false, error: error.message },
