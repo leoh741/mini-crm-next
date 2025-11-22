@@ -10,7 +10,6 @@ function EditarClientePageContent() {
   const params = useParams();
   const id = params.id;
   const [cliente, setCliente] = useState(null);
-  const [clienteOriginalPagado, setClienteOriginalPagado] = useState(false);
   const [formData, setFormData] = useState({
     nombre: "",
     rubro: "",
@@ -32,14 +31,12 @@ function EditarClientePageContent() {
       const clienteData = await getClienteById(id);
       if (clienteData) {
       setCliente(clienteData);
-      const estabaPagado = clienteData.pagado || false;
-      setClienteOriginalPagado(estabaPagado);
       setFormData({
         nombre: clienteData.nombre || "",
         rubro: clienteData.rubro || "",
         fechaPago: clienteData.fechaPago?.toString() || "",
         pagoUnico: clienteData.pagoUnico || false,
-        pagado: estabaPagado,
+        pagado: clienteData.pagado || false,
         pagoMesSiguiente: clienteData.pagoMesSiguiente || false,
         observaciones: clienteData.observaciones || ""
       });
@@ -132,16 +129,13 @@ function EditarClientePageContent() {
     }));
 
     // Preparar datos
-    // Si el cliente originalmente estaba pagado, mantener ese estado
-    const pagadoFinal = clienteOriginalPagado ? true : formData.pagado;
-    
     const datosActualizados = {
       nombre: formData.nombre.trim(),
       rubro: formData.rubro.trim() || undefined,
       servicios: serviciosFormateados,
       fechaPago: formData.pagoUnico ? undefined : parseInt(formData.fechaPago),
       pagoUnico: formData.pagoUnico,
-      pagado: pagadoFinal,
+      pagado: formData.pagado,
       pagoMesSiguiente: formData.pagoMesSiguiente && !formData.pagoUnico,
       observaciones: formData.observaciones.trim() || undefined
     };
@@ -338,28 +332,19 @@ function EditarClientePageContent() {
             </div>
           )}
 
-          {!clienteOriginalPagado && (
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="pagado"
-                name="pagado"
-                checked={formData.pagado}
-                onChange={handleChange}
-                className="w-4 h-4 bg-slate-800 border-slate-700 rounded focus:ring-blue-500"
-              />
-              <label htmlFor="pagado" className="ml-2 text-sm text-slate-300">
-                Marcar como pagado
-              </label>
-            </div>
-          )}
-          {clienteOriginalPagado && (
-            <div className="flex items-center px-3 py-2 bg-green-900/20 border border-green-700/50 rounded-lg">
-              <span className="text-sm text-green-300 font-medium">
-                ✓ Cliente marcado como pagado (no se puede cambiar)
-              </span>
-            </div>
-          )}
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="pagado"
+              name="pagado"
+              checked={formData.pagado}
+              onChange={handleChange}
+              className="w-4 h-4 bg-slate-800 border-slate-700 rounded focus:ring-blue-500"
+            />
+            <label htmlFor="pagado" className="ml-2 text-sm text-slate-300">
+              Marcar como pagado
+            </label>
+          </div>
         </div>
 
         {/* Campo de observaciones */}
