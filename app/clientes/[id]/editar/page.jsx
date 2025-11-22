@@ -129,14 +129,15 @@ function EditarClientePageContent() {
     }));
 
     // Preparar datos
+    // Asegurar que pagado sea un booleano explícito
     const datosActualizados = {
       nombre: formData.nombre.trim(),
       rubro: formData.rubro.trim() || undefined,
       servicios: serviciosFormateados,
       fechaPago: formData.pagoUnico ? undefined : parseInt(formData.fechaPago),
-      pagoUnico: formData.pagoUnico,
-      pagado: formData.pagado,
-      pagoMesSiguiente: formData.pagoMesSiguiente && !formData.pagoUnico,
+      pagoUnico: Boolean(formData.pagoUnico),
+      pagado: Boolean(formData.pagado),
+      pagoMesSiguiente: Boolean(formData.pagoMesSiguiente && !formData.pagoUnico),
       observaciones: formData.observaciones.trim() || undefined
     };
 
@@ -145,8 +146,12 @@ function EditarClientePageContent() {
 
     if (resultado) {
       setSuccess(true);
+      // Limpiar caché antes de redirigir
+      const { limpiarCacheClientes } = await import('../../../../lib/clientesUtils');
+      limpiarCacheClientes();
       setTimeout(() => {
-        router.push(`/clientes/${id}`);
+        router.push(`/clientes/${id}?refresh=${Date.now()}`);
+        router.refresh();
       }, 1500);
     } else {
       setError("Error al actualizar el cliente. Por favor, intenta nuevamente.");

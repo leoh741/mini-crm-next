@@ -25,7 +25,11 @@ function ClienteDetailPageContent() {
     const cargarCliente = async () => {
       try {
         setLoading(true);
-        const clienteData = await getClienteById(id);
+        // Limpiar caché y obtener datos frescos
+        const { limpiarCacheClientes } = await import('../../../lib/clientesUtils');
+        limpiarCacheClientes();
+        // Obtener sin caché para asegurar datos actualizados
+        const clienteData = await getClienteById(id, false);
         if (clienteData) {
           setCliente(clienteData);
           setError("");
@@ -40,7 +44,7 @@ function ClienteDetailPageContent() {
       }
     };
     cargarCliente();
-  }, [id]);
+  }, [id, searchParams]);
 
   const handleEliminar = async () => {
     setEliminando(true);

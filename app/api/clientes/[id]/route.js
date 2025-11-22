@@ -27,6 +27,18 @@ export async function PUT(request, { params }) {
   try {
     await connectDB();
     const body = await request.json();
+    
+    // Asegurar que los campos booleanos sean explícitos
+    if (body.pagado !== undefined) {
+      body.pagado = Boolean(body.pagado);
+    }
+    if (body.pagoUnico !== undefined) {
+      body.pagoUnico = Boolean(body.pagoUnico);
+    }
+    if (body.pagoMesSiguiente !== undefined) {
+      body.pagoMesSiguiente = Boolean(body.pagoMesSiguiente);
+    }
+    
     const cliente = await Client.findByIdAndUpdate(
       params.id,
       body,
@@ -42,6 +54,7 @@ export async function PUT(request, { params }) {
     
     return NextResponse.json({ success: true, data: cliente });
   } catch (error) {
+    console.error('Error al actualizar cliente:', error);
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 400 }
