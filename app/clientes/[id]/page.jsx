@@ -89,24 +89,24 @@ function ClienteDetailPageContent() {
       </Link>
 
       <div className="mt-4 space-y-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-semibold">{cliente.nombre}</h2>
-          <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+          <h2 className="text-xl sm:text-2xl font-semibold break-words pr-2">{cliente.nombre}</h2>
+          <div className="flex flex-wrap gap-2 sm:flex-nowrap">
             <button
               onClick={() => generarResumenPagoPDF(cliente)}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium"
+              className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap"
             >
-              📄 Exportar PDF
+              📄 PDF
             </button>
             <Link
               href={`/clientes/${id}/editar`}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium"
+              className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap text-center"
             >
               ✏️ Editar
             </Link>
             <button
               onClick={() => setMostrarConfirmacion(true)}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-medium"
+              className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap"
             >
               🗑️ Eliminar
             </button>

@@ -38,16 +38,16 @@ export default function Header() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-blue-950 border-b border-blue-900 w-full" style={{ maxWidth: '100vw', overflow: 'hidden' }}>
       <div className="flex justify-between items-center gap-2 px-3 py-2.5 md:px-4 md:py-4 min-h-[56px] md:min-h-0 w-full" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
-        <div className="flex items-center min-w-0 overflow-hidden flex-1" style={{ minWidth: 0 }}>
-          <Link href="/" onClick={() => setMenuAbierto(false)} className="min-w-0 flex items-center gap-2">
-            {/* Logo solo en desktop, texto en móvil */}
-            <span className="md:hidden text-white font-bold text-sm whitespace-nowrap">Digital Space</span>
+        <div className="flex items-center min-w-0 overflow-hidden flex-1" style={{ minWidth: 0, maxWidth: 'calc(100% - 60px)' }}>
+          <Link href="/" onClick={() => setMenuAbierto(false)} className="min-w-0 flex items-center">
+            {/* Logo en móvil y desktop, con tamaño reducido en móvil */}
             <Image 
               src="https://digitalspace.com.ar/wp-content/uploads/2025/01/Recurso-1.webp"
               alt="Digital Space Logo"
               width={150}
               height={50}
-              className="hidden md:block h-8 w-auto cursor-pointer"
+              className="h-5 md:h-8 w-auto cursor-pointer"
+              style={{ maxWidth: '120px', height: 'auto', objectFit: 'contain' }}
               priority
               loading="eager"
             />
