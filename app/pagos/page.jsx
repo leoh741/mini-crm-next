@@ -304,6 +304,7 @@ function PagosPageContent() {
                 <Link
                   key={cliente.id}
                   href={`/clientes/${cliente.id}?from=pagos`}
+                  prefetch={true}
                   className="block flex justify-between items-center p-2 bg-slate-800 rounded hover:opacity-90 transition-opacity cursor-pointer"
                 >
                   <div>
@@ -377,6 +378,7 @@ function PagosPageContent() {
               <Link
                 key={cliente.id}
                 href={`/clientes/${cliente.id}?from=pagos`}
+                prefetch={true}
                 className={`block p-3 md:p-4 rounded-lg border ${estado.border} ${estado.bg} flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:opacity-90 transition-opacity cursor-pointer`}
               >
                 <div className="flex-1 w-full sm:w-auto">

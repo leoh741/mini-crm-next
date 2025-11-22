@@ -1,8 +1,9 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { memo } from "react";
 
-export default function Footer() {
+function Footer() {
   const pathname = usePathname();
 
   // No mostrar footer en la página de login
@@ -20,4 +21,7 @@ export default function Footer() {
     </footer>
   );
 }
+
+// Memoizar Footer para evitar re-renders innecesarios
+export default memo(Footer);
 

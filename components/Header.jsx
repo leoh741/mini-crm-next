@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { getUsuarioActual, logout, esAdmin } from "../lib/authUtils";
 
-export default function Header() {
+function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const [usuario, setUsuario] = useState(null);
@@ -24,11 +24,11 @@ export default function Header() {
     setMenuAbierto(false);
   }, [pathname]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     logout();
     router.push("/login");
     router.refresh();
-  };
+  }, [router]);
 
   // No mostrar header en la página de login
   if (pathname === "/login") {
@@ -56,20 +56,20 @@ export default function Header() {
         
         {/* Menú desktop */}
         <nav className="hidden md:flex gap-4 text-sm items-center flex-shrink-0">
-          <Link href="/" className={pathname === "/" ? "text-blue-300" : ""}>
+          <Link href="/" prefetch={true} className={pathname === "/" ? "text-blue-300" : ""}>
             Inicio
           </Link>
-          <Link href="/clientes" className={pathname?.startsWith("/clientes") ? "text-blue-300" : ""}>
+          <Link href="/clientes" prefetch={true} className={pathname?.startsWith("/clientes") ? "text-blue-300" : ""}>
             Clientes
           </Link>
-          <Link href="/pagos" className={pathname === "/pagos" ? "text-blue-300" : ""}>
+          <Link href="/pagos" prefetch={true} className={pathname === "/pagos" ? "text-blue-300" : ""}>
             Pagos
           </Link>
-          <Link href="/balance" className={pathname === "/balance" ? "text-blue-300" : ""}>
+          <Link href="/balance" prefetch={true} className={pathname === "/balance" ? "text-blue-300" : ""}>
             Balance
           </Link>
           {esAdminUser && (
-            <Link href="/admin/usuarios" className={pathname?.startsWith("/admin") ? "text-blue-300" : ""}>
+            <Link href="/admin/usuarios" prefetch={true} className={pathname?.startsWith("/admin") ? "text-blue-300" : ""}>
               Usuarios
             </Link>
           )}
@@ -145,6 +145,7 @@ export default function Header() {
             {esAdminUser && (
               <Link 
                 href="/admin/usuarios" 
+                prefetch={true}
                 className={`px-4 py-3 ${pathname?.startsWith("/admin") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
                 onClick={() => setMenuAbierto(false)}
               >
@@ -168,4 +169,7 @@ export default function Header() {
     </header>
   );
 }
+
+// Memoizar Header para evitar re-renders innecesarios
+export default memo(Header);
 

@@ -1,33 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { estaAutenticado } from "../lib/authUtils";
 
 export default function ProtectedRoute({ children }) {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [autenticado, setAutenticado] = useState(false);
+  // Verificación inicial síncrona para evitar delay visual
+  const [autenticado, setAutenticado] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return estaAutenticado();
+    }
+    return false;
+  });
 
   useEffect(() => {
-    if (estaAutenticado()) {
-      setAutenticado(true);
-    } else {
+    // Verificación adicional en el cliente
+    const autenticadoActual = estaAutenticado();
+    if (!autenticadoActual) {
       router.push("/login");
+      return;
     }
-    setLoading(false);
-  }, [router]);
+    // Solo actualizar si cambió el estado
+    if (!autenticado) {
+      setAutenticado(true);
+    }
+  }, [router, autenticado]);
 
-  if (loading) {
+  // Evitar render innecesario si no está autenticado
+  if (!autenticado) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-slate-300">Cargando...</div>
+        <div className="text-slate-300">Verificando...</div>
       </div>
     );
-  }
-
-  if (!autenticado) {
-    return null;
   }
 
   return <>{children}</>;

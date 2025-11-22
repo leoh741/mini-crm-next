@@ -8,6 +8,7 @@ function ClientList({ clientes }) {
         <Link
           key={cliente.id}
           href={`/clientes/${cliente.id}`}
+          prefetch={true}
           className="block p-4 border border-slate-700 rounded hover:bg-slate-800 transition"
         >
           <h3 className="font-semibold">{cliente.nombre}</h3>

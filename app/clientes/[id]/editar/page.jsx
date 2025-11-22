@@ -184,30 +184,26 @@ function EditarClientePageContent() {
         const hoy = new Date();
         const mesActual = hoy.getMonth();
         const añoActual = hoy.getFullYear();
-        const { guardarEstadoPagoMes } = await import('../../../../lib/clientesUtils');
+        const { guardarEstadoPagoMes, limpiarCacheClientes } = await import('../../../../lib/clientesUtils');
+        // Limpiar caché antes de actualizar
+        limpiarCacheClientes();
         // Obtener el ID correcto del cliente (puede ser _id o crmId)
         const clienteId = cliente._id || cliente.id || cliente.crmId;
         // Actualizar el estado mensual con el nuevo valor de pagado
-        await guardarEstadoPagoMes(clienteId, mesActual, añoActual, formData.pagado);
-        console.log('Estado mensual actualizado:', { clienteId, mesActual, añoActual, pagado: formData.pagado });
+        await guardarEstadoPagoMes(clienteId, mesActual, añoActual, pagadoValue);
+        console.log('Estado mensual actualizado:', { clienteId, mesActual, añoActual, pagado: pagadoValue });
+        // Limpiar caché después de actualizar
+        limpiarCacheClientes();
       } catch (err) {
         console.error('Error al actualizar estado mensual de pago:', err);
         // No fallar la actualización si hay error al actualizar el estado mensual
       }
       
       setSuccess(true);
-      // Limpiar caché antes de redirigir
-      const { limpiarCacheClientes } = await import('../../../../lib/clientesUtils');
-      limpiarCacheClientes();
-      // Esperar un poco más para asegurar que la BD se actualizó completamente
-      setTimeout(() => {
-        // Forzar recarga completa de la página de detalle
-        router.push(`/clientes/${id}?refresh=${Date.now()}`);
-        // También refrescar el router para asegurar datos frescos
-        setTimeout(() => {
-          router.refresh();
-        }, 100);
-      }, 2000);
+      // Redirigir inmediatamente sin delay
+      router.push(`/clientes/${id}?refresh=${Date.now()}`);
+      // Refrescar el router para asegurar datos frescos
+      router.refresh();
     } else {
       setError("Error al actualizar el cliente. Por favor, intenta nuevamente.");
       setLoading(false);

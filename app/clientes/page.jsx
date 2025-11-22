@@ -83,6 +83,7 @@ function ClientesPageContent() {
         </div>
         <Link
           href="/clientes/nuevo"
+          prefetch={true}
           className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium text-center"
         >
           + Agregar Cliente

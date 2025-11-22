@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { getClienteById, eliminarCliente } from "../../../lib/clientesUtils";
+import { getClienteById, eliminarCliente, guardarEstadoPagoMes, limpiarCacheClientes } from "../../../lib/clientesUtils";
 import { getTotalCliente } from "../../../lib/clienteHelpers";
 import { generarResumenPagoPDF } from "../../../lib/pdfGenerator";
 import Link from "next/link";
@@ -18,6 +18,7 @@ function ClienteDetailPageContent() {
   const [eliminando, setEliminando] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [actualizandoPago, setActualizandoPago] = useState(false);
   
   const fromPagos = searchParams.get('from') === 'pagos';
 
@@ -69,6 +70,59 @@ function ClienteDetailPageContent() {
       alert("Error al eliminar el cliente. Por favor, intenta nuevamente.");
       setEliminando(false);
       setMostrarConfirmacion(false);
+    }
+  };
+
+  const handleTogglePagado = async () => {
+    if (!cliente || actualizandoPago) return;
+    
+    const nuevoEstado = !cliente.pagado;
+    
+    // Actualización optimista: cambiar estado inmediatamente en la UI
+    setCliente(prev => prev ? { ...prev, pagado: nuevoEstado } : null);
+    setActualizandoPago(true);
+    
+    try {
+      // Limpiar caché antes de actualizar
+      limpiarCacheClientes();
+      
+      // Actualizar en la base de datos
+      const hoy = new Date();
+      const mesActual = hoy.getMonth();
+      const añoActual = hoy.getFullYear();
+      const clienteId = cliente._id || cliente.id || cliente.crmId;
+      
+      // Guardar estado mensual
+      const resultado = await guardarEstadoPagoMes(clienteId, mesActual, añoActual, nuevoEstado);
+      
+      if (!resultado) {
+        // Revertir cambio si falló
+        setCliente(prev => prev ? { ...prev, pagado: !nuevoEstado } : null);
+        alert("Error al actualizar el estado de pago. Por favor, intenta nuevamente.");
+      } else {
+        // Actualizar también el estado del cliente directamente
+        const { actualizarCliente } = await import('../../../lib/clientesUtils');
+        await actualizarCliente(id, { pagado: nuevoEstado });
+        
+        // Limpiar caché después de actualizar
+        limpiarCacheClientes();
+        
+        // Recargar datos para asegurar sincronización
+        setTimeout(async () => {
+          const clienteData = await getClienteById(id, false);
+          if (clienteData) {
+            clienteData.pagado = Boolean(clienteData.pagado);
+            setCliente(clienteData);
+          }
+        }, 300);
+      }
+    } catch (err) {
+      console.error('Error al actualizar estado de pago:', err);
+      // Revertir cambio si falló
+      setCliente(prev => prev ? { ...prev, pagado: !nuevoEstado } : null);
+      alert("Error al actualizar el estado de pago. Por favor, intenta nuevamente.");
+    } finally {
+      setActualizandoPago(false);
     }
   };
 
@@ -212,15 +266,31 @@ function ClienteDetailPageContent() {
               )}
             </div>
           )}
-          <p><strong className="text-slate-300">Estado:</strong> 
-            <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
-              cliente.pagado 
-                ? "bg-green-900/30 text-green-400 border border-green-700" 
-                : "bg-orange-900/30 text-orange-400 border border-orange-700"
-            }`}>
-              {cliente.pagado ? "Pagado" : "Pendiente"}
-            </span>
-          </p>
+          <div className="flex items-center justify-between">
+            <p><strong className="text-slate-300">Estado:</strong> 
+              <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
+                cliente.pagado 
+                  ? "bg-green-900/30 text-green-400 border border-green-700" 
+                  : "bg-orange-900/30 text-orange-400 border border-orange-700"
+              }`}>
+                {cliente.pagado ? "Pagado" : "Pendiente"}
+              </span>
+            </p>
+            <button
+              onClick={handleTogglePagado}
+              disabled={actualizandoPago || cliente.pagoUnico}
+              className={`ml-4 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                cliente.pagoUnico
+                  ? "bg-slate-700 text-slate-500 cursor-not-allowed"
+                  : cliente.pagado
+                  ? "bg-orange-600 hover:bg-orange-700 text-white"
+                  : "bg-green-600 hover:bg-green-700 text-white"
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              title={cliente.pagoUnico ? "No se puede cambiar el estado de pago único" : cliente.pagado ? "Marcar como pendiente" : "Marcar como pagado"}
+            >
+              {actualizandoPago ? "..." : cliente.pagado ? "Marcar Pendiente" : "Marcar Pagado"}
+            </button>
+          </div>
           {cliente.observaciones && (
             <div className="mt-4 pt-4 border-t border-slate-600">
               <p className="text-slate-300 font-medium mb-2">Observaciones:</p>
