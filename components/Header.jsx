@@ -36,16 +36,17 @@ export default function Header() {
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-blue-950 border-b border-blue-900">
-      <div className="flex justify-between items-center gap-2 px-2.5 py-2.5 md:px-4 md:py-4 min-h-[56px] md:min-h-0">
-        <div className="flex items-center min-w-0 overflow-hidden flex-1">
-          <Link href="/" onClick={() => setMenuAbierto(false)} className="min-w-0">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-blue-950 border-b border-blue-900 w-full" style={{ maxWidth: '100vw', overflow: 'hidden' }}>
+      <div className="flex justify-between items-center gap-1 px-2 py-2.5 md:px-4 md:py-4 min-h-[56px] md:min-h-0 w-full" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
+        <div className="flex items-center min-w-0 overflow-hidden" style={{ flex: '1 1 auto', minWidth: 0, maxWidth: 'calc(100% - 52px)' }}>
+          <Link href="/" onClick={() => setMenuAbierto(false)} className="min-w-0 block overflow-hidden">
             <Image 
               src="https://digitalspace.com.ar/wp-content/uploads/2025/01/Recurso-1.webp"
               alt="Digital Space Logo"
               width={150}
               height={50}
-              className="h-5 md:h-8 w-auto cursor-pointer max-w-[100px] md:max-w-none"
+              className="h-4 md:h-8 w-auto cursor-pointer"
+              style={{ maxWidth: '65px', height: 'auto', objectFit: 'contain', display: 'block' }}
               priority
               loading="eager"
             />
@@ -53,7 +54,7 @@ export default function Header() {
         </div>
         
         {/* Menú desktop */}
-        <nav className="hidden md:flex gap-4 text-sm items-center">
+        <nav className="hidden md:flex gap-4 text-sm items-center flex-shrink-0">
           <Link href="/" className={pathname === "/" ? "text-blue-300" : ""}>
             Inicio
           </Link>
@@ -87,11 +88,20 @@ export default function Header() {
         {/* Botón hamburguesa móvil */}
         <button
           onClick={() => setMenuAbierto(!menuAbierto)}
-          className="md:hidden flex-shrink-0 p-2 text-slate-300 hover:text-white active:bg-blue-900/50 rounded transition-colors touch-manipulation"
+          className="md:hidden text-slate-300 hover:text-white active:bg-blue-900/50 rounded transition-colors touch-manipulation"
           aria-label="Toggle menu"
-          style={{ minWidth: '44px', minHeight: '44px' }}
+          style={{ 
+            width: '48px',
+            height: '48px',
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '8px',
+            boxSizing: 'border-box'
+          }}
         >
-          <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
             {menuAbierto ? (
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             ) : (
