@@ -5,8 +5,26 @@ import Client from '../../../../models/Client';
 export async function GET(request, { params }) {
   try {
     await connectDB();
-    // Usar lean() para obtener objetos planos (más rápido, menos overhead)
-    const cliente = await Client.findById(params.id).lean();
+    // Buscar por _id o por crmId
+    let cliente = null;
+    
+    // Primero intentar buscar por _id (ObjectId de MongoDB)
+    // Si params.id es un ObjectId válido, lo encontrará
+    // Si no, findById lanzará un error y buscaremos por crmId
+    try {
+      // Verificar si es un ObjectId válido (24 caracteres hexadecimales)
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(params.id);
+      if (isValidObjectId) {
+        cliente = await Client.findById(params.id).lean();
+      }
+    } catch (idError) {
+      // Si falla, continuar para buscar por crmId
+    }
+    
+    // Si no se encontró por _id, buscar por crmId
+    if (!cliente) {
+      cliente = await Client.findOne({ crmId: params.id }).lean();
+    }
     
     if (!cliente) {
       return NextResponse.json(
@@ -34,6 +52,31 @@ export async function PUT(request, { params }) {
     const body = await request.json();
     
     console.log('PUT /api/clientes/[id] - Body recibido:', JSON.stringify(body, null, 2));
+    
+    // Buscar cliente por _id o crmId
+    let cliente = null;
+    
+    // Verificar si es un ObjectId válido
+    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(params.id);
+    if (isValidObjectId) {
+      try {
+        cliente = await Client.findById(params.id);
+      } catch (idError) {
+        // Si falla, buscar por crmId
+      }
+    }
+    
+    // Si no se encontró por _id, buscar por crmId
+    if (!cliente) {
+      cliente = await Client.findOne({ crmId: params.id });
+    }
+    
+    if (!cliente) {
+      return NextResponse.json(
+        { success: false, error: 'Cliente no encontrado' },
+        { status: 404 }
+      );
+    }
     
     // Preparar objeto de actualización con $set para asegurar que false se guarde correctamente
     const updateData = {};
@@ -75,13 +118,13 @@ export async function PUT(request, { params }) {
     
     // Usar $set explícitamente para asegurar que false se guarde
     // Usar lean() para respuesta más rápida y select solo campos necesarios
-    const cliente = await Client.findByIdAndUpdate(
-      params.id,
+    const clienteActualizado = await Client.findByIdAndUpdate(
+      cliente._id,
       { $set: updateData },
       { new: true, runValidators: true, lean: true }
     ).select('-__v'); // Excluir campo __v de la respuesta
     
-    if (!cliente) {
+    if (!clienteActualizado) {
       return NextResponse.json(
         { success: false, error: 'Cliente no encontrado' },
         { status: 404 }
@@ -89,13 +132,13 @@ export async function PUT(request, { params }) {
     }
     
     console.log('Cliente actualizado en BD:', { 
-      id: cliente._id, 
-      nombre: cliente.nombre,
-      pagado: cliente.pagado,
-      tipoPagado: typeof cliente.pagado
+      id: clienteActualizado._id, 
+      nombre: clienteActualizado.nombre,
+      pagado: clienteActualizado.pagado,
+      tipoPagado: typeof clienteActualizado.pagado
     });
     
-    return NextResponse.json({ success: true, data: cliente });
+    return NextResponse.json({ success: true, data: clienteActualizado });
   } catch (error) {
     console.error('Error al actualizar cliente:', error);
     return NextResponse.json(
@@ -108,7 +151,24 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     await connectDB();
-    const cliente = await Client.findByIdAndDelete(params.id);
+    
+    // Buscar cliente por _id o crmId
+    let cliente = null;
+    
+    // Verificar si es un ObjectId válido
+    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(params.id);
+    if (isValidObjectId) {
+      try {
+        cliente = await Client.findById(params.id);
+      } catch (idError) {
+        // Si falla, buscar por crmId
+      }
+    }
+    
+    // Si no se encontró por _id, buscar por crmId
+    if (!cliente) {
+      cliente = await Client.findOne({ crmId: params.id });
+    }
     
     if (!cliente) {
       return NextResponse.json(
@@ -116,6 +176,9 @@ export async function DELETE(request, { params }) {
         { status: 404 }
       );
     }
+    
+    // Eliminar usando el _id encontrado
+    await Client.findByIdAndDelete(cliente._id);
     
     return NextResponse.json({ success: true, data: cliente });
   } catch (error) {
