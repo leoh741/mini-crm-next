@@ -137,13 +137,18 @@ function EditarClientePageContent() {
 
     // Preparar datos
     // Asegurar que pagado sea un booleano explícito y siempre se envíe (incluso si es false)
+    // IMPORTANTE: Convertir explícitamente a booleano para evitar problemas
+    const pagadoValue = formData.pagado === true || formData.pagado === 'true' || formData.pagado === 1;
+    const pagoUnicoValue = formData.pagoUnico === true || formData.pagoUnico === 'true' || formData.pagoUnico === 1;
+    const pagoMesSiguienteValue = (formData.pagoMesSiguiente === true || formData.pagoMesSiguiente === 'true' || formData.pagoMesSiguiente === 1) && !pagoUnicoValue;
+    
     const datosActualizados = {
       nombre: formData.nombre.trim(),
       servicios: serviciosFormateados,
-      fechaPago: formData.pagoUnico ? undefined : parseInt(formData.fechaPago),
-      pagoUnico: Boolean(formData.pagoUnico),
-      pagado: Boolean(formData.pagado), // Siempre enviar, incluso si es false
-      pagoMesSiguiente: Boolean(formData.pagoMesSiguiente && !formData.pagoUnico),
+      fechaPago: pagoUnicoValue ? undefined : parseInt(formData.fechaPago),
+      pagoUnico: pagoUnicoValue,
+      pagado: pagadoValue, // Siempre enviar, incluso si es false
+      pagoMesSiguiente: pagoMesSiguienteValue,
     };
     
     // Solo agregar campos opcionales si tienen valor
@@ -154,11 +159,12 @@ function EditarClientePageContent() {
       datosActualizados.observaciones = formData.observaciones.trim();
     }
     
-    console.log('Datos a actualizar:', datosActualizados);
-    console.log('Estado de pagado en formData:', { 
+    console.log('Datos a actualizar:', JSON.stringify(datosActualizados, null, 2));
+    console.log('Estado de pagado:', { 
       formDataPagado: formData.pagado, 
       tipo: typeof formData.pagado,
-      booleano: Boolean(formData.pagado)
+      pagadoValue: pagadoValue,
+      tipoPagadoValue: typeof pagadoValue
     });
 
     // Actualizar cliente

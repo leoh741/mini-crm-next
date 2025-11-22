@@ -35,9 +35,16 @@ export async function PUT(request, { params }) {
     
     // Asegurar que los campos booleanos sean explícitos y siempre se incluyan
     // IMPORTANTE: Incluir siempre, incluso si es false
+    // Convertir explícitamente a booleano verdadero, no solo truthy
     if (body.pagado !== undefined) {
-      updateData.pagado = Boolean(body.pagado);
-      console.log('Campo pagado a actualizar:', { valorOriginal: body.pagado, valorBooleano: updateData.pagado });
+      // Convertir explícitamente: solo true si es exactamente true, 1, o 'true'
+      updateData.pagado = body.pagado === true || body.pagado === 1 || body.pagado === 'true';
+      console.log('Campo pagado a actualizar:', { 
+        valorOriginal: body.pagado, 
+        tipoOriginal: typeof body.pagado,
+        valorBooleano: updateData.pagado,
+        tipoBooleano: typeof updateData.pagado
+      });
     } else {
       console.warn('Campo pagado NO está en el body, no se actualizará');
     }
