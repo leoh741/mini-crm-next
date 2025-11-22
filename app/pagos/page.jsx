@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { getClientes, getEstadosPagoMes, guardarEstadoPagoMes, getMesesConRegistros } from "../../lib/clientesUtils";
+import { getClientes, getEstadosPagoMes, guardarEstadoPagoMes, getMesesConRegistros, limpiarCacheClientes, actualizarCliente } from "../../lib/clientesUtils";
 import { getTotalCliente } from "../../lib/clienteHelpers";
 import ProtectedRoute from "../../components/ProtectedRoute";
 
@@ -20,6 +20,7 @@ function PagosPageContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [opcionesMeses, setOpcionesMeses] = useState([]);
+  const [actualizandoClientes, setActualizandoClientes] = useState(new Set());
 
   useEffect(() => {
     const cargarOpcionesMeses = async () => {
@@ -120,14 +121,24 @@ function PagosPageContent() {
   // Determinar si estamos viendo el mes actual
   const esMesActual = añoSeleccionado === añoActual && mesIndex === mesActual;
 
-  // Métricas para TODOS los clientes (mensuales + pago único) del mes seleccionado
-  const totalEsperado = clientesConEstado.reduce((sum, cliente) => sum + getTotalCliente(cliente), 0);
-  const totalPagado = clientesConEstado
-    .filter(cliente => cliente.pagado)
-    .reduce((sum, cliente) => sum + getTotalCliente(cliente), 0);
-  const totalPendiente = totalEsperado - totalPagado;
-  const cantidadPagados = clientesConEstado.filter(cliente => cliente.pagado).length;
-  const cantidadPendientes = clientesConEstado.length - cantidadPagados;
+  // Métricas para TODOS los clientes (mensuales + pago único) del mes seleccionado (memoizadas para actualización inmediata)
+  const { totalEsperado, totalPagado, totalPendiente, cantidadPagados, cantidadPendientes } = useMemo(() => {
+    const totalEsp = clientesConEstado.reduce((sum, cliente) => sum + getTotalCliente(cliente), 0);
+    const totalPag = clientesConEstado
+      .filter(cliente => cliente.pagado)
+      .reduce((sum, cliente) => sum + getTotalCliente(cliente), 0);
+    const totalPend = totalEsp - totalPag;
+    const cantPagados = clientesConEstado.filter(cliente => cliente.pagado).length;
+    const cantPendientes = clientesConEstado.length - cantPagados;
+    
+    return {
+      totalEsperado: totalEsp,
+      totalPagado: totalPag,
+      totalPendiente: totalPend,
+      cantidadPagados: cantPagados,
+      cantidadPendientes: cantPendientes
+    };
+  }, [clientesConEstado]);
 
   // Separar clientes mensuales de pago único solo para alertas
   const clientesMensuales = clientesConEstado.filter(cliente => !cliente.pagoUnico);
@@ -189,6 +200,90 @@ function PagosPageContent() {
         ? `Día ${cliente.fechaPago} (mes siguiente)`
         : `Día ${cliente.fechaPago}`;
       return { texto, tipo: "pendiente", color: "text-slate-400", bg: "bg-slate-800", border: "border-slate-700" };
+    }
+  };
+
+  // Función para toggle rápido del estado de pago
+  const handleTogglePagado = async (cliente) => {
+    if (actualizandoClientes.has(cliente.id) || cliente.pagoUnico) return;
+    
+    const clienteId = cliente._id || cliente.id;
+    const nuevoEstado = !cliente.pagado;
+    
+    // Actualización optimista: cambiar estado inmediatamente en la UI
+    setClientesConEstado(prev => prev.map(c => {
+      const cId = c._id || c.id;
+      if (cId === clienteId) {
+        return { ...c, pagado: nuevoEstado };
+      }
+      return c;
+    }));
+    
+    // Agregar a la lista de clientes actualizando
+    setActualizandoClientes(prev => new Set(prev).add(cliente.id));
+    
+    try {
+      // Limpiar caché antes de actualizar
+      limpiarCacheClientes();
+      
+      // Obtener mes y año seleccionado
+      const [añoSeleccionado, mesSeleccionadoNum] = mesSeleccionado.split('-').map(Number);
+      const mesIndex = mesSeleccionadoNum - 1;
+      
+      // Guardar estado mensual
+      const resultado = await guardarEstadoPagoMes(clienteId, mesIndex, añoSeleccionado, nuevoEstado);
+      
+      if (!resultado) {
+        // Revertir cambio si falló
+        setClientesConEstado(prev => prev.map(c => {
+          const cId = c._id || c.id;
+          if (cId === clienteId) {
+            return { ...c, pagado: !nuevoEstado };
+          }
+          return c;
+        }));
+        alert("Error al actualizar el estado de pago. Por favor, intenta nuevamente.");
+      } else {
+        // Actualizar también el estado del cliente directamente (para el mes actual)
+        const hoy = new Date();
+        const mesActual = hoy.getMonth();
+        const añoActual = hoy.getFullYear();
+        const esMesActual = añoSeleccionado === añoActual && mesIndex === mesActual;
+        
+        if (esMesActual) {
+          await actualizarCliente(clienteId, { pagado: nuevoEstado });
+        }
+        
+        // Limpiar caché después de actualizar
+        limpiarCacheClientes();
+        
+        // Actualizar también la lista de clientes base para mantener consistencia
+        setClientes(prev => prev.map(c => {
+          const cId = c._id || c.id;
+          if (cId === clienteId && esMesActual) {
+            return { ...c, pagado: nuevoEstado };
+          }
+          return c;
+        }));
+      }
+    } catch (err) {
+      console.error('Error al actualizar estado de pago:', err);
+      // Revertir cambio si falló
+      setClientesConEstado(prev => prev.map(c => {
+        const cId = c._id || c.id;
+        if (cId === clienteId) {
+          return { ...c, pagado: !nuevoEstado };
+        }
+        return c;
+      }));
+      alert("Error al actualizar el estado de pago. Por favor, intenta nuevamente.");
+    } finally {
+      // Remover de la lista de clientes actualizando
+      setActualizandoClientes(prev => {
+        const nuevo = new Set(prev);
+        nuevo.delete(cliente.id);
+        return nuevo;
+      });
     }
   };
 
@@ -374,14 +469,17 @@ function PagosPageContent() {
         <div className="space-y-3">
           {clientesFiltrados.map(cliente => {
             const estado = getEstadoPago(cliente);
+            const estaActualizando = actualizandoClientes.has(cliente.id);
             return (
-              <Link
+              <div
                 key={cliente.id}
-                href={`/clientes/${cliente.id}?from=pagos`}
-                prefetch={true}
-                className={`block p-3 md:p-4 rounded-lg border ${estado.border} ${estado.bg} flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:opacity-90 transition-opacity cursor-pointer`}
+                className={`block p-3 md:p-4 rounded-lg border ${estado.border} ${estado.bg} flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3`}
               >
-                <div className="flex-1 w-full sm:w-auto">
+                <Link
+                  href={`/clientes/${cliente.id}?from=pagos`}
+                  prefetch={true}
+                  className="flex-1 w-full sm:w-auto hover:opacity-90 transition-opacity cursor-pointer"
+                >
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
                     <h4 className="font-semibold text-base md:text-lg">{cliente.nombre}</h4>
                     <span className={`px-2 py-1 rounded text-xs font-medium ${estado.color} ${estado.bg} self-start sm:self-auto`}>
@@ -397,18 +495,38 @@ function PagosPageContent() {
                       : `Fecha de pago: día ${cliente.fechaPago} de cada mes`
                     }
                   </p>
-                </div>
-                <div className="text-left sm:text-right w-full sm:w-auto">
-                  <p className="text-xl md:text-2xl font-bold text-slate-200">
-                    {formatearMoneda(getTotalCliente(cliente))}
-                  </p>
-                  {cliente.servicios && cliente.servicios.length > 1 && (
-                    <p className="text-xs text-slate-400 mt-1">
-                      {cliente.servicios.length} servicios
+                </Link>
+                <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                  <div className="text-left sm:text-right">
+                    <p className="text-xl md:text-2xl font-bold text-slate-200">
+                      {formatearMoneda(getTotalCliente(cliente))}
                     </p>
+                    {cliente.servicios && cliente.servicios.length > 1 && (
+                      <p className="text-xs text-slate-400 mt-1">
+                        {cliente.servicios.length} servicios
+                      </p>
+                    )}
+                  </div>
+                  {!cliente.pagoUnico && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleTogglePagado(cliente);
+                      }}
+                      disabled={estaActualizando}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                        cliente.pagado
+                          ? "bg-orange-600 hover:bg-orange-700 text-white"
+                          : "bg-green-600 hover:bg-green-700 text-white"
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      title={cliente.pagado ? "Marcar como pendiente" : "Marcar como pagado"}
+                    >
+                      {estaActualizando ? "..." : cliente.pagado ? "Pendiente" : "Pagado"}
+                    </button>
                   )}
                 </div>
-              </Link>
+              </div>
             );
           })}
           {clientesFiltrados.length === 0 && (
