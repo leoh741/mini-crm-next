@@ -141,8 +141,11 @@ function HomePageContent() {
                   if (archivo) {
                     if (confirm('¿Estás seguro? Esto reemplazará todos los datos actuales.')) {
                       try {
-                        await cargarBackup(archivo);
-                        alert('Datos importados correctamente. Recarga la página.');
+                        const resultado = await cargarBackup(archivo);
+                        const mensaje = resultado?.resultados 
+                          ? `Datos importados correctamente:\n- Clientes: ${resultado.resultados.clientes}\n- Pagos: ${resultado.resultados.pagosMensuales}\n- Gastos: ${resultado.resultados.gastos}\n- Ingresos: ${resultado.resultados.ingresos}\n- Usuarios: ${resultado.resultados.usuarios}\n\nRecarga la página para ver los cambios.`
+                          : 'Datos importados correctamente. Recarga la página para ver los cambios.';
+                        alert(mensaje);
                         window.location.reload();
                       } catch (error) {
                         alert('Error al importar: ' + error.message);
