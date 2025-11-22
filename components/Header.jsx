@@ -37,15 +37,15 @@ export default function Header() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-blue-950 border-b border-blue-900">
-      <div className="flex justify-between items-center px-3 py-2.5 md:p-4 min-h-[56px] md:min-h-0">
-        <div className="flex items-center flex-shrink-0 min-w-0">
-          <Link href="/" onClick={() => setMenuAbierto(false)} className="flex-shrink-0">
+      <div className="flex justify-between items-center gap-2 px-2.5 py-2.5 md:px-4 md:py-4 min-h-[56px] md:min-h-0">
+        <div className="flex items-center min-w-0 overflow-hidden flex-1">
+          <Link href="/" onClick={() => setMenuAbierto(false)} className="min-w-0">
             <Image 
               src="https://digitalspace.com.ar/wp-content/uploads/2025/01/Recurso-1.webp"
               alt="Digital Space Logo"
               width={150}
               height={50}
-              className="h-6 md:h-8 w-auto cursor-pointer max-w-[120px] md:max-w-none"
+              className="h-5 md:h-8 w-auto cursor-pointer max-w-[100px] md:max-w-none"
               priority
               loading="eager"
             />
@@ -87,8 +87,9 @@ export default function Header() {
         {/* Botón hamburguesa móvil */}
         <button
           onClick={() => setMenuAbierto(!menuAbierto)}
-          className="md:hidden flex-shrink-0 p-2.5 text-slate-300 hover:text-white active:bg-blue-900/50 rounded transition-colors"
+          className="md:hidden flex-shrink-0 p-2 text-slate-300 hover:text-white active:bg-blue-900/50 rounded transition-colors touch-manipulation"
           aria-label="Toggle menu"
+          style={{ minWidth: '44px', minHeight: '44px' }}
         >
           <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             {menuAbierto ? (
