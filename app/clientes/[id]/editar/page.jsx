@@ -25,42 +25,67 @@ function EditarClientePageContent() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [cargandoCliente, setCargandoCliente] = useState(true);
 
   useEffect(() => {
     const cargarCliente = async () => {
-      // OPTIMIZACIÓN: NO limpiar caché al cargar, solo al actualizar
-      // Usar caché para cargas más rápidas, pero forzar recarga sin caché para datos frescos en edición
-      const clienteData = await getClienteById(id, false);
-      if (clienteData) {
-      setCliente(clienteData);
-      // Asegurar que pagado sea un booleano
-      const pagadoValue = Boolean(clienteData.pagado);
-      setFormData({
-        nombre: clienteData.nombre || "",
-        rubro: clienteData.rubro || "",
-        fechaPago: clienteData.fechaPago?.toString() || "",
-        pagoUnico: Boolean(clienteData.pagoUnico),
-        pagado: pagadoValue,
-        pagoMesSiguiente: Boolean(clienteData.pagoMesSiguiente),
-        observaciones: clienteData.observaciones || ""
-      });
-      
-      // Cargar servicios o convertir montoPago antiguo a servicio
-      if (clienteData.servicios && Array.isArray(clienteData.servicios) && clienteData.servicios.length > 0) {
-        setServicios(clienteData.servicios.map(s => ({
-          nombre: s.nombre || "",
-          precio: s.precio?.toString() || ""
-        })));
-      } else if (clienteData.montoPago) {
-        // Compatibilidad: convertir montoPago antiguo a servicio
-        setServicios([{
-          nombre: "Servicio",
-          precio: clienteData.montoPago.toString()
-        }]);
-      }
+      try {
+        setCargandoCliente(true);
+        setError("");
+        
+        // Intentar primero con caché (más rápido), si falla intentar sin caché
+        let clienteData = await getClienteById(id, true);
+        
+        // Si no se encuentra con caché, intentar sin caché
+        if (!clienteData) {
+          console.warn(`Cliente ${id} no encontrado con caché, intentando sin caché`);
+          clienteData = await getClienteById(id, false);
+        }
+        
+        if (clienteData) {
+          setCliente(clienteData);
+          // Asegurar que pagado sea un booleano
+          const pagadoValue = Boolean(clienteData.pagado);
+          setFormData({
+            nombre: clienteData.nombre || "",
+            rubro: clienteData.rubro || "",
+            fechaPago: clienteData.fechaPago?.toString() || "",
+            pagoUnico: Boolean(clienteData.pagoUnico),
+            pagado: pagadoValue,
+            pagoMesSiguiente: Boolean(clienteData.pagoMesSiguiente),
+            observaciones: clienteData.observaciones || ""
+          });
+          
+          // Cargar servicios o convertir montoPago antiguo a servicio
+          if (clienteData.servicios && Array.isArray(clienteData.servicios) && clienteData.servicios.length > 0) {
+            setServicios(clienteData.servicios.map(s => ({
+              nombre: s.nombre || "",
+              precio: s.precio?.toString() || ""
+            })));
+          } else if (clienteData.montoPago) {
+            // Compatibilidad: convertir montoPago antiguo a servicio
+            setServicios([{
+              nombre: "Servicio",
+              precio: clienteData.montoPago.toString()
+            }]);
+          }
+        } else {
+          setError("Cliente no encontrado");
+        }
+      } catch (err) {
+        console.error('Error al cargar cliente:', err);
+        setError('Error al cargar el cliente. Por favor, intenta nuevamente.');
+      } finally {
+        setCargandoCliente(false);
       }
     };
-    cargarCliente();
+    
+    if (id) {
+      cargarCliente();
+    } else {
+      setError("ID de cliente no proporcionado");
+      setCargandoCliente(false);
+    }
   }, [id]);
 
   const handleChange = (e) => {
@@ -204,10 +229,38 @@ function EditarClientePageContent() {
     router.refresh();
   };
 
+  if (cargandoCliente) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-slate-300">Cargando cliente...</div>
+      </div>
+    );
+  }
+
+  if (error && !cliente) {
+    return (
+      <div>
+        <p className="text-red-400 mb-4">{error}</p>
+        <button
+          onClick={() => router.back()}
+          className="text-blue-400 hover:text-blue-300"
+        >
+          ← Volver
+        </button>
+      </div>
+    );
+  }
+
   if (!cliente) {
     return (
       <div>
-        <p>Cargando...</p>
+        <p className="text-red-400 mb-4">Cliente no encontrado</p>
+        <button
+          onClick={() => router.back()}
+          className="text-blue-400 hover:text-blue-300"
+        >
+          ← Volver
+        </button>
       </div>
     );
   }
