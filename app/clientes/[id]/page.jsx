@@ -276,15 +276,13 @@ function ClienteDetailPageContent() {
             </p>
             <button
               onClick={handleTogglePagado}
-              disabled={actualizandoPago || cliente.pagoUnico}
+              disabled={actualizandoPago}
               className={`ml-4 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                cliente.pagoUnico
-                  ? "bg-slate-700 text-slate-500 cursor-not-allowed"
-                  : cliente.pagado
+                cliente.pagado
                   ? "bg-orange-600 hover:bg-orange-700 text-white"
                   : "bg-green-600 hover:bg-green-700 text-white"
               } disabled:opacity-50 disabled:cursor-not-allowed`}
-              title={cliente.pagoUnico ? "No se puede cambiar el estado de pago único" : cliente.pagado ? "Marcar como pendiente" : "Marcar como pagado"}
+              title={cliente.pagado ? "Marcar como pendiente" : "Marcar como pagado"}
             >
               {actualizandoPago ? "..." : cliente.pagado ? "Marcar Pendiente" : "Marcar Pagado"}
             </button>
