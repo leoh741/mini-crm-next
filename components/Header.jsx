@@ -46,8 +46,8 @@ export default function Header() {
               alt="Digital Space Logo"
               width={150}
               height={50}
-              className="h-4 md:h-8 w-auto cursor-pointer"
-              style={{ maxWidth: '90px', height: 'auto', objectFit: 'contain' }}
+              className="h-3.5 md:h-8 w-auto cursor-pointer"
+              style={{ maxWidth: '75px', height: 'auto', objectFit: 'contain' }}
               priority
               loading="eager"
             />
