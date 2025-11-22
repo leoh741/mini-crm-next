@@ -1,0 +1,355 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { getClientes, getEstadoPagoMes, guardarEstadoPagoMes, getMesesConRegistros } from "../../lib/clientesUtils";
+import { getTotalCliente } from "../../lib/clienteHelpers";
+import ProtectedRoute from "../../components/ProtectedRoute";
+
+function PagosPageContent() {
+  const [fechaActual, setFechaActual] = useState(new Date());
+  const [clientes, setClientes] = useState([]);
+  const [filtroEstado, setFiltroEstado] = useState("todos");
+  const [busqueda, setBusqueda] = useState("");
+  const [mesSeleccionado, setMesSeleccionado] = useState(() => {
+    const hoy = new Date();
+    return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+  });
+
+  useEffect(() => {
+    setClientes(getClientes());
+    const timer = setInterval(() => {
+      setFechaActual(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Parsear mes seleccionado
+  const [añoSeleccionado, mesSeleccionadoNum] = mesSeleccionado.split('-').map(Number);
+  const mesIndex = mesSeleccionadoNum - 1;
+
+  // Calcular métricas del mes seleccionado
+  const mesActual = fechaActual.getMonth();
+  const añoActual = fechaActual.getFullYear();
+  const diaActual = fechaActual.getDate();
+  
+  // Determinar si estamos viendo el mes actual
+  const esMesActual = añoSeleccionado === añoActual && mesIndex === mesActual;
+  
+  // Obtener clientes con estado de pago del mes seleccionado
+  const clientesConEstado = clientes.map(cliente => {
+    const estadoMes = getEstadoPagoMes(cliente.id, mesIndex, añoSeleccionado);
+    return {
+      ...cliente,
+      pagado: estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false)
+    };
+  });
+
+  // Separar clientes mensuales de pago único solo para alertas
+  const clientesMensuales = clientesConEstado.filter(cliente => !cliente.pagoUnico);
+
+  // Métricas para TODOS los clientes (mensuales + pago único) del mes seleccionado
+  const totalEsperado = clientesConEstado.reduce((sum, cliente) => sum + getTotalCliente(cliente), 0);
+  const totalPagado = clientesConEstado
+    .filter(cliente => cliente.pagado)
+    .reduce((sum, cliente) => sum + getTotalCliente(cliente), 0);
+  const totalPendiente = totalEsperado - totalPagado;
+  const cantidadPagados = clientesConEstado.filter(cliente => cliente.pagado).length;
+  const cantidadPendientes = clientesConEstado.length - cantidadPagados;
+
+  // Clientes con fecha de pago próxima o vencida (solo mensuales y solo en mes actual)
+  const clientesConAlerta = esMesActual ? clientesMensuales.filter(cliente => {
+    if (cliente.pagado) return false;
+    
+    let diasHastaPago = cliente.fechaPago - diaActual;
+    
+    // Si el pago corresponde al mes siguiente y ya pasó la fecha este mes
+    if (cliente.pagoMesSiguiente && diasHastaPago < 0) {
+      const ultimoDiaMes = new Date(añoActual, mesActual + 1, 0).getDate();
+      diasHastaPago = (ultimoDiaMes - diaActual) + cliente.fechaPago;
+    }
+    
+    return diasHastaPago <= 3 && diasHastaPago >= -3; // 3 días antes o después
+  }) : [];
+
+  // Generar opciones de meses (últimos 12 meses + meses con registros)
+  const generarOpcionesMeses = () => {
+    const opciones = [];
+    const hoy = new Date();
+    const mesesConRegistros = getMesesConRegistros();
+    
+    // Agregar últimos 12 meses
+    for (let i = 0; i < 12; i++) {
+      const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+      const año = fecha.getFullYear();
+      const mes = fecha.getMonth() + 1;
+      const valor = `${año}-${String(mes).padStart(2, '0')}`;
+      const nombreMes = fecha.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+      
+      if (!opciones.find(o => o.value === valor)) {
+        opciones.push({ value: valor, label: nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1) });
+      }
+    }
+    
+    // Agregar meses con registros que no estén en los últimos 12
+    mesesConRegistros.forEach(mesKey => {
+      if (!opciones.find(o => o.value === mesKey)) {
+        const [año, mes] = mesKey.split('-');
+        const fecha = new Date(parseInt(año), parseInt(mes) - 1, 1);
+        const nombreMes = fecha.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+        opciones.push({ value: mesKey, label: nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1) });
+      }
+    });
+    
+    return opciones.sort((a, b) => b.value.localeCompare(a.value));
+  };
+
+  const formatearMoneda = (monto) => {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 0
+    }).format(monto);
+  };
+
+  const getEstadoPago = (cliente) => {
+    if (cliente.pagado) {
+      return { texto: "Pagado", tipo: "pagado", color: "text-green-400", bg: "bg-green-900/30", border: "border-green-700" };
+    }
+    
+    // Para clientes de pago único
+    if (cliente.pagoUnico) {
+      return { texto: "Pago Único", tipo: "pago-unico", color: "text-purple-400", bg: "bg-purple-900/30", border: "border-purple-700" };
+    }
+    
+    // Si no es el mes actual, solo mostrar estado pendiente o pagado
+    if (!esMesActual) {
+      return { texto: "Pendiente", tipo: "pendiente", color: "text-slate-400", bg: "bg-slate-800", border: "border-slate-700" };
+    }
+    
+    let diasHastaPago = cliente.fechaPago - diaActual;
+    
+    // Si el pago corresponde al mes siguiente y ya pasó la fecha este mes
+    if (cliente.pagoMesSiguiente && diasHastaPago < 0) {
+      // Calcular días hasta el pago del mes siguiente
+      const ultimoDiaMes = new Date(añoActual, mesActual + 1, 0).getDate();
+      diasHastaPago = (ultimoDiaMes - diaActual) + cliente.fechaPago;
+    }
+    
+    if (diasHastaPago < 0) {
+      return { texto: "Vencido", tipo: "vencido", color: "text-red-400", bg: "bg-red-900/30", border: "border-red-700" };
+    } else if (diasHastaPago === 0) {
+      return { texto: "Hoy", tipo: "hoy", color: "text-yellow-400", bg: "bg-yellow-900/30", border: "border-yellow-700" };
+    } else if (diasHastaPago <= 3) {
+      return { texto: `En ${diasHastaPago} días`, tipo: "proximo", color: "text-orange-400", bg: "bg-orange-900/30", border: "border-orange-700" };
+    } else {
+      const texto = cliente.pagoMesSiguiente && diasHastaPago > 28 
+        ? `Día ${cliente.fechaPago} (mes siguiente)`
+        : `Día ${cliente.fechaPago}`;
+      return { texto, tipo: "pendiente", color: "text-slate-400", bg: "bg-slate-800", border: "border-slate-700" };
+    }
+  };
+
+  // Filtrar clientes por estado y búsqueda
+  const clientesFiltrados = clientesConEstado.filter(cliente => {
+    // Filtro por estado
+    if (filtroEstado !== "todos") {
+      const estado = getEstadoPago(cliente);
+      
+      if (filtroEstado === "pagado" && estado.tipo !== "pagado") return false;
+      if (filtroEstado === "vencido" && estado.tipo !== "vencido") return false;
+      if (filtroEstado === "hoy" && estado.tipo !== "hoy") return false;
+      if (filtroEstado === "proximo" && estado.tipo !== "proximo") return false;
+      if (filtroEstado === "pendiente" && estado.tipo !== "pendiente") return false;
+      if (filtroEstado === "pago-unico" && estado.tipo !== "pago-unico") return false;
+    }
+    
+    // Filtro por búsqueda
+    if (busqueda.trim()) {
+      const termino = busqueda.toLowerCase();
+      const nombreMatch = cliente.nombre?.toLowerCase().includes(termino);
+      const rubroMatch = cliente.rubro?.toLowerCase().includes(termino);
+      
+      if (!nombreMatch && !rubroMatch) return false;
+    }
+    
+    return true;
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center flex-wrap gap-4">
+        <h2 className="text-2xl font-semibold">Pagos</h2>
+    </div>
+
+      {/* Métricas del mes */}
+      <div>
+        <p className="text-sm text-slate-400 mb-2">
+          Métricas de {new Date(añoSeleccionado, mesIndex, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
+          {!esMesActual && <span className="ml-2 text-xs text-slate-500">(Histórico)</span>}
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
+          <p className="text-sm text-slate-400 mb-1">Total Esperado</p>
+          <p className="text-2xl font-bold text-blue-400">{formatearMoneda(totalEsperado)}</p>
+        </div>
+        
+        <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
+          <p className="text-sm text-slate-400 mb-1">Total Pagado</p>
+          <p className="text-2xl font-bold text-green-400">{formatearMoneda(totalPagado)}</p>
+        </div>
+        
+        <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
+          <p className="text-sm text-slate-400 mb-1">Total Pendiente</p>
+          <p className="text-2xl font-bold text-orange-400">{formatearMoneda(totalPendiente)}</p>
+        </div>
+        
+        <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
+          <p className="text-sm text-slate-400 mb-1">Clientes</p>
+          <p className="text-2xl font-bold text-slate-300">
+            <span className="text-green-400">{cantidadPagados}</span>
+            <span className="text-slate-500 mx-1">/</span>
+            <span className="text-orange-400">{cantidadPendientes}</span>
+          </p>
+        </div>
+        </div>
+      </div>
+
+      {/* Alertas de fechas de pago */}
+      {clientesConAlerta.length > 0 && (
+        <div className="p-4 bg-yellow-900/20 border border-yellow-700 rounded-lg">
+          <h3 className="text-lg font-semibold text-yellow-400 mb-2">⚠️ Alertas de Pago</h3>
+          <div className="space-y-2">
+            {clientesConAlerta.map(cliente => {
+              const estado = getEstadoPago(cliente);
+              const diasHastaPago = cliente.fechaPago - diaActual;
+              return (
+                <Link
+                  key={cliente.id}
+                  href={`/clientes/${cliente.id}?from=pagos`}
+                  className="block flex justify-between items-center p-2 bg-slate-800 rounded hover:opacity-90 transition-opacity cursor-pointer"
+                >
+                  <div>
+                    <p className="font-medium">{cliente.nombre}</p>
+                    <p className="text-sm text-slate-400">
+                      {diasHastaPago < 0 
+                        ? `Vencido hace ${Math.abs(diasHastaPago)} día(s)` 
+                        : diasHastaPago === 0 
+                        ? "Vence hoy" 
+                        : `Vence en ${diasHastaPago} día(s)`}
+                    </p>
+                  </div>
+                  <p className="font-semibold text-yellow-400">{formatearMoneda(getTotalCliente(cliente))}</p>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Filtros y búsqueda */}
+      <div>
+        <h3 className="text-xl font-semibold mb-4">Clientes y Pagos</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          {/* Buscador */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Buscar:
+            </label>
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar por nombre o rubro..."
+              className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-blue-500 placeholder:text-slate-500"
+            />
+          </div>
+
+          {/* Filtro por estado */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Filtrar por estado:
+            </label>
+            <select
+              value={filtroEstado}
+              onChange={(e) => setFiltroEstado(e.target.value)}
+              className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-blue-500"
+            >
+              <option value="todos">Todos</option>
+              <option value="pagado">Pagado</option>
+              <option value="vencido">Vencido</option>
+              <option value="hoy">Vence Hoy</option>
+              <option value="proximo">Próximos (1-3 días)</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="pago-unico">Pago Único</option>
+            </select>
+          </div>
+        </div>
+
+        {(filtroEstado !== "todos" || busqueda.trim()) && (
+          <p className="text-sm text-slate-400 mb-4">
+            Mostrando {clientesFiltrados.length} de {clientesConEstado.length} clientes
+          </p>
+        )}
+        <div className="space-y-3">
+          {clientesFiltrados.map(cliente => {
+            const estado = getEstadoPago(cliente);
+            return (
+              <Link
+                key={cliente.id}
+                href={`/clientes/${cliente.id}?from=pagos`}
+                className={`block p-4 rounded-lg border ${estado.border} ${estado.bg} flex justify-between items-center hover:opacity-90 transition-opacity cursor-pointer`}
+              >
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h4 className="font-semibold text-lg">{cliente.nombre}</h4>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${estado.color} ${estado.bg}`}>
+                      {estado.texto}
+                    </span>
+                  </div>
+                  {cliente.rubro && <p className="text-sm text-slate-400">{cliente.rubro}</p>}
+                  <p className="text-sm text-slate-400 mt-1">
+                    {cliente.pagoUnico 
+                      ? "Pago único - No recurrente"
+                      : cliente.pagoMesSiguiente
+                      ? `Fecha de pago: día ${cliente.fechaPago} del mes siguiente`
+                      : `Fecha de pago: día ${cliente.fechaPago} de cada mes`
+                    }
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-slate-200">
+                    {formatearMoneda(getTotalCliente(cliente))}
+                  </p>
+                  {cliente.servicios && cliente.servicios.length > 1 && (
+                    <p className="text-xs text-slate-400 mt-1">
+                      {cliente.servicios.length} servicios
+                    </p>
+                  )}
+                </div>
+              </Link>
+            );
+          })}
+          {clientesFiltrados.length === 0 && (
+            <p className="text-slate-400 text-center py-4">
+              {filtroEstado !== "todos" 
+                ? `No hay clientes con estado "${filtroEstado}"`
+                : "No hay clientes"
+              }
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function PagosPage() {
+  return (
+    <ProtectedRoute>
+      <PagosPageContent />
+    </ProtectedRoute>
+  );
+}
+
