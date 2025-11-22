@@ -177,8 +177,8 @@ export async function POST(request) {
       const usuariosImportados = usuarios.map(usuario => ({
         crmId: usuario.id || usuario.crmId || `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         nombre: usuario.nombre,
-        email: usuario.email,
-        password: usuario.password,
+        email: usuario.email ? usuario.email.trim().toLowerCase() : usuario.email, // Normalizar email
+        password: usuario.password, // Mantener password tal cual
         rol: usuario.rol || 'usuario',
         fechaCreacion: usuario.fechaCreacion ? new Date(usuario.fechaCreacion) : new Date()
       }));
