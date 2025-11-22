@@ -205,14 +205,17 @@ function PagosPageContent() {
 
   // Función para toggle rápido del estado de pago
   const handleTogglePagado = async (cliente) => {
-    if (actualizandoClientes.has(cliente.id) || cliente.pagoUnico) return;
+    // Obtener ID del cliente de forma robusta
+    const clienteId = cliente._id || cliente.id || cliente.crmId;
+    const clienteKey = cliente.id || cliente._id || cliente.crmId;
     
-    const clienteId = cliente._id || cliente.id;
+    if (actualizandoClientes.has(clienteKey) || cliente.pagoUnico) return;
+    
     const nuevoEstado = !cliente.pagado;
     
     // Actualización optimista: cambiar estado inmediatamente en la UI
     setClientesConEstado(prev => prev.map(c => {
-      const cId = c._id || c.id;
+      const cId = c._id || c.id || c.crmId;
       if (cId === clienteId) {
         return { ...c, pagado: nuevoEstado };
       }
@@ -220,7 +223,7 @@ function PagosPageContent() {
     }));
     
     // Agregar a la lista de clientes actualizando
-    setActualizandoClientes(prev => new Set(prev).add(cliente.id));
+    setActualizandoClientes(prev => new Set(prev).add(clienteKey));
     
     try {
       // Limpiar caché antes de actualizar
@@ -236,41 +239,47 @@ function PagosPageContent() {
       if (!resultado) {
         // Revertir cambio si falló
         setClientesConEstado(prev => prev.map(c => {
-          const cId = c._id || c.id;
+          const cId = c._id || c.id || c.crmId;
           if (cId === clienteId) {
             return { ...c, pagado: !nuevoEstado };
           }
           return c;
         }));
         alert("Error al actualizar el estado de pago. Por favor, intenta nuevamente.");
-      } else {
-        // Actualizar también el estado del cliente directamente (para el mes actual)
-        const hoy = new Date();
-        const mesActual = hoy.getMonth();
-        const añoActual = hoy.getFullYear();
-        const esMesActual = añoSeleccionado === añoActual && mesIndex === mesActual;
-        
-        if (esMesActual) {
-          await actualizarCliente(clienteId, { pagado: nuevoEstado });
-        }
-        
-        // Limpiar caché después de actualizar
-        limpiarCacheClientes();
-        
-        // Actualizar también la lista de clientes base para mantener consistencia
-        setClientes(prev => prev.map(c => {
-          const cId = c._id || c.id;
-          if (cId === clienteId && esMesActual) {
-            return { ...c, pagado: nuevoEstado };
-          }
-          return c;
-        }));
+        return;
       }
+      
+      // Actualizar también el estado del cliente directamente (para el mes actual)
+      const hoy = new Date();
+      const mesActual = hoy.getMonth();
+      const añoActual = hoy.getFullYear();
+      const esMesActual = añoSeleccionado === añoActual && mesIndex === mesActual;
+      
+      if (esMesActual) {
+        try {
+          await actualizarCliente(clienteId, { pagado: nuevoEstado });
+          
+          // Actualizar también la lista de clientes base para mantener consistencia
+          setClientes(prev => prev.map(c => {
+            const cId = c._id || c.id || c.crmId;
+            if (cId === clienteId) {
+              return { ...c, pagado: nuevoEstado };
+            }
+            return c;
+          }));
+        } catch (err) {
+          console.error('Error al actualizar estado del cliente:', err);
+          // No revertir porque el estado mensual ya se guardó correctamente
+        }
+      }
+      
+      // Limpiar caché después de actualizar
+      limpiarCacheClientes();
     } catch (err) {
       console.error('Error al actualizar estado de pago:', err);
       // Revertir cambio si falló
       setClientesConEstado(prev => prev.map(c => {
-        const cId = c._id || c.id;
+        const cId = c._id || c.id || c.crmId;
         if (cId === clienteId) {
           return { ...c, pagado: !nuevoEstado };
         }
@@ -281,7 +290,7 @@ function PagosPageContent() {
       // Remover de la lista de clientes actualizando
       setActualizandoClientes(prev => {
         const nuevo = new Set(prev);
-        nuevo.delete(cliente.id);
+        nuevo.delete(clienteKey);
         return nuevo;
       });
     }

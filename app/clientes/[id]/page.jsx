@@ -99,23 +99,20 @@ function ClienteDetailPageContent() {
         // Revertir cambio si falló
         setCliente(prev => prev ? { ...prev, pagado: !nuevoEstado } : null);
         alert("Error al actualizar el estado de pago. Por favor, intenta nuevamente.");
-      } else {
-        // Actualizar también el estado del cliente directamente
+        return;
+      }
+      
+      // Actualizar también el estado del cliente directamente para sincronización
+      try {
         const { actualizarCliente } = await import('../../../lib/clientesUtils');
         await actualizarCliente(id, { pagado: nuevoEstado });
-        
-        // Limpiar caché después de actualizar
-        limpiarCacheClientes();
-        
-        // Recargar datos para asegurar sincronización
-        setTimeout(async () => {
-          const clienteData = await getClienteById(id, false);
-          if (clienteData) {
-            clienteData.pagado = Boolean(clienteData.pagado);
-            setCliente(clienteData);
-          }
-        }, 300);
+      } catch (err) {
+        console.error('Error al actualizar estado del cliente:', err);
+        // No revertir porque el estado mensual ya se guardó correctamente
       }
+      
+      // Limpiar caché después de actualizar
+      limpiarCacheClientes();
     } catch (err) {
       console.error('Error al actualizar estado de pago:', err);
       // Revertir cambio si falló
