@@ -14,6 +14,12 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+
+  // Optimizaciones para Vercel
+  experimental: {
+    // Optimizar para serverless
+    serverComponentsExternalPackages: ['mongoose'],
+  },
 };
 
 module.exports = nextConfig;

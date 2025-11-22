@@ -19,10 +19,13 @@ export async function GET(request) {
       query.crmClientId = { $in: idsArray };
     }
     
+    // Optimización: usar lean() y seleccionar solo campos necesarios
+    // El índice compuesto { mes: 1, crmClientId: 1 } hace esta query muy rápida
     const pagos = await MonthlyPayment.find(query)
       .select('mes crmClientId pagado fechaActualizacion createdAt updatedAt')
       .sort({ mes: -1, createdAt: -1 })
-      .lean();
+      .lean()
+      .maxTimeMS(5000); // Timeout máximo de 5 segundos
     
     return NextResponse.json({ success: true, data: pagos }, {
       headers: {
@@ -57,11 +60,18 @@ export async function PUT(request) {
     const body = await request.json();
     const { mes, crmClientId, pagado, fechaActualizacion } = body;
     
+    // Optimización: usar lean() y el índice compuesto para update rápido
     const pago = await MonthlyPayment.findOneAndUpdate(
-      { mes, crmClientId },
-      { pagado, fechaActualizacion: fechaActualizacion || new Date() },
-      { new: true, upsert: true }
-    );
+      { mes, crmClientId }, // Usa el índice compuesto { mes: 1, crmClientId: 1 }
+      { 
+        $set: {
+          pagado, 
+          fechaActualizacion: fechaActualizacion || new Date(),
+          updatedAt: new Date()
+        }
+      },
+      { new: true, upsert: true, lean: true }
+    ).select('-__v'); // Excluir campo __v
     
     return NextResponse.json({ success: true, data: pago });
   } catch (error) {

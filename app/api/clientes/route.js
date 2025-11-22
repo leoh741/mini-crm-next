@@ -5,11 +5,13 @@ import Client from '../../../models/Client';
 export async function GET() {
   try {
     await connectDB();
-    // Optimización: traer solo los campos necesarios y limitar resultados si es necesario
+    // Optimización: traer solo los campos necesarios, usar lean() y timeout
+    // El índice en createdAt hace el sort más rápido
     const clientes = await Client.find({})
       .select('crmId nombre rubro ciudad email montoPago fechaPago pagado pagoUnico pagoMesSiguiente servicios observaciones createdAt updatedAt')
       .sort({ createdAt: -1 })
-      .lean(); // Usar lean() para obtener objetos planos (más rápido)
+      .lean() // Usar lean() para obtener objetos planos (más rápido, sin overhead de Mongoose)
+      .maxTimeMS(5000); // Timeout máximo de 5 segundos
     
     return NextResponse.json({ success: true, data: clientes }, {
       headers: {

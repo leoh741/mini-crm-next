@@ -5,7 +5,8 @@ import Client from '../../../../models/Client';
 export async function GET(request, { params }) {
   try {
     await connectDB();
-    const cliente = await Client.findById(params.id);
+    // Usar lean() para obtener objetos planos (más rápido, menos overhead)
+    const cliente = await Client.findById(params.id).lean();
     
     if (!cliente) {
       return NextResponse.json(
@@ -14,7 +15,11 @@ export async function GET(request, { params }) {
       );
     }
     
-    return NextResponse.json({ success: true, data: cliente });
+    return NextResponse.json({ success: true, data: cliente }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60'
+      }
+    });
   } catch (error) {
     return NextResponse.json(
       { success: false, error: error.message },
@@ -69,11 +74,12 @@ export async function PUT(request, { params }) {
     console.log('Datos a actualizar en MongoDB:', JSON.stringify(updateData, null, 2));
     
     // Usar $set explícitamente para asegurar que false se guarde
+    // Usar lean() para respuesta más rápida y select solo campos necesarios
     const cliente = await Client.findByIdAndUpdate(
       params.id,
       { $set: updateData },
-      { new: true, runValidators: true }
-    );
+      { new: true, runValidators: true, lean: true }
+    ).select('-__v'); // Excluir campo __v de la respuesta
     
     if (!cliente) {
       return NextResponse.json(
