@@ -26,20 +26,38 @@ function ClienteDetailPageContent() {
     const cargarCliente = async () => {
       try {
         setLoading(true);
-        // OPTIMIZACIÓN: NO limpiar caché al cargar, solo al actualizar
-        // Usar caché para cargas más rápidas
-        const clienteData = await getClienteById(id, true);
+        setError("");
+        
+        if (!id) {
+          setError("ID de cliente no proporcionado");
+          setLoading(false);
+          return;
+        }
+        
+        console.log('Buscando cliente con ID:', id);
+        
+        // Intentar cargar sin caché primero para obtener datos frescos
+        let clienteData = await getClienteById(id, false);
+        
+        // Si no se encuentra, intentar con caché
+        if (!clienteData) {
+          console.warn('Cliente no encontrado sin caché, intentando con caché...');
+          clienteData = await getClienteById(id, true);
+        }
+        
         if (clienteData) {
           // Asegurar que pagado sea un booleano
           clienteData.pagado = Boolean(clienteData.pagado);
           setCliente(clienteData);
           setError("");
+          console.log('Cliente cargado exitosamente:', clienteData.nombre);
         } else {
-          setError("Cliente no encontrado");
+          console.error('Cliente no encontrado con ID:', id);
+          setError(`Cliente no encontrado. ID: ${id}`);
         }
       } catch (err) {
         console.error('Error al cargar cliente:', err);
-        setError('Error al cargar el cliente. Por favor, intenta nuevamente.');
+        setError(`Error al cargar el cliente: ${err.message || 'Error desconocido'}`);
       } finally {
         setLoading(false);
       }

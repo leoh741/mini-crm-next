@@ -5,28 +5,40 @@ import Client from '../../../../models/Client';
 export async function GET(request, { params }) {
   try {
     await connectDB();
+    const searchId = params.id;
+    
     // Buscar por _id o por crmId
     let cliente = null;
     
     // Primero intentar buscar por _id (ObjectId de MongoDB)
-    // Si params.id es un ObjectId válido, lo encontrará
-    // Si no, findById lanzará un error y buscaremos por crmId
-    try {
-      // Verificar si es un ObjectId válido (24 caracteres hexadecimales)
-      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(params.id);
-      if (isValidObjectId) {
-        cliente = await Client.findById(params.id).lean();
+    // Verificar si es un ObjectId válido (24 caracteres hexadecimales)
+    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(searchId);
+    if (isValidObjectId) {
+      try {
+        cliente = await Client.findById(searchId).lean();
+      } catch (idError) {
+        // Si falla, continuar para buscar por crmId
+        console.warn('Error al buscar por _id:', idError.message);
       }
-    } catch (idError) {
-      // Si falla, continuar para buscar por crmId
     }
     
     // Si no se encontró por _id, buscar por crmId
     if (!cliente) {
-      cliente = await Client.findOne({ crmId: params.id }).lean();
+      cliente = await Client.findOne({ crmId: searchId }).lean();
+    }
+    
+    // Si aún no se encuentra, intentar buscar en todos los clientes (fallback)
+    if (!cliente) {
+      const todosClientes = await Client.find({}).lean();
+      cliente = todosClientes.find(c => 
+        c._id?.toString() === searchId || 
+        c.crmId === searchId ||
+        String(c._id) === searchId
+      );
     }
     
     if (!cliente) {
+      console.error(`Cliente no encontrado con ID: ${searchId}`);
       return NextResponse.json(
         { success: false, error: 'Cliente no encontrado' },
         { status: 404 }
@@ -39,6 +51,7 @@ export async function GET(request, { params }) {
       }
     });
   } catch (error) {
+    console.error('Error en GET /api/clientes/[id]:', error);
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }
