@@ -29,8 +29,11 @@ function ClienteDetailPageContent() {
         const { limpiarCacheClientes } = await import('../../../lib/clientesUtils');
         limpiarCacheClientes();
         // Obtener sin caché para asegurar datos actualizados
+        // Agregar timestamp para forzar recarga
         const clienteData = await getClienteById(id, false);
         if (clienteData) {
+          // Asegurar que pagado sea un booleano
+          clienteData.pagado = Boolean(clienteData.pagado);
           setCliente(clienteData);
           setError("");
         } else {
@@ -44,6 +47,16 @@ function ClienteDetailPageContent() {
       }
     };
     cargarCliente();
+    
+    // Recargar cuando cambia el parámetro refresh en la URL
+    const refreshParam = searchParams.get('refresh');
+    if (refreshParam) {
+      // Forzar recarga después de un pequeño delay para asegurar que la BD se actualizó
+      const timer = setTimeout(() => {
+        cargarCliente();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
   }, [id, searchParams]);
 
   const handleEliminar = async () => {

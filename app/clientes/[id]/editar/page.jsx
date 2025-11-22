@@ -28,16 +28,21 @@ function EditarClientePageContent() {
 
   useEffect(() => {
     const cargarCliente = async () => {
-      const clienteData = await getClienteById(id);
+      // Limpiar caché antes de cargar
+      const { limpiarCacheClientes } = await import('../../../../lib/clientesUtils');
+      limpiarCacheClientes();
+      const clienteData = await getClienteById(id, false);
       if (clienteData) {
       setCliente(clienteData);
+      // Asegurar que pagado sea un booleano
+      const pagadoValue = Boolean(clienteData.pagado);
       setFormData({
         nombre: clienteData.nombre || "",
         rubro: clienteData.rubro || "",
         fechaPago: clienteData.fechaPago?.toString() || "",
-        pagoUnico: clienteData.pagoUnico || false,
-        pagado: clienteData.pagado || false,
-        pagoMesSiguiente: clienteData.pagoMesSiguiente || false,
+        pagoUnico: Boolean(clienteData.pagoUnico),
+        pagado: pagadoValue,
+        pagoMesSiguiente: Boolean(clienteData.pagoMesSiguiente),
         observaciones: clienteData.observaciones || ""
       });
       
@@ -153,30 +158,36 @@ function EditarClientePageContent() {
     const resultado = await actualizarCliente(id, datosActualizados);
 
     if (resultado) {
-      // Si se cambió el estado de pagado, también actualizar el registro mensual para el mes actual
-      if (cliente && formData.pagado !== cliente.pagado) {
-        try {
-          const hoy = new Date();
-          const mesActual = hoy.getMonth();
-          const añoActual = hoy.getFullYear();
-          const { guardarEstadoPagoMes } = await import('../../../../lib/clientesUtils');
-          // Obtener el ID correcto del cliente (puede ser _id o crmId)
-          const clienteId = cliente._id || cliente.id || cliente.crmId;
-          await guardarEstadoPagoMes(clienteId, mesActual, añoActual, formData.pagado);
-        } catch (err) {
-          console.error('Error al actualizar estado mensual de pago:', err);
-          // No fallar la actualización si hay error al actualizar el estado mensual
-        }
+      // Siempre actualizar el registro mensual para el mes actual cuando se cambia el estado de pagado
+      // Esto asegura que el estado mensual esté sincronizado con el estado del cliente
+      try {
+        const hoy = new Date();
+        const mesActual = hoy.getMonth();
+        const añoActual = hoy.getFullYear();
+        const { guardarEstadoPagoMes } = await import('../../../../lib/clientesUtils');
+        // Obtener el ID correcto del cliente (puede ser _id o crmId)
+        const clienteId = cliente._id || cliente.id || cliente.crmId;
+        // Actualizar el estado mensual con el nuevo valor de pagado
+        await guardarEstadoPagoMes(clienteId, mesActual, añoActual, formData.pagado);
+        console.log('Estado mensual actualizado:', { clienteId, mesActual, añoActual, pagado: formData.pagado });
+      } catch (err) {
+        console.error('Error al actualizar estado mensual de pago:', err);
+        // No fallar la actualización si hay error al actualizar el estado mensual
       }
       
       setSuccess(true);
       // Limpiar caché antes de redirigir
       const { limpiarCacheClientes } = await import('../../../../lib/clientesUtils');
       limpiarCacheClientes();
+      // Esperar un poco más para asegurar que la BD se actualizó completamente
       setTimeout(() => {
+        // Forzar recarga completa de la página de detalle
         router.push(`/clientes/${id}?refresh=${Date.now()}`);
-        router.refresh();
-      }, 1500);
+        // También refrescar el router para asegurar datos frescos
+        setTimeout(() => {
+          router.refresh();
+        }, 100);
+      }, 2000);
     } else {
       setError("Error al actualizar el cliente. Por favor, intenta nuevamente.");
       setLoading(false);
