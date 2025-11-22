@@ -66,9 +66,11 @@ function EditarClientePageContent() {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    const newValue = type === 'checkbox' ? checked : value;
+    console.log('Campo cambiado:', { name, value, type, checked, newValue });
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: newValue
     }));
     setError("");
   };
@@ -153,9 +155,21 @@ function EditarClientePageContent() {
     }
     
     console.log('Datos a actualizar:', datosActualizados);
+    console.log('Estado de pagado en formData:', { 
+      formDataPagado: formData.pagado, 
+      tipo: typeof formData.pagado,
+      booleano: Boolean(formData.pagado)
+    });
 
     // Actualizar cliente
     const resultado = await actualizarCliente(id, datosActualizados);
+    
+    if (!resultado) {
+      console.error('Error: actualizarCliente retornó false');
+      setError("Error al actualizar el cliente. Por favor, intenta nuevamente.");
+      setLoading(false);
+      return;
+    }
 
     if (resultado) {
       // Siempre actualizar el registro mensual para el mes actual cuando se cambia el estado de pagado

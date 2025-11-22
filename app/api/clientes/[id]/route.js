@@ -28,13 +28,20 @@ export async function PUT(request, { params }) {
     await connectDB();
     const body = await request.json();
     
+    console.log('PUT /api/clientes/[id] - Body recibido:', JSON.stringify(body, null, 2));
+    
     // Preparar objeto de actualización con $set para asegurar que false se guarde correctamente
     const updateData = {};
     
     // Asegurar que los campos booleanos sean explícitos y siempre se incluyan
+    // IMPORTANTE: Incluir siempre, incluso si es false
     if (body.pagado !== undefined) {
       updateData.pagado = Boolean(body.pagado);
+      console.log('Campo pagado a actualizar:', { valorOriginal: body.pagado, valorBooleano: updateData.pagado });
+    } else {
+      console.warn('Campo pagado NO está en el body, no se actualizará');
     }
+    
     if (body.pagoUnico !== undefined) {
       updateData.pagoUnico = Boolean(body.pagoUnico);
     }
@@ -52,6 +59,8 @@ export async function PUT(request, { params }) {
     if (body.servicios !== undefined) updateData.servicios = body.servicios;
     if (body.observaciones !== undefined) updateData.observaciones = body.observaciones;
     
+    console.log('Datos a actualizar en MongoDB:', JSON.stringify(updateData, null, 2));
+    
     // Usar $set explícitamente para asegurar que false se guarde
     const cliente = await Client.findByIdAndUpdate(
       params.id,
@@ -66,7 +75,12 @@ export async function PUT(request, { params }) {
       );
     }
     
-    console.log('Cliente actualizado:', { id: cliente._id, pagado: cliente.pagado });
+    console.log('Cliente actualizado en BD:', { 
+      id: cliente._id, 
+      nombre: cliente.nombre,
+      pagado: cliente.pagado,
+      tipoPagado: typeof cliente.pagado
+    });
     
     return NextResponse.json({ success: true, data: cliente });
   } catch (error) {
