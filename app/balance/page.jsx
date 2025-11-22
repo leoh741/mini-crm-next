@@ -96,6 +96,9 @@ function BalancePageContent() {
       try {
         setLoading(true);
         setError("");
+        // Limpiar caché para obtener datos frescos siempre
+        const { limpiarCacheClientes } = await import('../../lib/clientesUtils');
+        limpiarCacheClientes();
         const clientesData = await getClientes();
         setClientes(clientesData || []);
         
