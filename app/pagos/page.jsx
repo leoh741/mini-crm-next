@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { getClientes, getEstadosPagoMes, guardarEstadoPagoMes, getMesesConRegistros, limpiarCacheClientes, actualizarCliente } from "../../lib/clientesUtils";
+import { getClientes, getEstadosPagoMes, getMesesConRegistros } from "../../lib/clientesUtils";
 import { getTotalCliente } from "../../lib/clienteHelpers";
 import ProtectedRoute from "../../components/ProtectedRoute";
 
@@ -20,7 +20,6 @@ function PagosPageContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [opcionesMeses, setOpcionesMeses] = useState([]);
-  const [actualizandoClientes, setActualizandoClientes] = useState(new Set());
 
   useEffect(() => {
     const cargarOpcionesMeses = async () => {
@@ -208,117 +207,6 @@ function PagosPageContent() {
     }
   };
 
-  // Función para toggle rápido del estado de pago
-  const handleTogglePagado = async (cliente) => {
-    // Obtener ID del cliente de forma robusta
-    const clienteId = cliente._id || cliente.id || cliente.crmId;
-    const clienteKey = cliente.id || cliente._id || cliente.crmId;
-    
-    if (actualizandoClientes.has(clienteKey) || cliente.pagoUnico) return;
-    
-    const nuevoEstado = !cliente.pagado;
-    
-    // Actualización optimista: cambiar estado inmediatamente en la UI
-    setClientesConEstado(prev => prev.map(c => {
-      const cId = c._id || c.id || c.crmId;
-      if (cId === clienteId) {
-        return { ...c, pagado: nuevoEstado };
-      }
-      return c;
-    }));
-    
-    // Agregar a la lista de clientes actualizando
-    setActualizandoClientes(prev => new Set(prev).add(clienteKey));
-    
-    try {
-      // Obtener mes y año seleccionado
-      const [añoSeleccionado, mesSeleccionadoNum] = mesSeleccionado.split('-').map(Number);
-      const mesIndex = mesSeleccionadoNum - 1;
-      
-      // Actualizar también la lista de clientes base inmediatamente para mejor UX
-      const hoy = new Date();
-      const mesActual = hoy.getMonth();
-      const añoActual = hoy.getFullYear();
-      const esMesActual = añoSeleccionado === añoActual && mesIndex === mesActual;
-      
-      if (esMesActual) {
-        setClientes(prev => prev.map(c => {
-          const cId = c._id || c.id || c.crmId;
-          if (cId === clienteId) {
-            return { ...c, pagado: nuevoEstado };
-          }
-          return c;
-        }));
-      }
-      
-      // Actualizar ambas cosas en paralelo para mayor velocidad
-      const promesas = [
-        guardarEstadoPagoMes(clienteId, mesIndex, añoSeleccionado, nuevoEstado)
-      ];
-      
-      // Solo actualizar cliente si es mes actual (sin limpiar caché dentro de la función)
-      if (esMesActual) {
-        promesas.push(actualizarCliente(clienteId, { pagado: nuevoEstado }, false)); // false = no limpiar caché aquí
-      }
-      
-      const resultados = await Promise.allSettled(promesas);
-      
-      // Verificar si la actualización mensual fue exitosa (es la más importante)
-      const resultadoMensual = resultados[0];
-      const mensualExitoso = resultadoMensual.status === 'fulfilled' && resultadoMensual.value === true;
-      
-      if (!mensualExitoso) {
-        // Revertir cambio si falló
-        setClientesConEstado(prev => prev.map(c => {
-          const cId = c._id || c.id || c.crmId;
-          if (cId === clienteId) {
-            return { ...c, pagado: !nuevoEstado };
-          }
-          return c;
-        }));
-        
-        if (esMesActual) {
-          setClientes(prev => prev.map(c => {
-            const cId = c._id || c.id || c.crmId;
-            if (cId === clienteId) {
-              return { ...c, pagado: !nuevoEstado };
-            }
-            return c;
-          }));
-        }
-        
-        alert("Error al actualizar el estado de pago. Por favor, intenta nuevamente.");
-        return;
-      }
-      
-      // Si la actualización del cliente falló pero la mensual fue exitosa, registrar pero no revertir
-      if (esMesActual && resultados[1] && resultados[1].status === 'rejected') {
-        console.error('Error al actualizar estado del cliente:', resultados[1].reason);
-      }
-      
-      // Limpiar caché solo una vez después de actualizar
-      limpiarCacheClientes();
-    } catch (err) {
-      console.error('Error al actualizar estado de pago:', err);
-      // Revertir cambio si falló
-      setClientesConEstado(prev => prev.map(c => {
-        const cId = c._id || c.id || c.crmId;
-        if (cId === clienteId) {
-          return { ...c, pagado: !nuevoEstado };
-        }
-        return c;
-      }));
-      alert("Error al actualizar el estado de pago. Por favor, intenta nuevamente.");
-    } finally {
-      // Remover de la lista de clientes actualizando
-      setActualizandoClientes(prev => {
-        const nuevo = new Set(prev);
-        nuevo.delete(clienteKey);
-        return nuevo;
-      });
-    }
-  };
-
   // Filtrar clientes por estado y búsqueda (memoizado)
   const clientesFiltrados = useMemo(() => {
     return clientesConEstado.filter(cliente => {
@@ -501,34 +389,31 @@ function PagosPageContent() {
         <div className="space-y-3">
           {clientesFiltrados.map(cliente => {
             const estado = getEstadoPago(cliente);
-            const estaActualizando = actualizandoClientes.has(cliente.id);
             return (
-              <div
+              <Link
                 key={cliente.id}
-                className={`block p-3 md:p-4 rounded-lg border ${estado.border} ${estado.bg} flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3`}
+                href={`/clientes/${cliente.id}?from=pagos`}
+                prefetch={true}
+                className={`block p-3 md:p-4 rounded-lg border ${estado.border} ${estado.bg} hover:opacity-90 transition-opacity cursor-pointer`}
               >
-                <Link
-                  href={`/clientes/${cliente.id}?from=pagos`}
-                  prefetch={true}
-                  className="flex-1 w-full sm:w-auto hover:opacity-90 transition-opacity cursor-pointer"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-                    <h4 className="font-semibold text-base md:text-lg">{cliente.nombre}</h4>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${estado.color} ${estado.bg} self-start sm:self-auto`}>
-                      {estado.texto}
-                    </span>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                  <div className="flex-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                      <h4 className="font-semibold text-base md:text-lg">{cliente.nombre}</h4>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${estado.color} ${estado.bg} self-start sm:self-auto`}>
+                        {estado.texto}
+                      </span>
+                    </div>
+                    {cliente.rubro && <p className="text-xs md:text-sm text-slate-400">{cliente.rubro}</p>}
+                    <p className="text-xs md:text-sm text-slate-400 mt-1">
+                      {cliente.pagoUnico 
+                        ? "Pago único - No recurrente"
+                        : cliente.pagoMesSiguiente
+                        ? `Fecha de pago: día ${cliente.fechaPago} del mes siguiente`
+                        : `Fecha de pago: día ${cliente.fechaPago} de cada mes`
+                      }
+                    </p>
                   </div>
-                  {cliente.rubro && <p className="text-xs md:text-sm text-slate-400">{cliente.rubro}</p>}
-                  <p className="text-xs md:text-sm text-slate-400 mt-1">
-                    {cliente.pagoUnico 
-                      ? "Pago único - No recurrente"
-                      : cliente.pagoMesSiguiente
-                      ? `Fecha de pago: día ${cliente.fechaPago} del mes siguiente`
-                      : `Fecha de pago: día ${cliente.fechaPago} de cada mes`
-                    }
-                  </p>
-                </Link>
-                <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
                   <div className="text-left sm:text-right">
                     <p className="text-xl md:text-2xl font-bold text-slate-200">
                       {formatearMoneda(getTotalCliente(cliente))}
@@ -539,26 +424,8 @@ function PagosPageContent() {
                       </p>
                     )}
                   </div>
-                  {!cliente.pagoUnico && (
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleTogglePagado(cliente);
-                      }}
-                      disabled={estaActualizando}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
-                        cliente.pagado
-                          ? "bg-orange-600 hover:bg-orange-700 text-white"
-                          : "bg-green-600 hover:bg-green-700 text-white"
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
-                      title={cliente.pagado ? "Marcar como pendiente" : "Marcar como pagado"}
-                    >
-                      {estaActualizando ? "..." : cliente.pagado ? "Pendiente" : "Pagado"}
-                    </button>
-                  )}
                 </div>
-              </div>
+              </Link>
             );
           })}
           {clientesFiltrados.length === 0 && (
