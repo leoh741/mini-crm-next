@@ -13,12 +13,11 @@ function ClientesPageContent() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const cargarClientes = async () => {
+    const cargarClientes = async (forceRefresh = false) => {
       try {
         setLoading(true);
-        // OPTIMIZACIÓN: NO limpiar caché aquí, reutilizar si existe
-        // El caché ya se limpia cuando se actualiza/crea/elimina un cliente
-        const clientesData = await getClientes();
+        // Si se fuerza la recarga, pasar el parámetro a getClientes
+        const clientesData = await getClientes(forceRefresh);
         setClientes(clientesData || []);
         setError("");
       } catch (err) {
@@ -29,7 +28,31 @@ function ClientesPageContent() {
         setLoading(false);
       }
     };
+    
+    // Cargar clientes al montar
     cargarClientes();
+    
+    // Escuchar eventos de actualización (por ejemplo, después de importar)
+    const handleStorageChange = (e) => {
+      // Si se detecta que se limpió el caché, recargar
+      if (e.key === 'crm_clientes_cache' && e.newValue === null) {
+        cargarClientes(true); // Forzar recarga desde servidor
+      }
+    };
+    
+    // Escuchar cambios en localStorage
+    window.addEventListener('storage', handleStorageChange);
+    
+    // También escuchar eventos personalizados
+    const handleForceRefresh = () => {
+      cargarClientes(true);
+    };
+    window.addEventListener('clientes:force-refresh', handleForceRefresh);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('clientes:force-refresh', handleForceRefresh);
+    };
   }, []);
 
   // Filtrar clientes basado en la búsqueda (memoizado)
