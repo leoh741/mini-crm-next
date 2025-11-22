@@ -96,23 +96,29 @@ function BalancePageContent() {
       try {
         setLoading(true);
         setError("");
-        // Limpiar caché para obtener datos frescos siempre
-        const { limpiarCacheClientes } = await import('../../lib/clientesUtils');
-        limpiarCacheClientes();
-        const clientesData = await getClientes();
-        setClientes(clientesData || []);
         
+        // OPTIMIZACIÓN: NO limpiar caché al cargar, solo al actualizar
+        // Cargar datos en paralelo para mayor velocidad
         const [año, mes] = mesSeleccionado.split('-').map(Number);
         const mesIndex = mes - 1;
-        const gastosData = await getGastosMes(mesIndex, año);
-        const ingresosData = await getIngresosMes(mesIndex, año);
+        
+        // Cargar clientes, gastos e ingresos en paralelo
+        const [clientesData, gastosData, ingresosData] = await Promise.all([
+          getClientes(),
+          getGastosMes(mesIndex, año),
+          getIngresosMes(mesIndex, año)
+        ]);
+        
+        setClientes(clientesData || []);
         setGastos(gastosData || []);
         setIngresos(ingresosData || []);
         
-        // Cargar estados de pago (optimizado: una sola llamada)
+        // Cargar estados de pago (optimizado: una sola llamada con caché)
         const esMesActual = año === fechaActual.getFullYear() && mesIndex === fechaActual.getMonth();
         const clientesIds = (clientesData || []).map(c => c._id || c.id);
-        const estadosMap = await getEstadosPagoMes(clientesIds, mesIndex, año);
+        const estadosMap = clientesIds.length > 0
+          ? await getEstadosPagoMes(clientesIds, mesIndex, año, true) // usar caché
+          : {};
         
         const clientesConEstados = (clientesData || []).map(cliente => {
           const clienteId = cliente._id || cliente.id;

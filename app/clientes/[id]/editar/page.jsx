@@ -28,9 +28,8 @@ function EditarClientePageContent() {
 
   useEffect(() => {
     const cargarCliente = async () => {
-      // Limpiar caché antes de cargar
-      const { limpiarCacheClientes } = await import('../../../../lib/clientesUtils');
-      limpiarCacheClientes();
+      // OPTIMIZACIÓN: NO limpiar caché al cargar, solo al actualizar
+      // Usar caché para cargas más rápidas, pero forzar recarga sin caché para datos frescos en edición
       const clienteData = await getClienteById(id, false);
       if (clienteData) {
       setCliente(clienteData);

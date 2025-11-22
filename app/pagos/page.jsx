@@ -65,22 +65,27 @@ function PagosPageContent() {
       try {
         setLoading(true);
         setError("");
-        // Limpiar caché para obtener datos frescos
-        const { limpiarCacheClientes } = await import('../../lib/clientesUtils');
-        limpiarCacheClientes();
-        const clientesData = await getClientes();
-        setClientes(clientesData || []);
         
-        // Cargar estados de pago para cada cliente
+        // Calcular mes y año una vez
         const [añoSeleccionado, mesSeleccionadoNum] = mesSeleccionado.split('-').map(Number);
         const mesIndex = mesSeleccionadoNum - 1;
         const mesActual = fechaActual.getMonth();
         const añoActual = fechaActual.getFullYear();
         const esMesActual = añoSeleccionado === añoActual && mesIndex === mesActual;
         
-        // Optimización: obtener todos los estados de pago en una sola llamada
+        // OPTIMIZACIÓN CRÍTICA: NO limpiar caché al cargar, solo al actualizar
+        // Cargar clientes y estados en paralelo para mayor velocidad
+        const clientesData = await getClientes();
+        
+        // Mientras tanto, preparar IDs para la query de estados
         const clientesIds = (clientesData || []).map(c => c._id || c.id);
-        const estadosMap = await getEstadosPagoMes(clientesIds, mesIndex, añoSeleccionado);
+        
+        // Cargar estados en paralelo (o inmediatamente después si no hay clientes)
+        const estadosMap = clientesIds.length > 0 
+          ? await getEstadosPagoMes(clientesIds, mesIndex, añoSeleccionado, true) // usar caché
+          : {};
+        
+        setClientes(clientesData || []);
         
         const clientesConEstados = (clientesData || []).map(cliente => {
           const clienteId = cliente._id || cliente.id;

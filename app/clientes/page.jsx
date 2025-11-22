@@ -16,6 +16,8 @@ function ClientesPageContent() {
     const cargarClientes = async () => {
       try {
         setLoading(true);
+        // OPTIMIZACIÓN: NO limpiar caché aquí, reutilizar si existe
+        // El caché ya se limpia cuando se actualiza/crea/elimina un cliente
         const clientesData = await getClientes();
         setClientes(clientesData || []);
         setError("");

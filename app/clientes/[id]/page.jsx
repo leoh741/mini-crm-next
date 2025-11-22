@@ -26,12 +26,9 @@ function ClienteDetailPageContent() {
     const cargarCliente = async () => {
       try {
         setLoading(true);
-        // Limpiar caché y obtener datos frescos
-        const { limpiarCacheClientes } = await import('../../../lib/clientesUtils');
-        limpiarCacheClientes();
-        // Obtener sin caché para asegurar datos actualizados
-        // Agregar timestamp para forzar recarga
-        const clienteData = await getClienteById(id, false);
+        // OPTIMIZACIÓN: NO limpiar caché al cargar, solo al actualizar
+        // Usar caché para cargas más rápidas
+        const clienteData = await getClienteById(id, true);
         if (clienteData) {
           // Asegurar que pagado sea un booleano
           clienteData.pagado = Boolean(clienteData.pagado);
