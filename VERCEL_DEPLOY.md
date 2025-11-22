@@ -59,10 +59,22 @@ Si tienes un backup JSON, necesitas importarlo:
 ### Error: "Please define the MONGODB_URI environment variable"
 - **Solución**: Agrega `MONGODB_URI` en las variables de entorno de Vercel
 
-### Error: "MongoNetworkError" o "MongooseServerSelectionError"
+### Error: "MongoNetworkError" o "MongooseServerSelectionError" o "Could not connect to any servers"
+- **Causa**: MongoDB Atlas está bloqueando las conexiones desde Vercel porque las IPs de Vercel no están en la whitelist
 - **Solución**: 
-  - Verifica que tu IP esté en la whitelist de MongoDB Atlas
-  - En MongoDB Atlas, ve a **Network Access** y agrega `0.0.0.0/0` (todas las IPs) o la IP de Vercel
+  1. Ve a MongoDB Atlas: https://cloud.mongodb.com
+  2. Selecciona tu proyecto/cluster
+  3. Ve a **Network Access** (o Security → Network Access)
+  4. Haz clic en **"Add IP Address"**
+  5. Agrega `0.0.0.0/0` con el comentario "Allow All IPs (Vercel)"
+  6. Haz clic en **"Confirm"**
+  7. Espera 1-2 minutos para que se propague el cambio
+  8. Vuelve a intentar el login en Vercel
+  
+  **Nota de Seguridad**: `0.0.0.0/0` permite conexiones desde cualquier IP. Asegúrate de:
+  - Usar autenticación fuerte (usuario/contraseña)
+  - No exponer tu `MONGODB_URI` públicamente
+  - Considerar restringir IPs en producción si es necesario
 
 ### La aplicación muestra "Cargando..." indefinidamente
 - **Solución**: 
