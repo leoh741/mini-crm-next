@@ -2,12 +2,31 @@ import { NextResponse } from 'next/server';
 import connectDB from '../../../lib/mongo';
 import User from '../../../models/User';
 
-export async function GET() {
+export async function GET(request) {
   try {
     await connectDB();
-    const usuarios = await User.find({}).sort({ createdAt: -1 });
+    const { searchParams } = new URL(request.url);
+    const email = searchParams.get('email');
+    
+    // Si se busca por email, devolver solo ese usuario (case-insensitive)
+    if (email) {
+      const usuario = await User.findOne({ 
+        email: { $regex: new RegExp(`^${email}$`, 'i') } 
+      }).lean();
+      if (!usuario) {
+        return NextResponse.json(
+          { success: false, error: 'Usuario no encontrado' },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json({ success: true, data: usuario });
+    }
+    
+    // Si no hay email, devolver todos los usuarios
+    const usuarios = await User.find({}).sort({ createdAt: -1 }).lean();
     return NextResponse.json({ success: true, data: usuarios });
   } catch (error) {
+    console.error('[API] Error al obtener usuarios:', error);
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }

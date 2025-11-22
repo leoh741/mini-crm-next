@@ -39,7 +39,8 @@ export default function LoginPage() {
       router.push("/");
       router.refresh();
     } catch (err) {
-      setError(err.message || "Error al iniciar sesión");
+      console.error('Error en login:', err);
+      setError(err.message || "Error al iniciar sesión. Verifica tu conexión a internet y que la base de datos esté configurada.");
     } finally {
       setLoading(false);
     }
