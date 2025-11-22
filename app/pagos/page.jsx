@@ -17,29 +17,91 @@ function PagosPageContent() {
   });
 
   const [clientesConEstado, setClientesConEstado] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [opcionesMeses, setOpcionesMeses] = useState([]);
+
+  useEffect(() => {
+    const cargarOpcionesMeses = async () => {
+      try {
+        const opciones = [];
+        const hoy = new Date();
+        const mesesConRegistros = await getMesesConRegistros();
+        
+        // Agregar últimos 12 meses
+        for (let i = 0; i < 12; i++) {
+          const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+          const año = fecha.getFullYear();
+          const mes = fecha.getMonth() + 1;
+          const valor = `${año}-${String(mes).padStart(2, '0')}`;
+          const nombreMes = fecha.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+          
+          if (!opciones.find(o => o.value === valor)) {
+            opciones.push({ value: valor, label: nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1) });
+          }
+        }
+        
+        // Agregar meses con registros que no estén en los últimos 12
+        mesesConRegistros.forEach(mesKey => {
+          if (!opciones.find(o => o.value === mesKey)) {
+            const [año, mes] = mesKey.split('-');
+            const fecha = new Date(parseInt(año), parseInt(mes) - 1, 1);
+            const nombreMes = fecha.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+            opciones.push({ value: mesKey, label: nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1) });
+          }
+        });
+        
+        setOpcionesMeses(opciones.sort((a, b) => b.value.localeCompare(a.value)));
+      } catch (err) {
+        console.error('Error al cargar opciones de meses:', err);
+      }
+    };
+    cargarOpcionesMeses();
+  }, []);
 
   useEffect(() => {
     const cargarDatos = async () => {
-      const clientesData = await getClientes();
-      setClientes(clientesData);
-      
-      // Cargar estados de pago para cada cliente
-      const [añoSeleccionado, mesSeleccionadoNum] = mesSeleccionado.split('-').map(Number);
-      const mesIndex = mesSeleccionadoNum - 1;
-      const mesActual = fechaActual.getMonth();
-      const añoActual = fechaActual.getFullYear();
-      const esMesActual = añoSeleccionado === añoActual && mesIndex === mesActual;
-      
-      const clientesConEstados = await Promise.all(
-        clientesData.map(async (cliente) => {
-          const estadoMes = await getEstadoPagoMes(cliente.id, mesIndex, añoSeleccionado);
-          return {
-            ...cliente,
-            pagado: estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false)
-          };
-        })
-      );
-      setClientesConEstado(clientesConEstados);
+      try {
+        setLoading(true);
+        setError("");
+        const clientesData = await getClientes();
+        setClientes(clientesData || []);
+        
+        // Cargar estados de pago para cada cliente
+        const [añoSeleccionado, mesSeleccionadoNum] = mesSeleccionado.split('-').map(Number);
+        const mesIndex = mesSeleccionadoNum - 1;
+        const mesActual = fechaActual.getMonth();
+        const añoActual = fechaActual.getFullYear();
+        const esMesActual = añoSeleccionado === añoActual && mesIndex === mesActual;
+        
+        const clientesConEstados = await Promise.all(
+          (clientesData || []).map(async (cliente) => {
+            try {
+              // Usar _id si está disponible, sino usar id
+              const clienteId = cliente._id || cliente.id;
+              const estadoMes = await getEstadoPagoMes(clienteId, mesIndex, añoSeleccionado);
+              return {
+                ...cliente,
+                pagado: estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false)
+              };
+            } catch (err) {
+              console.error(`Error al cargar estado de pago para cliente ${cliente.id || cliente._id}:`, err);
+              return {
+                ...cliente,
+                pagado: esMesActual ? cliente.pagado : false
+              };
+            }
+          })
+        );
+        setClientesConEstado(clientesConEstados);
+      } catch (err) {
+        console.error('Error al cargar datos de pagos:', err);
+        setError('Error al cargar los datos. Por favor, recarga la página.');
+        setClientes([]);
+        setClientesConEstado([]);
+      } finally {
+        setLoading(false);
+      }
     };
     
     cargarDatos();
@@ -61,9 +123,6 @@ function PagosPageContent() {
   // Determinar si estamos viendo el mes actual
   const esMesActual = añoSeleccionado === añoActual && mesIndex === mesActual;
 
-  // Separar clientes mensuales de pago único solo para alertas
-  const clientesMensuales = clientesConEstado.filter(cliente => !cliente.pagoUnico);
-
   // Métricas para TODOS los clientes (mensuales + pago único) del mes seleccionado
   const totalEsperado = clientesConEstado.reduce((sum, cliente) => sum + getTotalCliente(cliente), 0);
   const totalPagado = clientesConEstado
@@ -73,7 +132,7 @@ function PagosPageContent() {
   const cantidadPagados = clientesConEstado.filter(cliente => cliente.pagado).length;
   const cantidadPendientes = clientesConEstado.length - cantidadPagados;
 
-  // Clientes con fecha de pago próxima o vencida (solo mensuales y solo en mes actual)
+  // Separar clientes mensuales de pago único solo para alertas
   const clientesMensuales = clientesConEstado.filter(cliente => !cliente.pagoUnico);
   const clientesConAlerta = esMesActual ? clientesMensuales.filter(cliente => {
     if (cliente.pagado) return false;
@@ -89,37 +148,6 @@ function PagosPageContent() {
     return diasHastaPago <= 3 && diasHastaPago >= -3; // 3 días antes o después
   }) : [];
 
-  // Generar opciones de meses (últimos 12 meses + meses con registros)
-  const generarOpcionesMeses = async () => {
-    const opciones = [];
-    const hoy = new Date();
-    const mesesConRegistros = await getMesesConRegistros();
-    
-    // Agregar últimos 12 meses
-    for (let i = 0; i < 12; i++) {
-      const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
-      const año = fecha.getFullYear();
-      const mes = fecha.getMonth() + 1;
-      const valor = `${año}-${String(mes).padStart(2, '0')}`;
-      const nombreMes = fecha.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
-      
-      if (!opciones.find(o => o.value === valor)) {
-        opciones.push({ value: valor, label: nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1) });
-      }
-    }
-    
-    // Agregar meses con registros que no estén en los últimos 12
-    mesesConRegistros.forEach(mesKey => {
-      if (!opciones.find(o => o.value === mesKey)) {
-        const [año, mes] = mesKey.split('-');
-        const fecha = new Date(parseInt(año), parseInt(mes) - 1, 1);
-        const nombreMes = fecha.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
-        opciones.push({ value: mesKey, label: nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1) });
-      }
-    });
-    
-    return opciones.sort((a, b) => b.value.localeCompare(a.value));
-  };
 
   const formatearMoneda = (monto) => {
     return new Intl.NumberFormat('es-AR', {
@@ -192,6 +220,28 @@ function PagosPageContent() {
     
     return true;
   });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-slate-300">Cargando datos de pagos...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 bg-red-900/50 border border-red-700 rounded-lg">
+        <p className="text-red-200">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm"
+        >
+          Recargar página
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

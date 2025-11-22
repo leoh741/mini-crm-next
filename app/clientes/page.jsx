@@ -9,11 +9,23 @@ import ProtectedRoute from "../../components/ProtectedRoute";
 function ClientesPageContent() {
   const [clientes, setClientes] = useState([]);
   const [busqueda, setBusqueda] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const cargarClientes = async () => {
-      const clientesData = await getClientes();
-      setClientes(clientesData);
+      try {
+        setLoading(true);
+        const clientesData = await getClientes();
+        setClientes(clientesData || []);
+        setError("");
+      } catch (err) {
+        console.error('Error al cargar clientes:', err);
+        setError('Error al cargar los clientes. Por favor, recarga la página.');
+        setClientes([]);
+      } finally {
+        setLoading(false);
+      }
     };
     cargarClientes();
   }, []);
@@ -28,6 +40,28 @@ function ClientesPageContent() {
     
     return nombreMatch || rubroMatch;
   });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-slate-300">Cargando clientes...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 bg-red-900/50 border border-red-700 rounded-lg">
+        <p className="text-red-200">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm"
+        >
+          Recargar página
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div>

@@ -31,17 +31,60 @@ function BalancePageContent() {
     categoria: ''
   });
 
+
+  // Parsear mes seleccionado
+  const [añoSeleccionado, mesSeleccionadoNum] = mesSeleccionado.split('-').map(Number);
+  const mesIndex = mesSeleccionadoNum - 1;
+
+  const [clientesConEstado, setClientesConEstado] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
   useEffect(() => {
     const cargarDatos = async () => {
-      const clientesData = await getClientes();
-      setClientes(clientesData);
-      
-      const [año, mes] = mesSeleccionado.split('-').map(Number);
-      const mesIndex = mes - 1;
-      const gastosData = await getGastosMes(mesIndex, año);
-      const ingresosData = await getIngresosMes(mesIndex, año);
-      setGastos(gastosData);
-      setIngresos(ingresosData);
+      try {
+        setLoading(true);
+        setError("");
+        const clientesData = await getClientes();
+        setClientes(clientesData || []);
+        
+        const [año, mes] = mesSeleccionado.split('-').map(Number);
+        const mesIndex = mes - 1;
+        const gastosData = await getGastosMes(mesIndex, año);
+        const ingresosData = await getIngresosMes(mesIndex, año);
+        setGastos(gastosData || []);
+        setIngresos(ingresosData || []);
+        
+        // Cargar estados de pago
+        const esMesActual = año === fechaActual.getFullYear() && mesIndex === fechaActual.getMonth();
+        const clientesConEstados = await Promise.all(
+          (clientesData || []).map(async (cliente) => {
+            try {
+              const estadoMes = await getEstadoPagoMes(cliente.id, mesIndex, año);
+              return {
+                ...cliente,
+                pagado: estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false)
+              };
+            } catch (err) {
+              console.error(`Error al cargar estado de pago para cliente ${cliente.id}:`, err);
+              return {
+                ...cliente,
+                pagado: esMesActual ? cliente.pagado : false
+              };
+            }
+          })
+        );
+        setClientesConEstado(clientesConEstados);
+      } catch (err) {
+        console.error('Error al cargar datos de balance:', err);
+        setError('Error al cargar los datos. Por favor, recarga la página.');
+        setClientes([]);
+        setGastos([]);
+        setIngresos([]);
+        setClientesConEstado([]);
+      } finally {
+        setLoading(false);
+      }
     };
     
     cargarDatos();
@@ -50,35 +93,6 @@ function BalancePageContent() {
     }, 1000);
     return () => clearInterval(timer);
   }, [mesSeleccionado]);
-
-  // Parsear mes seleccionado
-  const [añoSeleccionado, mesSeleccionadoNum] = mesSeleccionado.split('-').map(Number);
-  const mesIndex = mesSeleccionadoNum - 1;
-
-  const [clientesConEstado, setClientesConEstado] = useState([]);
-
-  useEffect(() => {
-    const cargarEstadosPago = async () => {
-      const [año, mes] = mesSeleccionado.split('-').map(Number);
-      const mesIndex = mes - 1;
-      const esMesActual = año === fechaActual.getFullYear() && mesIndex === fechaActual.getMonth();
-      
-      const clientesConEstados = await Promise.all(
-        clientes.map(async (cliente) => {
-          const estadoMes = await getEstadoPagoMes(cliente.id, mesIndex, año);
-          return {
-            ...cliente,
-            pagado: estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false)
-          };
-        })
-      );
-      setClientesConEstado(clientesConEstados);
-    };
-    
-    if (clientes.length > 0) {
-      cargarEstadosPago();
-    }
-  }, [clientes, mesSeleccionado, fechaActual]);
 
   // Ingresos calculados automáticamente (clientes pagados)
   const ingresosAutomaticos = clientesConEstado
@@ -226,7 +240,7 @@ function BalancePageContent() {
             onChange={(e) => setMesSeleccionado(e.target.value)}
             className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm"
           >
-            {generarOpcionesMeses().map(opcion => (
+            {opcionesMeses.map(opcion => (
               <option key={opcion.value} value={opcion.value}>
                 {opcion.label}
               </option>

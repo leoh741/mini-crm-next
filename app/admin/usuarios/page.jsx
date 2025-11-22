@@ -19,6 +19,7 @@ function UsuariosAdminContent() {
   });
   const [error, setError] = useState("");
   const [exito, setExito] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!esAdmin()) {
@@ -29,8 +30,18 @@ function UsuariosAdminContent() {
   }, [router]);
 
   const cargarUsuarios = async () => {
-    const usuariosData = await getUsuarios();
-    setUsuarios(usuariosData);
+    try {
+      setLoading(true);
+      const usuariosData = await getUsuarios();
+      setUsuarios(usuariosData || []);
+      setError("");
+    } catch (err) {
+      console.error('Error al cargar usuarios:', err);
+      setError('Error al cargar los usuarios. Por favor, recarga la página.');
+      setUsuarios([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -107,6 +118,14 @@ function UsuariosAdminContent() {
     setError("");
     setExito("");
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-slate-300">Cargando usuarios...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -16,13 +16,28 @@ function ClienteDetailPageContent() {
   const [cliente, setCliente] = useState(null);
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   const [eliminando, setEliminando] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   
   const fromPagos = searchParams.get('from') === 'pagos';
 
   useEffect(() => {
     const cargarCliente = async () => {
-      const clienteData = await getClienteById(id);
-      setCliente(clienteData);
+      try {
+        setLoading(true);
+        const clienteData = await getClienteById(id);
+        if (clienteData) {
+          setCliente(clienteData);
+          setError("");
+        } else {
+          setError("Cliente no encontrado");
+        }
+      } catch (err) {
+        console.error('Error al cargar cliente:', err);
+        setError('Error al cargar el cliente. Por favor, intenta nuevamente.');
+      } finally {
+        setLoading(false);
+      }
     };
     cargarCliente();
   }, [id]);
@@ -40,11 +55,21 @@ function ClienteDetailPageContent() {
     }
   };
 
-  if (!cliente) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-slate-300">Cargando cliente...</div>
+      </div>
+    );
+  }
+
+  if (error || !cliente) {
     return (
       <div>
-        <p>Cliente no encontrado.</p>
-        <Link href={fromPagos ? "/pagos" : "/clientes"}>← Volver</Link>
+        <p className="text-red-400 mb-4">{error || "Cliente no encontrado."}</p>
+        <Link href={fromPagos ? "/pagos" : "/clientes"} className="text-blue-400 hover:text-blue-300">
+          ← Volver
+        </Link>
       </div>
     );
   }
