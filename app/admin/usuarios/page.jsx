@@ -129,15 +129,15 @@ function UsuariosAdminContent() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h2 className="text-2xl font-semibold">Administración de Usuarios</h2>
-          <p className="text-slate-400 mt-1">Gestiona los usuarios del sistema</p>
+          <h2 className="text-xl md:text-2xl font-semibold">Administración de Usuarios</h2>
+          <p className="text-xs md:text-sm text-slate-400 mt-1">Gestiona los usuarios del sistema</p>
         </div>
         {!mostrarFormulario && (
           <button
             onClick={() => setMostrarFormulario(true)}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium"
+            className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium text-sm"
           >
             + Nuevo Usuario
           </button>
@@ -228,7 +228,8 @@ function UsuariosAdminContent() {
         </div>
       )}
 
-      <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+      {/* Vista de tabla para desktop */}
+      <div className="hidden md:block bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
         <table className="w-full">
           <thead className="bg-slate-700">
             <tr>
@@ -280,6 +281,57 @@ function UsuariosAdminContent() {
           <div className="p-8 text-center text-slate-400">
             No hay usuarios registrados
           </div>
+        )}
+      </div>
+
+      {/* Vista de cards para móvil */}
+      <div className="md:hidden space-y-3">
+        {usuarios.length === 0 ? (
+          <div className="p-8 text-center text-slate-400 bg-slate-800 rounded-lg border border-slate-700">
+            No hay usuarios registrados
+          </div>
+        ) : (
+          usuarios.map((usuario) => (
+            <div key={usuario.id} className="bg-slate-800 rounded-lg border border-slate-700 p-4 space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-base mb-1">{usuario.nombre}</h3>
+                  <p className="text-sm text-slate-300 break-words">{usuario.email}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-slate-400 font-medium">Rol:</span>
+                <span className={`px-3 py-1.5 rounded text-sm font-medium whitespace-nowrap ${
+                  usuario.rol === 'admin' 
+                    ? 'bg-purple-900/50 text-purple-200' 
+                    : 'bg-slate-700 text-slate-300'
+                }`}>
+                  {usuario.rol === 'admin' ? 'Administrador' : 'Usuario'}
+                </span>
+              </div>
+              
+              <div className="text-xs text-slate-400">
+                <span className="font-medium">Fecha Creación: </span>
+                {new Date(usuario.fechaCreacion).toLocaleDateString('es-ES')}
+              </div>
+              
+              <div className="flex gap-2 pt-2 border-t border-slate-700">
+                <button
+                  onClick={() => handleEditar(usuario)}
+                  className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium"
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={() => handleEliminar(usuario.id, usuario.nombre)}
+                  className="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 rounded text-sm font-medium"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          ))
         )}
       </div>
     </div>
