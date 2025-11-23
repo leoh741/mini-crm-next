@@ -126,17 +126,18 @@ export async function PUT(request, { params }) {
     console.log('Datos a actualizar en MongoDB:', JSON.stringify(updateData, null, 2));
     
     // Usar $set explícitamente para asegurar que false se guarde
-    // Optimizado para MongoDB Free: sin validadores, sin lean en update (más rápido)
+    // Optimizado para MongoDB Free: sin validadores para mayor velocidad
     const clienteActualizado = await Client.findByIdAndUpdate(
       cliente._id,
       { $set: updateData },
       { 
         new: true, 
         runValidators: false, // Desactivar validadores para mayor velocidad
-        lean: true,
-        maxTimeMS: 3000 // Timeout de 3 segundos
+        maxTimeMS: 8000 // Timeout de 8 segundos (aumentado para MongoDB Free)
       }
-    ).select('-__v -__t'); // Excluir campos innecesarios
+    )
+    .select('crmId nombre rubro ciudad email montoPago fechaPago pagado pagoUnico pagoMesSiguiente servicios observaciones')
+    .lean(); // Usar lean() después para obtener objeto plano (más rápido)
     
     if (!clienteActualizado) {
       return NextResponse.json(

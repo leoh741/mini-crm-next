@@ -80,7 +80,7 @@ export async function PUT(request) {
         upsert: true, 
         lean: true,
         runValidators: false, // Desactivar validadores para mayor velocidad
-        maxTimeMS: 3000 // Timeout de 3 segundos
+        maxTimeMS: 8000 // Timeout de 8 segundos (aumentado para MongoDB Free)
       }
     ).select('-__v -__t'); // Excluir campos innecesarios
     

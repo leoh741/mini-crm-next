@@ -118,7 +118,11 @@ function ClienteDetailPageContent() {
       if (!mensualExitoso && !clienteExitoso) {
         // Revertir cambio si ambas fallaron
         setCliente(prev => prev ? { ...prev, pagado: !nuevoEstado } : null);
-        alert("Error al actualizar el estado de pago. Por favor, intenta nuevamente.");
+        const errorMensual = resultadoMensual.status === 'rejected' ? resultadoMensual.reason?.message : '';
+        const errorCliente = resultadoCliente.status === 'rejected' ? resultadoCliente.reason?.message : '';
+        console.error('Error al actualizar estado mensual:', resultadoMensual.reason);
+        console.error('Error al actualizar estado del cliente:', resultadoCliente.reason);
+        alert(`Error al actualizar el estado de pago. ${errorCliente || errorMensual || 'Por favor, intenta nuevamente.'}`);
         return;
       }
       
@@ -128,6 +132,9 @@ function ClienteDetailPageContent() {
       }
       if (!clienteExitoso) {
         console.error('Error al actualizar estado del cliente:', resultadoCliente.reason);
+        // Mostrar error más específico
+        const errorMsg = resultadoCliente.reason?.message || 'Error desconocido';
+        console.error('Detalles del error:', errorMsg);
       }
       
       // Limpiar caché solo una vez después de actualizar
