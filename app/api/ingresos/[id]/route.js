@@ -5,7 +5,7 @@ import Income from '../../../../models/Income';
 export async function DELETE(request, { params }) {
   try {
     await connectDB();
-    const ingreso = await Income.findByIdAndDelete(params.id);
+    const ingreso = await Income.findByIdAndDelete(params.id, { maxTimeMS: 3000 });
     
     if (!ingreso) {
       return NextResponse.json(

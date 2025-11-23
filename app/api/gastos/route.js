@@ -14,7 +14,8 @@ export async function GET(request) {
     const gastos = await Expense.find(query)
       .select('crmId descripcion monto fecha categoria fechaCreacion createdAt updatedAt')
       .sort({ periodo: -1, createdAt: -1 })
-      .lean();
+      .lean()
+      .maxTimeMS(3000); // Timeout reducido para MongoDB Free
     
     return NextResponse.json({ success: true, data: gastos }, {
       headers: {
@@ -39,7 +40,11 @@ export async function POST(request) {
       body.crmId = `expense-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     }
     
-    const gasto = await Expense.create(body);
+    // Optimizado para MongoDB Free: sin validadores para mayor velocidad
+    const gasto = await Expense.create(body, { 
+      runValidators: false,
+      maxTimeMS: 3000 
+    });
     return NextResponse.json({ success: true, data: gasto }, { status: 201 });
   } catch (error) {
     return NextResponse.json(

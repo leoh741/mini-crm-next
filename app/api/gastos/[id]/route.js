@@ -5,7 +5,7 @@ import Expense from '../../../../models/Expense';
 export async function DELETE(request, { params }) {
   try {
     await connectDB();
-    const gasto = await Expense.findByIdAndDelete(params.id);
+    const gasto = await Expense.findByIdAndDelete(params.id, { maxTimeMS: 3000 });
     
     if (!gasto) {
       return NextResponse.json(

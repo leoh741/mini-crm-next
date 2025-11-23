@@ -11,31 +11,27 @@ export async function GET(request, { params }) {
     let cliente = null;
     
     // Primero intentar buscar por _id (ObjectId de MongoDB)
-    // Verificar si es un ObjectId válido (24 caracteres hexadecimales)
-    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(searchId);
-    if (isValidObjectId) {
-      try {
-        cliente = await Client.findById(searchId).lean();
-      } catch (idError) {
-        // Si falla, continuar para buscar por crmId
-        console.warn('Error al buscar por _id:', idError.message);
+      // Verificar si es un ObjectId válido (24 caracteres hexadecimales)
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(searchId);
+      if (isValidObjectId) {
+        try {
+          cliente = await Client.findById(searchId)
+            .select('crmId nombre rubro ciudad email montoPago fechaPago pagado pagoUnico pagoMesSiguiente servicios observaciones')
+            .lean()
+            .maxTimeMS(3000);
+        } catch (idError) {
+          // Si falla, continuar para buscar por crmId
+          console.warn('Error al buscar por _id:', idError.message);
+        }
       }
-    }
-    
-    // Si no se encontró por _id, buscar por crmId
-    if (!cliente) {
-      cliente = await Client.findOne({ crmId: searchId }).lean();
-    }
-    
-    // Si aún no se encuentra, intentar buscar en todos los clientes (fallback)
-    if (!cliente) {
-      const todosClientes = await Client.find({}).lean();
-      cliente = todosClientes.find(c => 
-        c._id?.toString() === searchId || 
-        c.crmId === searchId ||
-        String(c._id) === searchId
-      );
-    }
+      
+      // Si no se encontró por _id, buscar por crmId (usando índice)
+      if (!cliente) {
+        cliente = await Client.findOne({ crmId: searchId })
+          .select('crmId nombre rubro ciudad email montoPago fechaPago pagado pagoUnico pagoMesSiguiente servicios observaciones')
+          .lean()
+          .maxTimeMS(3000);
+      }
     
     if (!cliente) {
       console.error(`Cliente no encontrado con ID: ${searchId}`);
@@ -130,12 +126,17 @@ export async function PUT(request, { params }) {
     console.log('Datos a actualizar en MongoDB:', JSON.stringify(updateData, null, 2));
     
     // Usar $set explícitamente para asegurar que false se guarde
-    // Usar lean() para respuesta más rápida y select solo campos necesarios
+    // Optimizado para MongoDB Free: sin validadores, sin lean en update (más rápido)
     const clienteActualizado = await Client.findByIdAndUpdate(
       cliente._id,
       { $set: updateData },
-      { new: true, runValidators: true, lean: true }
-    ).select('-__v'); // Excluir campo __v de la respuesta
+      { 
+        new: true, 
+        runValidators: false, // Desactivar validadores para mayor velocidad
+        lean: true,
+        maxTimeMS: 3000 // Timeout de 3 segundos
+      }
+    ).select('-__v -__t'); // Excluir campos innecesarios
     
     if (!clienteActualizado) {
       return NextResponse.json(
@@ -190,8 +191,10 @@ export async function DELETE(request, { params }) {
       );
     }
     
-    // Eliminar usando el _id encontrado
-    await Client.findByIdAndDelete(cliente._id);
+    // Eliminar usando el _id encontrado (optimizado para MongoDB Free)
+    await Client.findByIdAndDelete(cliente._id, { 
+      maxTimeMS: 3000 
+    });
     
     return NextResponse.json({ success: true, data: cliente });
   } catch (error) {

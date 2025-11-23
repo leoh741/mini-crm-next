@@ -16,15 +16,21 @@ export async function GET(request) {
       // Escapar caracteres especiales para regex
       const emailEscapado = emailLimpio.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       
-      // Intentar buscar de múltiples formas
+      // Intentar buscar de múltiples formas (optimizado para MongoDB Free)
       let usuario = await User.findOne({ 
         email: { $regex: new RegExp(`^${emailEscapado}$`, 'i') } 
-      }).lean();
+      })
+      .select('crmId nombre email password rol fechaCreacion')
+      .lean()
+      .maxTimeMS(3000);
       
       // Si no se encuentra con regex, intentar búsqueda exacta (case-insensitive)
       if (!usuario) {
-        // Buscar todos los usuarios y filtrar en memoria (fallback)
-        const todosUsuarios = await User.find({}).lean();
+        // Buscar todos los usuarios y filtrar en memoria (fallback optimizado)
+        const todosUsuarios = await User.find({})
+          .select('crmId nombre email password rol fechaCreacion')
+          .lean()
+          .maxTimeMS(3000);
         usuario = todosUsuarios.find(u => 
           u.email && u.email.trim().toLowerCase() === emailLimpio
         );
@@ -42,7 +48,11 @@ export async function GET(request) {
     }
     
     // Si no hay email, devolver todos los usuarios
-    const usuarios = await User.find({}).sort({ createdAt: -1 }).lean();
+    const usuarios = await User.find({})
+      .select('crmId nombre email password rol fechaCreacion createdAt')
+      .sort({ createdAt: -1 })
+      .lean()
+      .maxTimeMS(3000);
     return NextResponse.json({ success: true, data: usuarios });
   } catch (error) {
     console.error('[API /usuarios] Error completo:', {
@@ -80,7 +90,11 @@ export async function POST(request) {
       body.crmId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     }
     
-    const usuario = await User.create(body);
+    // Optimizado para MongoDB Free: sin validadores para mayor velocidad
+    const usuario = await User.create(body, { 
+      runValidators: false,
+      maxTimeMS: 3000 
+    });
     return NextResponse.json({ success: true, data: usuario }, { status: 201 });
   } catch (error) {
     return NextResponse.json(

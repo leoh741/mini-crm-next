@@ -5,7 +5,10 @@ import User from '../../../../models/User';
 export async function GET(request, { params }) {
   try {
     await connectDB();
-    const usuario = await User.findById(params.id);
+    const usuario = await User.findById(params.id)
+      .select('crmId nombre email password rol fechaCreacion')
+      .lean()
+      .maxTimeMS(3000);
     
     if (!usuario) {
       return NextResponse.json(
@@ -30,7 +33,12 @@ export async function PUT(request, { params }) {
     const usuario = await User.findByIdAndUpdate(
       params.id,
       body,
-      { new: true, runValidators: true }
+      { 
+        new: true, 
+        runValidators: false, // Desactivar validadores para mayor velocidad
+        lean: true,
+        maxTimeMS: 3000
+      }
     );
     
     if (!usuario) {
@@ -52,7 +60,7 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     await connectDB();
-    const usuario = await User.findByIdAndDelete(params.id);
+    const usuario = await User.findByIdAndDelete(params.id, { maxTimeMS: 3000 });
     
     if (!usuario) {
       return NextResponse.json(

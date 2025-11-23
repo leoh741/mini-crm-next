@@ -25,7 +25,7 @@ export async function GET(request) {
       .select('mes crmClientId pagado fechaActualizacion createdAt updatedAt')
       .sort({ mes: -1, createdAt: -1 })
       .lean()
-      .maxTimeMS(5000); // Timeout máximo de 5 segundos
+      .maxTimeMS(3000); // Timeout reducido a 3 segundos para MongoDB Free
     
     return NextResponse.json({ success: true, data: pagos }, {
       headers: {
@@ -44,7 +44,11 @@ export async function POST(request) {
   try {
     await connectDB();
     const body = await request.json();
-    const pago = await MonthlyPayment.create(body);
+    // Optimizado para MongoDB Free: sin validadores para mayor velocidad
+    const pago = await MonthlyPayment.create(body, { 
+      runValidators: false,
+      maxTimeMS: 3000 
+    });
     return NextResponse.json({ success: true, data: pago }, { status: 201 });
   } catch (error) {
     return NextResponse.json(
@@ -61,6 +65,7 @@ export async function PUT(request) {
     const { mes, crmClientId, pagado, fechaActualizacion } = body;
     
     // Optimización: usar lean() y el índice compuesto para update rápido
+    // Optimizado para MongoDB Free: sin validadores, timeout reducido
     const pago = await MonthlyPayment.findOneAndUpdate(
       { mes, crmClientId }, // Usa el índice compuesto { mes: 1, crmClientId: 1 }
       { 
@@ -70,8 +75,14 @@ export async function PUT(request) {
           updatedAt: new Date()
         }
       },
-      { new: true, upsert: true, lean: true }
-    ).select('-__v'); // Excluir campo __v
+      { 
+        new: true, 
+        upsert: true, 
+        lean: true,
+        runValidators: false, // Desactivar validadores para mayor velocidad
+        maxTimeMS: 3000 // Timeout de 3 segundos
+      }
+    ).select('-__v -__t'); // Excluir campos innecesarios
     
     return NextResponse.json({ success: true, data: pago });
   } catch (error) {
