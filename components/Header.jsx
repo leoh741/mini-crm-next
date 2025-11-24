@@ -68,7 +68,7 @@ function Header() {
           <Link href="/balance" prefetch={true} className={pathname === "/balance" ? "text-blue-300" : ""}>
             Balance
           </Link>
-          {usuario && (
+          {esAdminUser && (
             <Link href="/admin/usuarios" prefetch={true} className={pathname?.startsWith("/admin") ? "text-blue-300" : ""}>
               Usuarios
             </Link>
@@ -142,7 +142,7 @@ function Header() {
             >
               Balance
             </Link>
-            {usuario && (
+            {esAdminUser && (
               <Link 
                 href="/admin/usuarios" 
                 prefetch={true}

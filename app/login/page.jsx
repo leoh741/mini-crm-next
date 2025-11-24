@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { login } from "../../lib/authUtils";
 import { estaAutenticado } from "../../lib/authUtils";
 
@@ -103,15 +102,6 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-6 pt-6 border-t border-slate-700">
-          <p className="text-sm text-slate-400 text-center">
-            ¿No tienes una cuenta?{" "}
-            <Link href="/registro" className="text-blue-400 hover:text-blue-300 underline">
-              Regístrate
-            </Link>
-          </p>
-        </div>
-
-        <div className="mt-4 pt-4 border-t border-slate-700">
           <p className="text-xs text-slate-400 text-center">
             Digital Space CRM Copyright © 2025 - Todos los derechos reservados
           </p>

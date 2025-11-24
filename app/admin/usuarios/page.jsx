@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import ProtectedRoute from "../../../components/ProtectedRoute";
+import { esAdmin } from "../../../lib/authUtils";
 import { getUsuarios, crearUsuario, eliminarUsuario, actualizarUsuario, cambiarPassword } from "../../../lib/usuariosUtils";
 
 function UsuariosAdminContent() {
+  const router = useRouter();
   const [usuarios, setUsuarios] = useState([]);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [usuarioEditando, setUsuarioEditando] = useState(null);
@@ -19,8 +22,12 @@ function UsuariosAdminContent() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!esAdmin()) {
+      router.push("/");
+      return;
+    }
     cargarUsuarios();
-  }, []);
+  }, [router]);
 
   const cargarUsuarios = async () => {
     try {
