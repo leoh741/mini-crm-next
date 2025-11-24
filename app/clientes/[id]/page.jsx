@@ -175,48 +175,95 @@ function ClienteDetailPageContent() {
   };
 
   const handleToggleServicioPagado = async (indiceServicio) => {
-    if (!cliente || actualizandoServicio === indiceServicio) return;
+    if (!cliente || actualizandoServicio === indiceServicio || actualizandoPago) return;
     
     setActualizandoServicio(indiceServicio);
     
+    const hoy = new Date();
+    const mesActual = hoy.getMonth();
+    const añoActual = hoy.getFullYear();
+    const clienteId = cliente._id || cliente.id || cliente.crmId;
+    
+    const serviciosPagados = estadoPagoMes?.serviciosPagados || {};
+    const estadoAnterior = serviciosPagados[indiceServicio] === true;
+    const nuevoEstado = !estadoAnterior;
+    
+    // Actualización optimista inmediata
+    const nuevosServiciosPagados = { ...serviciosPagados, [indiceServicio]: nuevoEstado };
+    const estadoAnteriorCompleto = { ...estadoPagoMes };
+    setEstadoPagoMes(prev => ({ 
+      ...prev, 
+      serviciosPagados: nuevosServiciosPagados 
+    }));
+    
+    // Calcular nuevo estado general
+    const todosPagados = todosLosServiciosPagados(cliente, nuevosServiciosPagados);
+    const clienteAnterior = cliente;
+    if (cliente.pagado !== todosPagados) {
+      setCliente(prev => prev ? { ...prev, pagado: todosPagados } : null);
+    }
+    
     try {
-      const hoy = new Date();
-      const mesActual = hoy.getMonth();
-      const añoActual = hoy.getFullYear();
-      const clienteId = cliente._id || cliente.id || cliente.crmId;
-      
-      const serviciosPagados = estadoPagoMes?.serviciosPagados || {};
-      const nuevoEstado = !(serviciosPagados[indiceServicio] === true);
-      
-      // Actualización optimista
-      const nuevosServiciosPagados = { ...serviciosPagados, [indiceServicio]: nuevoEstado };
-      setEstadoPagoMes(prev => ({ ...prev, serviciosPagados: nuevosServiciosPagados }));
-      
+      // Guardar en el servidor
       await guardarEstadoPagoServicio(clienteId, mesActual, añoActual, indiceServicio, nuevoEstado);
       
-      // Recargar estado de pago completo
-      const estadoActualizado = await getEstadoPagoMes(clienteId, mesActual, añoActual, false);
-      setEstadoPagoMes(estadoActualizado || { serviciosPagados: nuevosServiciosPagados });
-      
-      // Actualizar estado pagado general del cliente si todos los servicios están pagados
-      const todosPagados = todosLosServiciosPagados(cliente, nuevosServiciosPagados);
-      if (cliente.pagado !== todosPagados) {
-        setCliente(prev => prev ? { ...prev, pagado: todosPagados } : null);
-        const { actualizarCliente } = await import('../../../lib/clientesUtils');
-        await actualizarCliente(id, { pagado: todosPagados }, false);
+      // Actualizar estado general del cliente si cambió
+      if (clienteAnterior.pagado !== todosPagados) {
+        try {
+          const { actualizarCliente } = await import('../../../lib/clientesUtils');
+          await actualizarCliente(id, { pagado: todosPagados }, false);
+        } catch (err) {
+          console.warn('Error al actualizar estado general del cliente (no crítico):', err);
+          // No revertir si solo falla esto
+        }
       }
       
-      limpiarCacheClientes();
+      // Esperar un poco para que el servidor procese, luego verificar
+      setTimeout(async () => {
+        try {
+          const estadoVerificado = await getEstadoPagoMes(clienteId, mesActual, añoActual, false);
+          if (estadoVerificado) {
+            // Verificar que el estado se guardó correctamente
+            const servicioGuardado = estadoVerificado.serviciosPagados?.[indiceServicio];
+            if (servicioGuardado !== nuevoEstado) {
+              console.warn('Estado del servicio no coincide con el guardado, sincronizando...');
+              // Sincronizar si hay diferencia
+              setEstadoPagoMes(prev => ({
+                ...prev,
+                serviciosPagados: estadoVerificado.serviciosPagados || prev.serviciosPagados
+              }));
+            }
+          }
+        } catch (err) {
+          console.warn('Error al verificar estado guardado:', err);
+        }
+      }, 500);
+      
+      // Limpiar caché después de un pequeño delay para permitir que la BD se actualice
+      setTimeout(() => {
+        limpiarCacheClientes();
+      }, 300);
+      
     } catch (err) {
       console.error('Error al actualizar estado de pago del servicio:', err);
-      alert("Error al actualizar el estado de pago del servicio. Por favor, intenta nuevamente.");
-      // Recargar estado original
-      const hoy = new Date();
-      const mesActual = hoy.getMonth();
-      const añoActual = hoy.getFullYear();
-      const clienteId = cliente._id || cliente.id || cliente.crmId;
-      const estado = await getEstadoPagoMes(clienteId, mesActual, añoActual, true);
-      setEstadoPagoMes(estado || { serviciosPagados: {} });
+      
+      // Revertir actualización optimista
+      setEstadoPagoMes(estadoAnteriorCompleto);
+      setCliente(clienteAnterior);
+      
+      alert(`Error al actualizar el estado de pago del servicio: ${err.message || 'Error desconocido'}. Por favor, intenta nuevamente.`);
+      
+      // Intentar recargar estado desde el servidor para sincronizar
+      try {
+        const estadoRecargado = await getEstadoPagoMes(clienteId, mesActual, añoActual, false);
+        if (estadoRecargado) {
+          setEstadoPagoMes(estadoRecargado);
+          const todosPagadosRecargados = todosLosServiciosPagados(cliente, estadoRecargado.serviciosPagados || {});
+          setCliente(prev => prev ? { ...prev, pagado: todosPagadosRecargados } : null);
+        }
+      } catch (reloadErr) {
+        console.error('Error al recargar estado después de fallo:', reloadErr);
+      }
     } finally {
       setActualizandoServicio(null);
     }
@@ -227,37 +274,60 @@ function ClienteDetailPageContent() {
     
     setActualizandoPago(true);
     
+    const hoy = new Date();
+    const mesActual = hoy.getMonth();
+    const añoActual = hoy.getFullYear();
+    const clienteId = cliente._id || cliente.id || cliente.crmId;
+    
+    // Guardar estado anterior para rollback
+    const estadoAnteriorCompleto = { ...estadoPagoMes };
+    const clienteAnterior = cliente;
+    
+    // Calcular nuevo estado
+    const todosPagados = todosLosServiciosPagados(cliente, nuevosServiciosPagados);
+    
+    // Actualización optimista
+    setEstadoPagoMes(prev => ({ ...prev, serviciosPagados: nuevosServiciosPagados }));
+    setCliente(prev => prev ? { ...prev, pagado: todosPagados } : null);
+    
     try {
-      const hoy = new Date();
-      const mesActual = hoy.getMonth();
-      const añoActual = hoy.getFullYear();
-      const clienteId = cliente._id || cliente.id || cliente.crmId;
-      
-      // Actualización optimista
-      setEstadoPagoMes(prev => ({ ...prev, serviciosPagados: nuevosServiciosPagados }));
-      
-      // Calcular si todos están pagados
-      const todosPagados = todosLosServiciosPagados(cliente, nuevosServiciosPagados);
-      
       // Guardar estados de pago
       await guardarEstadoPagoMes(clienteId, mesActual, añoActual, todosPagados, nuevosServiciosPagados);
       
       // Actualizar estado general del cliente
-      setCliente(prev => prev ? { ...prev, pagado: todosPagados } : null);
-      const { actualizarCliente } = await import('../../../lib/clientesUtils');
-      await actualizarCliente(id, { pagado: todosPagados }, false);
+      try {
+        const { actualizarCliente } = await import('../../../lib/clientesUtils');
+        await actualizarCliente(id, { pagado: todosPagados }, false);
+      } catch (err) {
+        console.warn('Error al actualizar estado general del cliente (no crítico):', err);
+        // No revertir si solo falla esto
+      }
       
-      limpiarCacheClientes();
+      // Limpiar caché después de un pequeño delay
+      setTimeout(() => {
+        limpiarCacheClientes();
+      }, 300);
+      
     } catch (err) {
       console.error('Error al actualizar estados de pago:', err);
-      alert("Error al actualizar los estados de pago. Por favor, intenta nuevamente.");
-      // Recargar estado original
-      const hoy = new Date();
-      const mesActual = hoy.getMonth();
-      const añoActual = hoy.getFullYear();
-      const clienteId = cliente._id || cliente.id || cliente.crmId;
-      const estado = await getEstadoPagoMes(clienteId, mesActual, añoActual, true);
-      setEstadoPagoMes(estado || { serviciosPagados: {} });
+      
+      // Revertir actualización optimista
+      setEstadoPagoMes(estadoAnteriorCompleto);
+      setCliente(clienteAnterior);
+      
+      alert(`Error al actualizar los estados de pago: ${err.message || 'Error desconocido'}. Por favor, intenta nuevamente.`);
+      
+      // Intentar recargar estado desde el servidor
+      try {
+        const estadoRecargado = await getEstadoPagoMes(clienteId, mesActual, añoActual, false);
+        if (estadoRecargado) {
+          setEstadoPagoMes(estadoRecargado);
+          const todosPagadosRecargados = todosLosServiciosPagados(cliente, estadoRecargado.serviciosPagados || {});
+          setCliente(prev => prev ? { ...prev, pagado: todosPagadosRecargados } : null);
+        }
+      } catch (reloadErr) {
+        console.error('Error al recargar estado después de fallo:', reloadErr);
+      }
     } finally {
       setActualizandoPago(false);
     }
