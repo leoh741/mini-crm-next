@@ -4,19 +4,25 @@ import Client from '../../../../models/Client';
 
 export async function POST(req) {
   try {
+    console.log('[IMPORT CLIENTS] Iniciando importación...');
     await connectDB();
+    console.log('[IMPORT CLIENTS] Conectado a MongoDB');
 
-    const { data } = await req.json();
+    const body = await req.json();
+    const { data } = body;
+    console.log('[IMPORT CLIENTS] Datos recibidos, cantidad:', Array.isArray(data) ? data.length : 'NO ES ARRAY');
+    
     // "data" debe ser un array de clientes provenientes del JSON
-
     if (!Array.isArray(data)) {
+      console.error('[IMPORT CLIENTS] Error: data no es un array, tipo:', typeof data);
       return NextResponse.json(
-        { ok: false, message: 'El payload "data" debe ser un array' },
+        { ok: false, message: 'El payload "data" debe ser un array', error: `Tipo recibido: ${typeof data}` },
         { status: 400 }
       );
     }
 
     if (data.length === 0) {
+      console.warn('[IMPORT CLIENTS] Array vacío recibido');
       return NextResponse.json(
         { ok: false, message: 'El array de clientes está vacío' },
         { status: 400 }
@@ -44,17 +50,21 @@ export async function POST(req) {
     // await Client.deleteMany({});
 
     // Intentar insertar los clientes en MongoDB
+    console.log('[IMPORT CLIENTS] Preparando insertar', clientesImportados.length, 'clientes');
     try {
-      await Client.insertMany(clientesImportados, { ordered: false });
+      const result = await Client.insertMany(clientesImportados, { ordered: false });
+      console.log('[IMPORT CLIENTS] Insertados:', result.length, 'clientes');
 
       return NextResponse.json({
         ok: true,
-        inserted: clientesImportados.length,
-        message: `Se importaron ${clientesImportados.length} clientes correctamente`
+        inserted: result.length,
+        message: `Se importaron ${result.length} clientes correctamente`
       });
     } catch (insertError) {
+      console.error('[IMPORT CLIENTS] Error en insertMany:', insertError);
       // Si hay errores de duplicados, intentar uno por uno con upsert
       if (insertError.code === 11000 || insertError.name === 'BulkWriteError') {
+        console.log('[IMPORT CLIENTS] Intentando insertar uno por uno debido a duplicados...');
         let insertados = 0;
         let actualizados = 0;
         for (const cliente of clientesImportados) {
@@ -72,9 +82,10 @@ export async function POST(req) {
               actualizados++;
             }
           } catch (e) {
-            console.warn('Error al insertar/actualizar cliente:', e.message);
+            console.warn('[IMPORT CLIENTS] Error al insertar/actualizar cliente:', e.message);
           }
         }
+        console.log('[IMPORT CLIENTS] Resultado final - Insertados:', insertados, 'Actualizados:', actualizados);
         
         return NextResponse.json({
           ok: true,
@@ -87,10 +98,11 @@ export async function POST(req) {
       throw insertError;
     }
   } catch (error) {
-    console.error('Error importando clientes:', error);
+    console.error('[IMPORT CLIENTS] Error importando clientes:', error);
+    console.error('[IMPORT CLIENTS] Stack:', error.stack);
 
     return NextResponse.json(
-      { ok: false, message: 'Error al importar clientes: ' + error.message },
+      { ok: false, message: 'Error al importar clientes', error: String(error) },
       { status: 500 }
     );
   }
