@@ -37,7 +37,7 @@ function HomePageContent() {
   };
 
   return (
-    <div className="flex flex-col space-y-4">
+    <div className="flex flex-col space-y-3">
       <div className="flex-shrink-0">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <div>
@@ -54,9 +54,9 @@ function HomePageContent() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Link href="/clientes" className="group" prefetch={true}>
-          <div className="relative w-full min-h-[140px] p-4 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-blue-500/20 flex flex-col justify-between">
+          <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-blue-500/20 flex flex-col justify-between">
             <div className="flex items-start justify-between mb-2">
               <div className="text-3xl group-hover:scale-110 transition-transform duration-300">👥</div>
               <div className="w-1.5 h-1.5 bg-blue-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -70,7 +70,7 @@ function HomePageContent() {
         </Link>
 
         <Link href="/pagos" className="group" prefetch={true}>
-          <div className="relative w-full min-h-[140px] p-4 bg-gradient-to-br from-green-600 via-green-700 to-green-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-green-500/20 flex flex-col justify-between">
+          <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-green-600 via-green-700 to-green-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-green-500/20 flex flex-col justify-between">
             <div className="flex items-start justify-between mb-2">
               <div className="text-3xl group-hover:scale-110 transition-transform duration-300">💰</div>
               <div className="w-1.5 h-1.5 bg-green-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -84,7 +84,7 @@ function HomePageContent() {
         </Link>
 
         <Link href="/clientes/nuevo" className="group" prefetch={true}>
-          <div className="relative w-full min-h-[140px] p-4 bg-gradient-to-br from-purple-600 via-purple-700 to-purple-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-purple-500/20 flex flex-col justify-between">
+          <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-purple-600 via-purple-700 to-purple-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-purple-500/20 flex flex-col justify-between">
             <div className="flex items-start justify-between mb-2">
               <div className="text-3xl group-hover:scale-110 transition-transform duration-300">➕</div>
               <div className="w-1.5 h-1.5 bg-purple-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -98,7 +98,7 @@ function HomePageContent() {
         </Link>
 
         <Link href="/balance" className="group" prefetch={true}>
-          <div className="relative w-full min-h-[140px] p-4 bg-gradient-to-br from-orange-600 via-orange-700 to-orange-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-orange-500/20 flex flex-col justify-between">
+          <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-orange-600 via-orange-700 to-orange-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-orange-500/20 flex flex-col justify-between">
             <div className="flex items-start justify-between mb-2">
               <div className="text-3xl group-hover:scale-110 transition-transform duration-300">📊</div>
               <div className="w-1.5 h-1.5 bg-orange-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -112,7 +112,35 @@ function HomePageContent() {
         </Link>
       </div>
 
-      <div className="flex-shrink-0 mt-4 pt-4 border-t border-slate-700">
+      <div className="flex-shrink-0 mt-3 pt-3 border-t border-slate-700">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold text-slate-300">Presupuestos</h3>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Link
+              href="/presupuestos/nuevo"
+              className="group relative flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-cyan-500/30 overflow-hidden text-center"
+            >
+              <span className="relative z-10 flex items-center justify-center gap-1.5">
+                <span className="text-sm">📋</span>
+                <span>Nuevo Presupuesto</span>
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+            </Link>
+            <Link
+              href="/presupuestos"
+              className="group relative flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-cyan-500/30 overflow-hidden text-center"
+            >
+              <span className="relative z-10 flex items-center justify-center gap-1.5">
+                <span className="text-sm">📑</span>
+                <span>Ver Presupuestos</span>
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-shrink-0 mt-3 pt-3 border-t border-slate-700">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <h3 className="text-sm font-semibold text-slate-300">Respaldo</h3>
           <div className="flex gap-2 w-full sm:w-auto">
@@ -161,7 +189,7 @@ function HomePageContent() {
       </div>
 
       {isAdmin && (
-        <div className="flex-shrink-0 mt-4 pt-4 border-t border-slate-700">
+        <div className="flex-shrink-0 mt-3 pt-3 border-t border-slate-700">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <h3 className="text-sm font-semibold text-slate-300">Usuarios</h3>
             <Link

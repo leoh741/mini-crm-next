@@ -68,6 +68,9 @@ function Header() {
           <Link href="/balance" prefetch={true} className={pathname === "/balance" ? "text-blue-300" : ""}>
             Balance
           </Link>
+          <Link href="/presupuestos" prefetch={true} className={pathname?.startsWith("/presupuestos") ? "text-blue-300" : ""}>
+            Presupuestos
+          </Link>
           {esAdminUser && (
             <Link href="/admin/usuarios" prefetch={true} className={pathname?.startsWith("/admin") ? "text-blue-300" : ""}>
               Usuarios
@@ -141,6 +144,13 @@ function Header() {
               onClick={() => setMenuAbierto(false)}
             >
               Balance
+            </Link>
+            <Link 
+              href="/presupuestos" 
+              className={`px-4 py-3 ${pathname?.startsWith("/presupuestos") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
+              onClick={() => setMenuAbierto(false)}
+            >
+              Presupuestos
             </Link>
             {esAdminUser && (
               <Link 
