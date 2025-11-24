@@ -334,7 +334,6 @@ function NuevoClientePageContent() {
                     </div>
                   </div>
                 </div>
-                </div>
               </div>
             ))}
           </div>
