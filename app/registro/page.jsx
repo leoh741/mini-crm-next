@@ -3,13 +3,16 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { crearUsuario } from "../../lib/usuariosUtils";
 import { login } from "../../lib/authUtils";
 import { estaAutenticado } from "../../lib/authUtils";
 
-export default function LoginPage() {
+export default function RegistroPage() {
   const router = useRouter();
+  const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -36,13 +39,39 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
+    // Validaciones
+    if (password !== confirmPassword) {
+      setError("Las contraseñas no coinciden");
+      setLoading(false);
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres");
+      setLoading(false);
+      return;
+    }
+
     try {
-      await login(email, password);
+      // Crear el usuario
+      await crearUsuario({
+        nombre: nombre.trim(),
+        email: email.trim().toLowerCase(),
+        password: password,
+        rol: "usuario" // Por defecto todos los usuarios nuevos son "usuario"
+      });
+
+      // Hacer login automático después de registrarse
+      await login(email.trim().toLowerCase(), password);
       router.push("/");
       router.refresh();
     } catch (err) {
-      console.error('Error en login:', err);
-      setError(err.message || "Error al iniciar sesión. Verifica tu conexión a internet y que la base de datos esté configurada.");
+      console.error('Error en registro:', err);
+      if (err.message.includes('duplicate') || err.message.includes('ya existe')) {
+        setError("Este email ya está registrado. Por favor, inicia sesión.");
+      } else {
+        setError(err.message || "Error al registrarse. Verifica tu conexión a internet y que la base de datos esté configurada.");
+      }
     } finally {
       setLoading(false);
     }
@@ -53,7 +82,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md p-6 md:p-8 bg-slate-800 rounded-lg border border-slate-700">
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold mb-2">Digital Space CRM</h1>
-          <p className="text-slate-400">Inicia sesión para continuar</p>
+          <p className="text-slate-400">Crea una cuenta nueva</p>
         </div>
 
         {error && (
@@ -63,6 +92,21 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="nombre" className="block text-sm font-medium mb-2">
+              Nombre
+            </label>
+            <input
+              id="nombre"
+              type="text"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              required
+              className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Tu nombre completo"
+            />
+          </div>
+
           <div>
             <label htmlFor="email" className="block text-sm font-medium mb-2">
               Email
@@ -88,6 +132,23 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              minLength={6}
+              className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="••••••••"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium mb-2">
+              Confirmar Contraseña
+            </label>
+            <input
+              id="confirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              minLength={6}
               className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="••••••••"
             />
@@ -98,15 +159,15 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
           >
-            {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
+            {loading ? "Registrando..." : "Registrarse"}
           </button>
         </form>
 
         <div className="mt-6 pt-6 border-t border-slate-700">
           <p className="text-sm text-slate-400 text-center">
-            ¿No tienes una cuenta?{" "}
-            <Link href="/registro" className="text-blue-400 hover:text-blue-300 underline">
-              Regístrate
+            ¿Ya tienes una cuenta?{" "}
+            <Link href="/login" className="text-blue-400 hover:text-blue-300 underline">
+              Inicia sesión
             </Link>
           </p>
         </div>

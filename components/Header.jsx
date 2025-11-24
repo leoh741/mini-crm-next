@@ -30,8 +30,8 @@ function Header() {
     router.refresh();
   }, [router]);
 
-  // No mostrar header en la página de login
-  if (pathname === "/login") {
+  // No mostrar header en la página de login o registro
+  if (pathname === "/login" || pathname === "/registro") {
     return null;
   }
 

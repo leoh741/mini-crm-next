@@ -1,50 +1,47 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { estaAutenticado, login } from "../lib/authUtils";
+import { useRouter, usePathname } from "next/navigation";
+import { estaAutenticado } from "../lib/authUtils";
 
 export default function ProtectedRoute({ children }) {
   const router = useRouter();
-  const [autenticado, setAutenticado] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return estaAutenticado();
-    }
-    return false;
-  });
-  const [cargando, setCargando] = useState(!autenticado);
+  const pathname = usePathname();
+  const [autenticado, setAutenticado] = useState(false);
+  const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    const hacerLoginAutomatico = async () => {
-      // Si ya está autenticado, no hacer nada
-      if (estaAutenticado()) {
-        setAutenticado(true);
-        setCargando(false);
+    // Verificar autenticación
+    const verificarAutenticacion = () => {
+      if (typeof window === 'undefined') {
         return;
       }
 
-      // Hacer login automático con las credenciales por defecto
-      try {
-        await login('leoh741@gmail.com', 'Leonel1234');
-        setAutenticado(true);
-        setCargando(false);
-      } catch (error) {
-        console.error('Error en login automático:', error);
-        // Si falla el login automático, redirigir al login manual
+      const estaAuth = estaAutenticado();
+      setAutenticado(estaAuth);
+      setCargando(false);
+
+      // Si no está autenticado y no está en login o registro, redirigir
+      if (!estaAuth && pathname !== '/login' && pathname !== '/registro') {
         router.push("/login");
       }
     };
 
-    hacerLoginAutomatico();
-  }, [router]);
+    verificarAutenticacion();
+  }, [router, pathname]);
 
-  // Mostrar carga mientras se autentica
-  if (cargando || !autenticado) {
+  // Mostrar carga solo mientras se verifica
+  if (cargando) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-slate-300">Cargando...</div>
       </div>
     );
+  }
+
+  // Si no está autenticado, no mostrar el contenido (ya se redirigió)
+  if (!autenticado) {
+    return null;
   }
 
   return <>{children}</>;
