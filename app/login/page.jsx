@@ -20,7 +20,23 @@ export default function LoginPage() {
     // Si ya está autenticado, redirigir al inicio
     if (estaAutenticado()) {
       router.push("/");
+      return;
     }
+    
+    // Hacer login automático
+    const hacerLoginAutomatico = async () => {
+      try {
+        await login('leoh741@gmail.com', 'Leonel1234');
+        router.push("/");
+        router.refresh();
+      } catch (error) {
+        console.error('Error en login automático:', error);
+        // Si falla, mostrar el formulario de login manual
+        setError('No se pudo iniciar sesión automáticamente. Por favor, inicia sesión manualmente.');
+      }
+    };
+    
+    hacerLoginAutomatico();
     
     // Cleanup: restaurar scroll al desmontar
     return () => {

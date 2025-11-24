@@ -1,37 +1,48 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { estaAutenticado } from "../lib/authUtils";
+import { estaAutenticado, login } from "../lib/authUtils";
 
 export default function ProtectedRoute({ children }) {
   const router = useRouter();
-  // Verificación inicial síncrona para evitar delay visual
   const [autenticado, setAutenticado] = useState(() => {
     if (typeof window !== 'undefined') {
       return estaAutenticado();
     }
     return false;
   });
+  const [cargando, setCargando] = useState(!autenticado);
 
   useEffect(() => {
-    // Verificación adicional en el cliente
-    const autenticadoActual = estaAutenticado();
-    if (!autenticadoActual) {
-      router.push("/login");
-      return;
-    }
-    // Solo actualizar si cambió el estado
-    if (!autenticado) {
-      setAutenticado(true);
-    }
-  }, [router, autenticado]);
+    const hacerLoginAutomatico = async () => {
+      // Si ya está autenticado, no hacer nada
+      if (estaAutenticado()) {
+        setAutenticado(true);
+        setCargando(false);
+        return;
+      }
 
-  // Evitar render innecesario si no está autenticado
-  if (!autenticado) {
+      // Hacer login automático con las credenciales por defecto
+      try {
+        await login('leoh741@gmail.com', 'Leonel1234');
+        setAutenticado(true);
+        setCargando(false);
+      } catch (error) {
+        console.error('Error en login automático:', error);
+        // Si falla el login automático, redirigir al login manual
+        router.push("/login");
+      }
+    };
+
+    hacerLoginAutomatico();
+  }, [router]);
+
+  // Mostrar carga mientras se autentica
+  if (cargando || !autenticado) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-slate-300">Verificando...</div>
+        <div className="text-slate-300">Cargando...</div>
       </div>
     );
   }
