@@ -101,10 +101,47 @@ function PagosPageContent() {
         const clientesConEstados = clientesData.map(cliente => {
           const clienteId = cliente._id || cliente.id || cliente.crmId;
           const estadoMes = estadosMap[clienteId];
+          let serviciosPagados = estadoMes ? (estadoMes.serviciosPagados || {}) : {};
+          
+          // Migración automática: Si el cliente tiene servicios pero serviciosPagados está vacío o incompleto,
+          // y el estado pagado general es true, migrar todos los servicios como pagados
+          if (cliente.servicios && Array.isArray(cliente.servicios) && cliente.servicios.length > 0) {
+            const estadoPagadoGeneral = estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false);
+            
+            // Si está marcado como pagado pero no tiene serviciosPagados definidos, inicializar todos como pagados
+            if (estadoPagadoGeneral && Object.keys(serviciosPagados).length === 0) {
+              const serviciosMigrados = {};
+              cliente.servicios.forEach((_, index) => {
+                serviciosMigrados[index] = true;
+              });
+              serviciosPagados = serviciosMigrados;
+              
+              // Sincronizar en background (no esperar)
+              const hoy = new Date();
+              const mesActual = hoy.getMonth();
+              const añoActual = hoy.getFullYear();
+              import('../../lib/clientesUtils').then(({ guardarEstadoPagoMes }) => {
+                guardarEstadoPagoMes(clienteId, mesActual, añoActual, true, serviciosPagados)
+                  .catch(err => console.warn('Error al migrar servicios pagados:', err));
+              }).catch(err => console.warn('Error al importar clientesUtils:', err));
+            }
+          }
+          
+          // Si el cliente tiene servicios, calcular pagado basándose en serviciosPagados
+          // Si no tiene servicios, usar el estado pagado general (para compatibilidad con clientes antiguos)
+          let pagadoCalculado;
+          if (cliente.servicios && Array.isArray(cliente.servicios) && cliente.servicios.length > 0) {
+            // Calcular si todos los servicios están pagados
+            pagadoCalculado = todosLosServiciosPagados(cliente, serviciosPagados);
+          } else {
+            // Compatibilidad: usar el estado pagado general
+            pagadoCalculado = estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false);
+          }
+          
           return {
             ...cliente,
-            pagado: estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false),
-            serviciosPagados: estadoMes ? (estadoMes.serviciosPagados || {}) : {}
+            pagado: pagadoCalculado,
+            serviciosPagados: serviciosPagados
           };
         });
         setClientesConEstado(clientesConEstados);
