@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { getClientes, getEstadosPagoMes } from "../../lib/clientesUtils";
-import { getTotalCliente } from "../../lib/clienteHelpers";
+import { getTotalCliente, getTotalPagadoCliente } from "../../lib/clienteHelpers";
 import { getGastosMes, agregarGasto, eliminarGasto, getMesesConGastos } from "../../lib/gastosUtils";
 import { getIngresosMes, agregarIngreso, eliminarIngreso } from "../../lib/ingresosUtils";
 import ProtectedRoute from "../../components/ProtectedRoute";
@@ -121,11 +121,12 @@ function BalancePageContent() {
           : {};
         
         const clientesConEstados = (clientesData || []).map(cliente => {
-          const clienteId = cliente._id || cliente.id;
+          const clienteId = cliente._id || cliente.id || cliente.crmId;
           const estadoMes = estadosMap[clienteId];
           return {
             ...cliente,
-            pagado: estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false)
+            pagado: estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false),
+            serviciosPagados: estadoMes ? (estadoMes.serviciosPagados || {}) : {}
           };
         });
         setClientesConEstado(clientesConEstados);
@@ -151,9 +152,11 @@ function BalancePageContent() {
 
   // Ingresos calculados automáticamente (clientes pagados) - memoizado
   const { ingresosAutomaticos, ingresosManuales, totalIngresos, totalGastos, utilidadNeta, porcentajeUtilidad } = useMemo(() => {
-    const ingresosAuto = clientesConEstado
-      .filter(cliente => cliente.pagado)
-      .reduce((sum, cliente) => sum + getTotalCliente(cliente), 0);
+    // Calcular ingresos sumando solo los servicios pagados de cada cliente
+    const ingresosAuto = clientesConEstado.reduce((sum, cliente) => {
+      const serviciosPagados = cliente.serviciosPagados || {};
+      return sum + getTotalPagadoCliente(cliente, serviciosPagados);
+    }, 0);
     
     const ingresosMan = ingresos.reduce((sum, ingreso) => sum + (parseFloat(ingreso.monto) || 0), 0);
     
@@ -471,7 +474,13 @@ function BalancePageContent() {
           <div className="text-xs md:text-sm text-slate-400 mb-1">Ingresos Totales</div>
           <div className="text-lg md:text-2xl font-bold text-green-400 break-words">{formatearMoneda(totalIngresos)}</div>
           <div className="text-xs text-slate-500 mt-2">
-            {clientesConEstado.filter(c => c.pagado).length} cliente(s) pagado(s)
+            {clientesConEstado.filter(c => {
+              if (c.servicios && Array.isArray(c.servicios) && c.servicios.length > 0) {
+                const serviciosPagados = c.serviciosPagados || {};
+                return Object.values(serviciosPagados).some(pagado => pagado === true);
+              }
+              return c.pagado;
+            }).length} cliente(s) con pago(s)
             {ingresosManuales > 0 && ` + ${ingresos.length} ingreso(s) manual(es)`}
           </div>
         </div>

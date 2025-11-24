@@ -18,7 +18,7 @@ export async function GET(request, { params }) {
           cliente = await Client.findById(searchId)
             .select('crmId nombre rubro ciudad email montoPago fechaPago pagado pagoUnico pagoMesSiguiente servicios observaciones')
             .lean()
-            .maxTimeMS(3000);
+            .maxTimeMS(5000); // Timeout adecuado para servidor local
         } catch (idError) {
           // Si falla, continuar para buscar por crmId
           console.warn('Error al buscar por _id:', idError.message);
@@ -30,7 +30,7 @@ export async function GET(request, { params }) {
         cliente = await Client.findOne({ crmId: searchId })
           .select('crmId nombre rubro ciudad email montoPago fechaPago pagado pagoUnico pagoMesSiguiente servicios observaciones')
           .lean()
-          .maxTimeMS(3000);
+          .maxTimeMS(5000); // Timeout adecuado para servidor local
       }
     
     if (!cliente) {
@@ -43,7 +43,8 @@ export async function GET(request, { params }) {
     
     return NextResponse.json({ success: true, data: cliente }, {
       headers: {
-        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60'
+        'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=240', // Cache más largo para servidor local
+        'Content-Type': 'application/json'
       }
     });
   } catch (error) {
@@ -126,18 +127,18 @@ export async function PUT(request, { params }) {
     console.log('Datos a actualizar en MongoDB:', JSON.stringify(updateData, null, 2));
     
     // Usar $set explícitamente para asegurar que false se guarde
-    // Optimizado para MongoDB Free: sin validadores para mayor velocidad
+    // Optimizado para servidor local
     const clienteActualizado = await Client.findByIdAndUpdate(
       cliente._id,
       { $set: updateData },
       { 
         new: true, 
-        runValidators: false, // Desactivar validadores para mayor velocidad
-        maxTimeMS: 8000 // Timeout de 8 segundos (aumentado para MongoDB Free)
+        runValidators: true, // Habilitar validadores para servidor local
+        maxTimeMS: 5000, // Timeout adecuado para servidor local
+        lean: true // Usar lean() directamente para mejor rendimiento
       }
     )
-    .select('crmId nombre rubro ciudad email montoPago fechaPago pagado pagoUnico pagoMesSiguiente servicios observaciones')
-    .lean(); // Usar lean() después para obtener objeto plano (más rápido)
+    .select('crmId nombre rubro ciudad email montoPago fechaPago pagado pagoUnico pagoMesSiguiente servicios observaciones');
     
     if (!clienteActualizado) {
       return NextResponse.json(
@@ -192,9 +193,9 @@ export async function DELETE(request, { params }) {
       );
     }
     
-    // Eliminar usando el _id encontrado (optimizado para MongoDB Free)
+    // Eliminar usando el _id encontrado (optimizado para servidor local)
     await Client.findByIdAndDelete(cliente._id, { 
-      maxTimeMS: 3000 
+      maxTimeMS: 5000 // Timeout adecuado para servidor local
     });
     
     return NextResponse.json({ success: true, data: cliente });

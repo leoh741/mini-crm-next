@@ -8,7 +8,7 @@ export async function GET(request, { params }) {
     const usuario = await User.findById(params.id)
       .select('crmId nombre email password rol fechaCreacion')
       .lean()
-      .maxTimeMS(3000);
+      .maxTimeMS(5000); // Timeout adecuado para servidor local
     
     if (!usuario) {
       return NextResponse.json(
@@ -35,9 +35,9 @@ export async function PUT(request, { params }) {
       body,
       { 
         new: true, 
-        runValidators: false, // Desactivar validadores para mayor velocidad
+        runValidators: true, // Habilitar validadores para integridad
         lean: true,
-        maxTimeMS: 3000
+        maxTimeMS: 5000 // Timeout adecuado para servidor local
       }
     );
     

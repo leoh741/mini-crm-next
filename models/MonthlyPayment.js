@@ -14,7 +14,13 @@ const MonthlyPaymentSchema = new mongoose.Schema({
   pagado: {
     type: Boolean,
     default: false,
-    index: true // Índice para filtros por estado de pago
+    index: true // Índice para filtros por estado de pago (mantenido para compatibilidad)
+  },
+  // Nuevo: estados de pago por servicio (índice del servicio -> estado pagado)
+  serviciosPagados: {
+    type: Map,
+    of: Boolean,
+    default: {}
   },
   fechaActualizacion: {
     type: Date,

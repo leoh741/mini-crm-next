@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { getClienteById, eliminarCliente, guardarEstadoPagoMes, limpiarCacheClientes } from "../../../lib/clientesUtils";
-import { getTotalCliente } from "../../../lib/clienteHelpers";
+import { getClienteById, eliminarCliente, guardarEstadoPagoMes, guardarEstadoPagoServicio, limpiarCacheClientes, getEstadoPagoMes } from "../../../lib/clientesUtils";
+import { getTotalCliente, getTotalPagadoCliente, getTotalPendienteCliente, todosLosServiciosPagados } from "../../../lib/clienteHelpers";
 import { generarResumenPagoPDF } from "../../../lib/pdfGenerator";
 import Link from "next/link";
 import ProtectedRoute from "../../../components/ProtectedRoute";
@@ -19,6 +19,8 @@ function ClienteDetailPageContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actualizandoPago, setActualizandoPago] = useState(false);
+  const [estadoPagoMes, setEstadoPagoMes] = useState(null);
+  const [actualizandoServicio, setActualizandoServicio] = useState(null);
   
   const fromPagos = searchParams.get('from') === 'pagos';
 
@@ -51,6 +53,14 @@ function ClienteDetailPageContent() {
           setCliente(clienteData);
           setError("");
           console.log('Cliente cargado exitosamente:', clienteData.nombre);
+          
+          // Cargar estado de pago del mes actual
+          const hoy = new Date();
+          const mesActual = hoy.getMonth();
+          const añoActual = hoy.getFullYear();
+          const clienteId = clienteData._id || clienteData.id || clienteData.crmId;
+          const estado = await getEstadoPagoMes(clienteId, mesActual, añoActual, true);
+          setEstadoPagoMes(estado || { serviciosPagados: {} });
         } else {
           console.error('Cliente no encontrado con ID:', id);
           setError(`Cliente no encontrado. ID: ${id}`);
@@ -91,6 +101,27 @@ function ClienteDetailPageContent() {
   const handleTogglePagado = async () => {
     if (!cliente || actualizandoPago) return;
     
+    const hoy = new Date();
+    const mesActual = hoy.getMonth();
+    const añoActual = hoy.getFullYear();
+    const clienteId = cliente._id || cliente.id || cliente.crmId;
+    const serviciosPagados = estadoPagoMes?.serviciosPagados || {};
+    
+    // Si hay servicios, marcar/desmarcar todos según el estado actual
+    if (cliente.servicios && Array.isArray(cliente.servicios) && cliente.servicios.length > 0) {
+      const todosPagados = todosLosServiciosPagados(cliente, serviciosPagados);
+      const nuevosServiciosPagados = {};
+      
+      // Marcar todos como pagados o no pagados según el estado
+      cliente.servicios.forEach((_, index) => {
+        nuevosServiciosPagados[index] = !todosPagados;
+      });
+      
+      await handleActualizarServiciosPagados(nuevosServiciosPagados);
+      return;
+    }
+    
+    // Para clientes sin servicios (compatibilidad)
     const nuevoEstado = !cliente.pagado;
     
     // Actualización optimista: cambiar estado inmediatamente en la UI
@@ -98,12 +129,6 @@ function ClienteDetailPageContent() {
     setActualizandoPago(true);
     
     try {
-      const hoy = new Date();
-      const mesActual = hoy.getMonth();
-      const añoActual = hoy.getFullYear();
-      const clienteId = cliente._id || cliente.id || cliente.crmId;
-      
-      // Actualizar ambas cosas en paralelo para mayor velocidad (sin limpiar caché dentro de la función)
       const { actualizarCliente } = await import('../../../lib/clientesUtils');
       
       const [resultadoMensual, resultadoCliente] = await Promise.allSettled([
@@ -144,6 +169,95 @@ function ClienteDetailPageContent() {
       // Revertir cambio si falló
       setCliente(prev => prev ? { ...prev, pagado: !nuevoEstado } : null);
       alert("Error al actualizar el estado de pago. Por favor, intenta nuevamente.");
+    } finally {
+      setActualizandoPago(false);
+    }
+  };
+
+  const handleToggleServicioPagado = async (indiceServicio) => {
+    if (!cliente || actualizandoServicio === indiceServicio) return;
+    
+    setActualizandoServicio(indiceServicio);
+    
+    try {
+      const hoy = new Date();
+      const mesActual = hoy.getMonth();
+      const añoActual = hoy.getFullYear();
+      const clienteId = cliente._id || cliente.id || cliente.crmId;
+      
+      const serviciosPagados = estadoPagoMes?.serviciosPagados || {};
+      const nuevoEstado = !(serviciosPagados[indiceServicio] === true);
+      
+      // Actualización optimista
+      const nuevosServiciosPagados = { ...serviciosPagados, [indiceServicio]: nuevoEstado };
+      setEstadoPagoMes(prev => ({ ...prev, serviciosPagados: nuevosServiciosPagados }));
+      
+      await guardarEstadoPagoServicio(clienteId, mesActual, añoActual, indiceServicio, nuevoEstado);
+      
+      // Recargar estado de pago completo
+      const estadoActualizado = await getEstadoPagoMes(clienteId, mesActual, añoActual, false);
+      setEstadoPagoMes(estadoActualizado || { serviciosPagados: nuevosServiciosPagados });
+      
+      // Actualizar estado pagado general del cliente si todos los servicios están pagados
+      const todosPagados = todosLosServiciosPagados(cliente, nuevosServiciosPagados);
+      if (cliente.pagado !== todosPagados) {
+        setCliente(prev => prev ? { ...prev, pagado: todosPagados } : null);
+        const { actualizarCliente } = await import('../../../lib/clientesUtils');
+        await actualizarCliente(id, { pagado: todosPagados }, false);
+      }
+      
+      limpiarCacheClientes();
+    } catch (err) {
+      console.error('Error al actualizar estado de pago del servicio:', err);
+      alert("Error al actualizar el estado de pago del servicio. Por favor, intenta nuevamente.");
+      // Recargar estado original
+      const hoy = new Date();
+      const mesActual = hoy.getMonth();
+      const añoActual = hoy.getFullYear();
+      const clienteId = cliente._id || cliente.id || cliente.crmId;
+      const estado = await getEstadoPagoMes(clienteId, mesActual, añoActual, true);
+      setEstadoPagoMes(estado || { serviciosPagados: {} });
+    } finally {
+      setActualizandoServicio(null);
+    }
+  };
+
+  const handleActualizarServiciosPagados = async (nuevosServiciosPagados) => {
+    if (!cliente || actualizandoPago) return;
+    
+    setActualizandoPago(true);
+    
+    try {
+      const hoy = new Date();
+      const mesActual = hoy.getMonth();
+      const añoActual = hoy.getFullYear();
+      const clienteId = cliente._id || cliente.id || cliente.crmId;
+      
+      // Actualización optimista
+      setEstadoPagoMes(prev => ({ ...prev, serviciosPagados: nuevosServiciosPagados }));
+      
+      // Calcular si todos están pagados
+      const todosPagados = todosLosServiciosPagados(cliente, nuevosServiciosPagados);
+      
+      // Guardar estados de pago
+      await guardarEstadoPagoMes(clienteId, mesActual, añoActual, todosPagados, nuevosServiciosPagados);
+      
+      // Actualizar estado general del cliente
+      setCliente(prev => prev ? { ...prev, pagado: todosPagados } : null);
+      const { actualizarCliente } = await import('../../../lib/clientesUtils');
+      await actualizarCliente(id, { pagado: todosPagados }, false);
+      
+      limpiarCacheClientes();
+    } catch (err) {
+      console.error('Error al actualizar estados de pago:', err);
+      alert("Error al actualizar los estados de pago. Por favor, intenta nuevamente.");
+      // Recargar estado original
+      const hoy = new Date();
+      const mesActual = hoy.getMonth();
+      const añoActual = hoy.getFullYear();
+      const clienteId = cliente._id || cliente.id || cliente.crmId;
+      const estado = await getEstadoPagoMes(clienteId, mesActual, añoActual, true);
+      setEstadoPagoMes(estado || { serviciosPagados: {} });
     } finally {
       setActualizandoPago(false);
     }
@@ -251,15 +365,65 @@ function ClienteDetailPageContent() {
             <p className="text-slate-300 font-medium mb-2">Servicios:</p>
             {cliente.servicios && Array.isArray(cliente.servicios) && cliente.servicios.length > 0 ? (
               <div className="space-y-2">
-                {cliente.servicios.map((servicio, index) => (
-                  <div key={index} className="p-2 bg-slate-700 rounded flex justify-between items-center">
-                    <span className="text-slate-200">{servicio.nombre}</span>
-                    <span className="text-slate-200 font-semibold">{formatearMoneda(servicio.precio)}</span>
+                {cliente.servicios.map((servicio, index) => {
+                  const serviciosPagados = estadoPagoMes?.serviciosPagados || {};
+                  const servicioPagado = serviciosPagados[index] === true;
+                  const estaActualizando = actualizandoServicio === index;
+                  
+                  return (
+                    <div 
+                      key={index} 
+                      className={`p-3 bg-slate-700 rounded border ${
+                        servicioPagado ? 'border-green-700' : 'border-slate-600'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-200 font-medium">{servicio.nombre}</span>
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                              servicioPagado 
+                                ? 'bg-green-900/30 text-green-400 border border-green-700' 
+                                : 'bg-orange-900/30 text-orange-400 border border-orange-700'
+                            }`}>
+                              {servicioPagado ? "Pagado" : "Pendiente"}
+                            </span>
+                          </div>
+                          <span className="text-slate-200 font-semibold">{formatearMoneda(servicio.precio)}</span>
+                        </div>
+                        <button
+                          onClick={() => handleToggleServicioPagado(index)}
+                          disabled={estaActualizando || actualizandoPago}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                            servicioPagado
+                              ? "bg-orange-600 hover:bg-orange-700 text-white"
+                              : "bg-green-600 hover:bg-green-700 text-white"
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                          title={servicioPagado ? "Marcar como pendiente" : "Marcar como pagado"}
+                        >
+                          {estaActualizando ? "..." : servicioPagado ? "Marcar Pendiente" : "Marcar Pagado"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="pt-2 border-t border-slate-600 space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300 font-semibold">Total:</span>
+                    <span className="text-slate-100 font-bold text-lg">{formatearMoneda(getTotalCliente(cliente))}</span>
                   </div>
-                ))}
-                <div className="pt-2 border-t border-slate-600 flex justify-between items-center">
-                  <span className="text-slate-300 font-semibold">Total:</span>
-                  <span className="text-slate-100 font-bold text-lg">{formatearMoneda(getTotalCliente(cliente))}</span>
+                  {estadoPagoMes && (
+                    <>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-300">Pagado:</span>
+                        <span className="text-green-400 font-semibold">{formatearMoneda(getTotalPagadoCliente(cliente, estadoPagoMes.serviciosPagados))}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-300">Pendiente:</span>
+                        <span className="text-orange-400 font-semibold">{formatearMoneda(getTotalPendienteCliente(cliente, estadoPagoMes.serviciosPagados))}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             ) : (
@@ -289,29 +453,56 @@ function ClienteDetailPageContent() {
               )}
             </div>
           )}
-          <div className="flex items-center justify-between">
-            <p><strong className="text-slate-300">Estado:</strong> 
-              <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
-                cliente.pagado 
-                  ? "bg-green-900/30 text-green-400 border border-green-700" 
-                  : "bg-orange-900/30 text-orange-400 border border-orange-700"
-              }`}>
-                {cliente.pagado ? "Pagado" : "Pendiente"}
-              </span>
-            </p>
-            <button
-              onClick={handleTogglePagado}
-              disabled={actualizandoPago}
-              className={`ml-4 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                cliente.pagado
-                  ? "bg-orange-600 hover:bg-orange-700 text-white"
-                  : "bg-green-600 hover:bg-green-700 text-white"
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
-              title={cliente.pagado ? "Marcar como pendiente" : "Marcar como pagado"}
-            >
-              {actualizandoPago ? "..." : cliente.pagado ? "Marcar Pendiente" : "Marcar Pagado"}
-            </button>
-          </div>
+          {cliente.servicios && Array.isArray(cliente.servicios) && cliente.servicios.length > 1 && (
+            <div className="flex items-center justify-between">
+              <p><strong className="text-slate-300">Estado General:</strong> 
+                <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
+                  todosLosServiciosPagados(cliente, estadoPagoMes?.serviciosPagados || {})
+                    ? "bg-green-900/30 text-green-400 border border-green-700" 
+                    : "bg-orange-900/30 text-orange-400 border border-orange-700"
+                }`}>
+                  {todosLosServiciosPagados(cliente, estadoPagoMes?.serviciosPagados || {}) ? "Todos Pagados" : "Pendiente"}
+                </span>
+              </p>
+              <button
+                onClick={handleTogglePagado}
+                disabled={actualizandoPago}
+                className={`ml-4 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  todosLosServiciosPagados(cliente, estadoPagoMes?.serviciosPagados || {})
+                    ? "bg-orange-600 hover:bg-orange-700 text-white"
+                    : "bg-green-600 hover:bg-green-700 text-white"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                title={todosLosServiciosPagados(cliente, estadoPagoMes?.serviciosPagados || {}) ? "Marcar todos como pendientes" : "Marcar todos como pagados"}
+              >
+                {actualizandoPago ? "..." : todosLosServiciosPagados(cliente, estadoPagoMes?.serviciosPagados || {}) ? "Desmarcar Todos" : "Marcar Todos"}
+              </button>
+            </div>
+          )}
+          {(!cliente.servicios || !Array.isArray(cliente.servicios) || cliente.servicios.length <= 1) && (
+            <div className="flex items-center justify-between">
+              <p><strong className="text-slate-300">Estado:</strong> 
+                <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
+                  cliente.pagado 
+                    ? "bg-green-900/30 text-green-400 border border-green-700" 
+                    : "bg-orange-900/30 text-orange-400 border border-orange-700"
+                }`}>
+                  {cliente.pagado ? "Pagado" : "Pendiente"}
+                </span>
+              </p>
+              <button
+                onClick={handleTogglePagado}
+                disabled={actualizandoPago}
+                className={`ml-4 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  cliente.pagado
+                    ? "bg-orange-600 hover:bg-orange-700 text-white"
+                    : "bg-green-600 hover:bg-green-700 text-white"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                title={cliente.pagado ? "Marcar como pendiente" : "Marcar como pagado"}
+              >
+                {actualizandoPago ? "..." : cliente.pagado ? "Marcar Pendiente" : "Marcar Pagado"}
+              </button>
+            </div>
+          )}
           {cliente.observaciones && (
             <div className="mt-4 pt-4 border-t border-slate-600">
               <p className="text-slate-300 font-medium mb-2">Observaciones:</p>

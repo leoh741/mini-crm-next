@@ -13,13 +13,14 @@ export async function GET(request) {
     
     const ingresos = await Income.find(query)
       .select('crmId descripcion monto fecha categoria fechaCreacion createdAt updatedAt')
-      .sort({ periodo: -1, createdAt: -1 })
+      .sort({ periodo: -1, fecha: -1 }) // Usar índice compuesto (periodo, fecha)
       .lean()
-      .maxTimeMS(3000); // Timeout reducido para MongoDB Free
+      .maxTimeMS(5000); // Timeout adecuado para servidor local
     
     return NextResponse.json({ success: true, data: ingresos }, {
       headers: {
-        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60'
+        'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=240', // Cache más largo para servidor local
+        'Content-Type': 'application/json'
       }
     });
   } catch (error) {
@@ -40,10 +41,10 @@ export async function POST(request) {
       body.crmId = `income-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     }
     
-    // Optimizado para MongoDB Free: sin validadores para mayor velocidad
+    // Optimizado para servidor local: validadores habilitados
     const ingreso = await Income.create(body, { 
-      runValidators: false,
-      maxTimeMS: 3000 
+      runValidators: true, // Habilitar validadores para integridad
+      maxTimeMS: 5000 // Timeout adecuado para servidor local
     });
     return NextResponse.json({ success: true, data: ingreso }, { status: 201 });
   } catch (error) {

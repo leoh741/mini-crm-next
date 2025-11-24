@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { getClientes, getEstadosPagoMes, getMesesConRegistros } from "../../lib/clientesUtils";
-import { getTotalCliente } from "../../lib/clienteHelpers";
+import { getTotalCliente, getTotalPagadoCliente, getTotalPendienteCliente, todosLosServiciosPagados, algunServicioPagado } from "../../lib/clienteHelpers";
 import ProtectedRoute from "../../components/ProtectedRoute";
 
 function PagosPageContent() {
@@ -103,7 +103,8 @@ function PagosPageContent() {
           const estadoMes = estadosMap[clienteId];
           return {
             ...cliente,
-            pagado: estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false)
+            pagado: estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false),
+            serviciosPagados: estadoMes ? (estadoMes.serviciosPagados || {}) : {}
           };
         });
         setClientesConEstado(clientesConEstados);
@@ -140,11 +141,19 @@ function PagosPageContent() {
   // Métricas para TODOS los clientes (mensuales + pago único) del mes seleccionado (memoizadas para actualización inmediata)
   const { totalEsperado, totalPagado, totalPendiente, cantidadPagados, cantidadPendientes } = useMemo(() => {
     const totalEsp = clientesConEstado.reduce((sum, cliente) => sum + getTotalCliente(cliente), 0);
-    const totalPag = clientesConEstado
-      .filter(cliente => cliente.pagado)
-      .reduce((sum, cliente) => sum + getTotalCliente(cliente), 0);
+    // Calcular total pagado sumando solo servicios pagados de cada cliente
+    const totalPag = clientesConEstado.reduce((sum, cliente) => {
+      const serviciosPagados = cliente.serviciosPagados || {};
+      return sum + getTotalPagadoCliente(cliente, serviciosPagados);
+    }, 0);
     const totalPend = totalEsp - totalPag;
-    const cantPagados = clientesConEstado.filter(cliente => cliente.pagado).length;
+    // Un cliente se considera "pagado" si todos sus servicios están pagados
+    const cantPagados = clientesConEstado.filter(cliente => {
+      if (cliente.servicios && Array.isArray(cliente.servicios) && cliente.servicios.length > 0) {
+        return todosLosServiciosPagados(cliente, cliente.serviciosPagados || {});
+      }
+      return cliente.pagado;
+    }).length;
     const cantPendientes = clientesConEstado.length - cantPagados;
     
     return {
@@ -182,7 +191,18 @@ function PagosPageContent() {
   };
 
   const getEstadoPago = (cliente) => {
-    if (cliente.pagado) {
+    // Si tiene servicios, verificar si todos están pagados
+    const serviciosPagados = cliente.serviciosPagados || {};
+    if (cliente.servicios && Array.isArray(cliente.servicios) && cliente.servicios.length > 0) {
+      const todosPagados = todosLosServiciosPagados(cliente, serviciosPagados);
+      const algunPagado = algunServicioPagado(cliente, serviciosPagados);
+      
+      if (todosPagados) {
+        return { texto: "Pagado", tipo: "pagado", color: "text-green-400", bg: "bg-green-900/30", border: "border-green-700" };
+      } else if (algunPagado) {
+        return { texto: "Parcial", tipo: "parcial", color: "text-yellow-400", bg: "bg-yellow-900/30", border: "border-yellow-700" };
+      }
+    } else if (cliente.pagado) {
       return { texto: "Pagado", tipo: "pagado", color: "text-green-400", bg: "bg-green-900/30", border: "border-green-700" };
     }
     
@@ -227,6 +247,7 @@ function PagosPageContent() {
       const estado = getEstadoPago(cliente);
       
       if (filtroEstado === "pagado" && estado.tipo !== "pagado") return false;
+      if (filtroEstado === "parcial" && estado.tipo !== "parcial") return false;
       if (filtroEstado === "vencido" && estado.tipo !== "vencido") return false;
       if (filtroEstado === "hoy" && estado.tipo !== "hoy") return false;
       if (filtroEstado === "proximo" && estado.tipo !== "proximo") return false;
@@ -374,6 +395,7 @@ function PagosPageContent() {
             >
               <option value="todos">Todos</option>
               <option value="pagado">Pagado</option>
+              <option value="parcial">Pago Parcial</option>
               <option value="vencido">Vencido</option>
               <option value="hoy">Vence Hoy</option>
               <option value="proximo">Próximos (1-3 días)</option>
@@ -421,9 +443,22 @@ function PagosPageContent() {
                       {formatearMoneda(getTotalCliente(cliente))}
                     </p>
                     {cliente.servicios && cliente.servicios.length > 1 && (
-                      <p className="text-xs text-slate-400 mt-1">
-                        {cliente.servicios.length} servicios
-                      </p>
+                      <>
+                        <p className="text-xs text-slate-400 mt-1">
+                          {cliente.servicios.length} servicios
+                        </p>
+                        {cliente.serviciosPagados && Object.keys(cliente.serviciosPagados).length > 0 && (
+                          <p className="text-xs mt-1">
+                            <span className="text-green-400">
+                              Pagado: {formatearMoneda(getTotalPagadoCliente(cliente, cliente.serviciosPagados))}
+                            </span>
+                            <span className="text-slate-500 mx-1">/</span>
+                            <span className="text-orange-400">
+                              Pendiente: {formatearMoneda(getTotalPendienteCliente(cliente, cliente.serviciosPagados))}
+                            </span>
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

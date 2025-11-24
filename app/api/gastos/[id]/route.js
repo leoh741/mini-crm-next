@@ -5,7 +5,7 @@ import Expense from '../../../../models/Expense';
 export async function DELETE(request, { params }) {
   try {
     await connectDB();
-    const gasto = await Expense.findByIdAndDelete(params.id, { maxTimeMS: 3000 });
+    const gasto = await Expense.findByIdAndDelete(params.id, { maxTimeMS: 5000 }); // Timeout adecuado para servidor local
     
     if (!gasto) {
       return NextResponse.json(

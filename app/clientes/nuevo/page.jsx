@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { agregarCliente } from "../../../lib/clientesUtils";
+import { agregarCliente, guardarEstadoPagoMes, limpiarCacheClientes } from "../../../lib/clientesUtils";
+import { todosLosServiciosPagados } from "../../../lib/clienteHelpers";
 import ProtectedRoute from "../../../components/ProtectedRoute";
 
 function NuevoClientePageContent() {
@@ -22,6 +23,7 @@ function NuevoClientePageContent() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [serviciosPagados, setServiciosPagados] = useState({});
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -45,7 +47,28 @@ function NuevoClientePageContent() {
   const eliminarServicio = (index) => {
     if (servicios.length > 1) {
       setServicios(servicios.filter((_, i) => i !== index));
+      // Eliminar también el estado de pago de ese servicio si existe
+      const nuevosServiciosPagados = { ...serviciosPagados };
+      // Reindexar servicios pagados
+      const reindexados = {};
+      Object.keys(nuevosServiciosPagados).forEach(key => {
+        const keyNum = parseInt(key);
+        if (keyNum < index) {
+          reindexados[keyNum] = nuevosServiciosPagados[key];
+        } else if (keyNum > index) {
+          reindexados[keyNum - 1] = nuevosServiciosPagados[key];
+        }
+        // keyNum === index se omite (se elimina)
+      });
+      setServiciosPagados(reindexados);
     }
+  };
+
+  const handleToggleServicioPagado = (index) => {
+    setServiciosPagados(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -92,6 +115,9 @@ function NuevoClientePageContent() {
       precio: parseInt(s.precio)
     }));
 
+    // Calcular si todos los servicios están pagados
+    const todosPagados = serviciosFormateados.every((_, index) => serviciosPagados[index] === true);
+    
     // Preparar datos
     const nuevoCliente = {
       nombre: formData.nombre.trim(),
@@ -99,7 +125,7 @@ function NuevoClientePageContent() {
       servicios: serviciosFormateados,
       fechaPago: formData.pagoUnico ? undefined : parseInt(formData.fechaPago),
       pagoUnico: formData.pagoUnico,
-      pagado: formData.pagado,
+      pagado: formData.pagado || todosPagados,
       pagoMesSiguiente: formData.pagoMesSiguiente && !formData.pagoUnico,
       observaciones: formData.observaciones.trim() || undefined
     };
@@ -108,6 +134,40 @@ function NuevoClientePageContent() {
     const resultado = await agregarCliente(nuevoCliente);
 
     if (resultado) {
+      // Guardar estados de pago por servicio si hay servicios marcados como pagados
+      if (Object.keys(serviciosPagados).length > 0 && Object.values(serviciosPagados).some(p => p === true)) {
+        // Esperar un momento para que el cliente se guarde, luego obtenerlo y guardar estados
+        try {
+          // Preparar serviciosPagados: solo incluir índices válidos
+          const serviciosPagadosFinal = {};
+          serviciosFormateados.forEach((_, index) => {
+            if (serviciosPagados[index] === true) {
+              serviciosPagadosFinal[index] = true;
+            }
+          });
+          
+          // Obtener el cliente recién creado
+          const { getClientes } = await import('../../../lib/clientesUtils');
+          // Esperar un poco para que MongoDB guarde el cliente
+          await new Promise(resolve => setTimeout(resolve, 800));
+          const clientes = await getClientes(true); // Forzar recarga
+          const clienteGuardado = clientes.find(c => c.nombre === nuevoCliente.nombre && c.rubro === nuevoCliente.rubro);
+          
+          if (clienteGuardado) {
+            const hoy = new Date();
+            const mesActual = hoy.getMonth();
+            const añoActual = hoy.getFullYear();
+            const clienteId = clienteGuardado._id || clienteGuardado.id || clienteGuardado.crmId;
+            
+            await guardarEstadoPagoMes(clienteId, mesActual, añoActual, todosPagados, serviciosPagadosFinal);
+            limpiarCacheClientes();
+          }
+        } catch (err) {
+          console.error('Error al guardar estados de pago por servicio:', err);
+          // No fallar la creación del cliente si falla esto
+        }
+      }
+      
       setSuccess(true);
       setTimeout(() => {
         router.push("/clientes");
@@ -252,6 +312,29 @@ function NuevoClientePageContent() {
                     </div>
                   </div>
                 </div>
+                {/* Checkbox para marcar servicio como pagado */}
+                <div className="mt-3 pt-3 border-t border-slate-600">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm text-slate-300">Estado de pago del servicio:</label>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs px-2 py-1 rounded ${
+                        serviciosPagados[index] === true
+                          ? 'bg-green-900/30 text-green-400 border border-green-700'
+                          : 'bg-orange-900/30 text-orange-400 border border-orange-700'
+                      }`}>
+                        {serviciosPagados[index] === true ? 'Pagado' : 'Pendiente'}
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={serviciosPagados[index] === true}
+                        onChange={() => handleToggleServicioPagado(index)}
+                        className="w-4 h-4 bg-slate-800 border-slate-700 rounded focus:ring-blue-500"
+                      />
+                      <label className="text-xs text-slate-400">Marcar como pagado</label>
+                    </div>
+                  </div>
+                </div>
+                </div>
               </div>
             ))}
           </div>
@@ -288,19 +371,48 @@ function NuevoClientePageContent() {
             </div>
           )}
 
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="pagado"
-              name="pagado"
-              checked={formData.pagado}
-              onChange={handleChange}
-              className="w-4 h-4 bg-slate-800 border-slate-700 rounded focus:ring-blue-500"
-            />
-            <label htmlFor="pagado" className="ml-2 text-sm text-slate-300">
-              Marcar como pagado
-            </label>
-          </div>
+          {servicios.filter(s => s.nombre.trim() && s.precio).length > 1 ? (
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="pagado"
+                name="pagado"
+                checked={todosLosServiciosPagados({ servicios: servicios.filter(s => s.nombre.trim() && s.precio) }, serviciosPagados)}
+                onChange={(e) => {
+                  // Si se marca, marcar todos; si se desmarca, desmarcar todos
+                  const nuevoEstado = e.target.checked;
+                  const serviciosValidos = servicios.filter(s => s.nombre.trim() && s.precio);
+                  const nuevosServiciosPagados = {};
+                  serviciosValidos.forEach((_, index) => {
+                    nuevosServiciosPagados[index] = nuevoEstado;
+                  });
+                  setServiciosPagados(nuevosServiciosPagados);
+                  setFormData(prev => ({ ...prev, pagado: nuevoEstado }));
+                }}
+                className="w-4 h-4 bg-slate-800 border-slate-700 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="pagado" className="ml-2 text-sm text-slate-300">
+                Marcar todos los servicios como pagados
+              </label>
+            </div>
+          ) : (
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="pagado"
+                name="pagado"
+                checked={formData.pagado || serviciosPagados[0] === true}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, pagado: e.target.checked }));
+                  setServiciosPagados({ 0: e.target.checked });
+                }}
+                className="w-4 h-4 bg-slate-800 border-slate-700 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="pagado" className="ml-2 text-sm text-slate-300">
+                Marcar como pagado
+              </label>
+            </div>
+          )}
         </div>
 
         {/* Campo de observaciones */}
