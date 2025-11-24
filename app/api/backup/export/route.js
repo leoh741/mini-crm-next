@@ -5,18 +5,20 @@ import MonthlyPayment from '../../../../models/MonthlyPayment';
 import Expense from '../../../../models/Expense';
 import Income from '../../../../models/Income';
 import User from '../../../../models/User';
+import Budget from '../../../../models/Budget';
 
 export async function GET() {
   try {
     await connectDB();
 
     // Obtener todos los datos
-    const [clientes, pagos, gastos, ingresos, usuarios] = await Promise.all([
+    const [clientes, pagos, gastos, ingresos, usuarios, presupuestos] = await Promise.all([
       Client.find({}).lean(),
       MonthlyPayment.find({}).lean(),
       Expense.find({}).lean(),
       Income.find({}).lean(),
-      User.find({}).lean()
+      User.find({}).lean(),
+      Budget.find({}).lean()
     ]);
 
     // Convertir clientes al formato esperado
@@ -89,6 +91,24 @@ export async function GET() {
       fechaCreacion: usuario.fechaCreacion || null
     }));
 
+    // Convertir presupuestos al formato esperado
+    const presupuestosFormateados = presupuestos.map(presupuesto => ({
+      id: presupuesto.presupuestoId || presupuesto._id.toString(),
+      presupuestoId: presupuesto.presupuestoId || presupuesto._id.toString(),
+      numero: presupuesto.numero,
+      cliente: presupuesto.cliente,
+      fecha: presupuesto.fecha || null,
+      validez: presupuesto.validez || 30,
+      items: presupuesto.items || [],
+      subtotal: presupuesto.subtotal || 0,
+      descuento: presupuesto.descuento || 0,
+      porcentajeDescuento: presupuesto.porcentajeDescuento || 0,
+      total: presupuesto.total || 0,
+      estado: presupuesto.estado || 'borrador',
+      observaciones: presupuesto.observaciones || '',
+      notasInternas: presupuesto.notasInternas || ''
+    }));
+
     // Formato compatible con el formato antiguo de localStorage (strings JSON)
     const datos = {
       clientes: JSON.stringify(clientesFormateados),
@@ -97,8 +117,9 @@ export async function GET() {
       gastos: JSON.stringify(gastosFormateados),
       ingresos: JSON.stringify(ingresosFormateados),
       usuarios: JSON.stringify(usuariosFormateados),
+      presupuestos: JSON.stringify(presupuestosFormateados),
       fechaExportacion: new Date().toISOString(),
-      version: '2.0'
+      version: '2.1'
     };
 
     return NextResponse.json({

@@ -5,6 +5,7 @@ import MonthlyPayment from '../../../../models/MonthlyPayment';
 import Expense from '../../../../models/Expense';
 import Income from '../../../../models/Income';
 import User from '../../../../models/User';
+import Budget from '../../../../models/Budget';
 
 export async function POST(request) {
   try {
@@ -25,6 +26,7 @@ export async function POST(request) {
     let gastos = {};
     let ingresos = {};
     let usuarios = [];
+    let presupuestos = [];
 
     try {
       clientes = typeof body.clientes === 'string' ? JSON.parse(body.clientes) : (body.clientes || []);
@@ -32,6 +34,7 @@ export async function POST(request) {
       gastos = typeof body.gastos === 'string' ? JSON.parse(body.gastos) : (body.gastos || {});
       ingresos = typeof body.ingresos === 'string' ? JSON.parse(body.ingresos) : (body.ingresos || {});
       usuarios = typeof body.usuarios === 'string' ? JSON.parse(body.usuarios) : (body.usuarios || []);
+      presupuestos = typeof body.presupuestos === 'string' ? JSON.parse(body.presupuestos) : (body.presupuestos || []);
     } catch (parseError) {
       return NextResponse.json(
         { success: false, error: 'Error al parsear los datos JSON: ' + parseError.message },
@@ -39,19 +42,22 @@ export async function POST(request) {
       );
     }
 
-    // Limpiar colecciones existentes
+    // Limpiar colecciones existentes (EXCEPTO usuarios - se mantienen)
     await Client.deleteMany({});
     await MonthlyPayment.deleteMany({});
     await Expense.deleteMany({});
     await Income.deleteMany({});
-    await User.deleteMany({});
+    await Budget.deleteMany({});
+    // NO eliminamos usuarios - se mantienen y se hace merge
 
     const resultados = {
       clientes: 0,
       pagosMensuales: 0,
       gastos: 0,
       ingresos: 0,
-      usuarios: 0
+      usuarios: 0,
+      usuariosMantenidos: 0,
+      presupuestos: 0
     };
 
     // Importar clientes
@@ -172,7 +178,12 @@ export async function POST(request) {
       }
     }
 
-    // Importar usuarios
+    // Importar usuarios - MERGE: mantener existentes, actualizar/insertar del backup
+    // Primero contar usuarios existentes que se mantendrán
+    const usuariosExistentes = await User.find({}).select('email').lean();
+    const emailsExistentes = new Set(usuariosExistentes.map(u => u.email));
+    const emailsDelBackup = new Set();
+    
     if (Array.isArray(usuarios) && usuarios.length > 0) {
       const usuariosImportados = usuarios.map(usuario => ({
         crmId: usuario.id || usuario.crmId || `user-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
@@ -184,26 +195,83 @@ export async function POST(request) {
       }));
       
       if (usuariosImportados.length > 0) {
+        let insertados = 0;
+        let actualizados = 0;
+        
+        for (const usuario of usuariosImportados) {
+          if (!usuario.email) {
+            console.warn('Usuario sin email, omitiendo:', usuario);
+            continue;
+          }
+          
+          emailsDelBackup.add(usuario.email);
+          
+          try {
+            // Usar upsert para actualizar si existe o insertar si no existe
+            const resultado = await User.findOneAndUpdate(
+              { email: usuario.email },
+              usuario,
+              { upsert: true, new: true, runValidators: true }
+            );
+            
+            // Verificar si fue insertado o actualizado
+            if (resultado.createdAt && resultado.createdAt.getTime() === resultado.updatedAt.getTime()) {
+              insertados++;
+            } else {
+              actualizados++;
+            }
+          } catch (e) {
+            console.warn('Error al insertar/actualizar usuario:', e.message);
+          }
+        }
+        
+        resultados.usuarios = insertados + actualizados;
+      }
+    }
+    
+    // Contar usuarios existentes que NO están en el backup (se mantienen)
+    const usuariosMantenidos = Array.from(emailsExistentes).filter(email => !emailsDelBackup.has(email));
+    resultados.usuariosMantenidos = usuariosMantenidos.length;
+
+    // Importar presupuestos
+    if (Array.isArray(presupuestos) && presupuestos.length > 0) {
+      const presupuestosImportados = presupuestos.map(presupuesto => ({
+        presupuestoId: presupuesto.presupuestoId || presupuesto.id || `budget-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+        numero: presupuesto.numero,
+        cliente: presupuesto.cliente || {},
+        fecha: presupuesto.fecha ? new Date(presupuesto.fecha) : new Date(),
+        validez: presupuesto.validez || 30,
+        items: presupuesto.items || [],
+        subtotal: presupuesto.subtotal || 0,
+        descuento: presupuesto.descuento || 0,
+        porcentajeDescuento: presupuesto.porcentajeDescuento || 0,
+        total: presupuesto.total || 0,
+        estado: presupuesto.estado || 'borrador',
+        observaciones: presupuesto.observaciones || '',
+        notasInternas: presupuesto.notasInternas || ''
+      }));
+      
+      if (presupuestosImportados.length > 0) {
         try {
-          await User.insertMany(usuariosImportados, { ordered: false });
-          resultados.usuarios = usuariosImportados.length;
+          await Budget.insertMany(presupuestosImportados, { ordered: false });
+          resultados.presupuestos = presupuestosImportados.length;
         } catch (error) {
           // Si hay errores de duplicados, intentar uno por uno
           if (error.code === 11000) {
             let insertados = 0;
-            for (const usuario of usuariosImportados) {
+            for (const presupuesto of presupuestosImportados) {
               try {
-                await User.findOneAndUpdate(
-                  { email: usuario.email },
-                  usuario,
+                await Budget.findOneAndUpdate(
+                  { presupuestoId: presupuesto.presupuestoId },
+                  presupuesto,
                   { upsert: true }
                 );
                 insertados++;
               } catch (e) {
-                console.warn('Error al insertar usuario:', e.message);
+                console.warn('Error al insertar presupuesto:', e.message);
               }
             }
-            resultados.usuarios = insertados;
+            resultados.presupuestos = insertados;
           } else {
             throw error;
           }

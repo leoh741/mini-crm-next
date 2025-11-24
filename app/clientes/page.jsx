@@ -11,7 +11,6 @@ function ClientesPageContent() {
   const [busqueda, setBusqueda] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     const cargarClientes = async (forceRefresh = false) => {
@@ -73,58 +72,6 @@ function ClientesPageContent() {
     setBusqueda(e.target.value);
   }, []);
 
-  // Handler para importar JSON de clientes
-  const handleImportJson = useCallback(async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setImporting(true);
-      setError("");
-
-      // Leer el archivo como texto
-      const text = await file.text();
-      const json = JSON.parse(text); // debe ser un array de clientes
-
-      // Validar que sea un array
-      if (!Array.isArray(json)) {
-        throw new Error('El archivo JSON debe contener un array de clientes');
-      }
-
-      // Enviar al endpoint de importación
-      const res = await fetch('/api/clientes/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: json }),
-      });
-
-      const result = await res.json();
-
-      if (!res.ok || !result.ok) {
-        throw new Error(result.message || 'Error al importar clientes');
-      }
-
-      // Mostrar mensaje de éxito
-      alert(`✅ ${result.message || `Se importaron ${result.inserted} clientes correctamente`}`);
-
-      // Recargar la lista de clientes desde la API
-      const clientesData = await getClientes(true); // Forzar recarga
-      setClientes(clientesData || []);
-
-      // Disparar evento para que otras páginas se actualicen
-      window.dispatchEvent(new Event('clientes:force-refresh'));
-
-    } catch (error) {
-      console.error('Error leyendo o importando JSON:', error);
-      setError('Error al importar clientes: ' + error.message);
-      alert('Error al importar clientes: ' + error.message);
-    } finally {
-      setImporting(false);
-      // Resetear el input para permitir importar el mismo archivo de nuevo
-      e.target.value = '';
-    }
-  }, []);
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -159,25 +106,13 @@ function ClientesPageContent() {
             }
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <label className="w-full sm:w-auto px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium text-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-            {importing ? 'Importando...' : '📥 Importar JSON'}
-            <input
-              type="file"
-              accept=".json"
-              className="hidden"
-              onChange={handleImportJson}
-              disabled={importing}
-            />
-          </label>
-          <Link
-            href="/clientes/nuevo"
-            prefetch={true}
-            className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium text-center"
-          >
-            + Agregar Cliente
-          </Link>
-        </div>
+        <Link
+          href="/clientes/nuevo"
+          prefetch={true}
+          className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium text-center"
+        >
+          + Agregar Cliente
+        </Link>
       </div>
 
       {/* Buscador */}
