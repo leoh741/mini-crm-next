@@ -106,12 +106,19 @@ function ClienteDetailPageContent() {
     : cliente?.pagado || false;
 
   const handleEliminar = async () => {
-    setEliminando(true);
-    const resultado = await eliminarCliente(id);
-    
-    if (resultado) {
-      router.push(fromPagos ? "/pagos" : "/clientes");
-    } else {
+    try {
+      setEliminando(true);
+      const resultado = await eliminarCliente(id);
+      
+      if (resultado) {
+        router.push(fromPagos ? "/pagos" : "/clientes");
+      } else {
+        alert("Error al eliminar el cliente. Por favor, intenta nuevamente.");
+        setEliminando(false);
+        setMostrarConfirmacion(false);
+      }
+    } catch (error) {
+      console.error('Error al eliminar cliente:', error);
       alert("Error al eliminar el cliente. Por favor, intenta nuevamente.");
       setEliminando(false);
       setMostrarConfirmacion(false);
