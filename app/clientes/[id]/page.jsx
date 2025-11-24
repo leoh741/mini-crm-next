@@ -54,12 +54,27 @@ function ClienteDetailPageContent() {
           setError("");
           console.log('Cliente cargado exitosamente:', clienteData.nombre);
           
-          // Cargar estado de pago del mes actual
+          // Cargar estado de pago del mes actual SIN CACHÉ para obtener datos frescos
           const hoy = new Date();
           const mesActual = hoy.getMonth();
           const añoActual = hoy.getFullYear();
           const clienteId = clienteData._id || clienteData.id || clienteData.crmId;
-          const estado = await getEstadoPagoMes(clienteId, mesActual, añoActual, true);
+          
+          // Cargar sin caché para asegurar datos actualizados
+          const estado = await getEstadoPagoMes(clienteId, mesActual, añoActual, false);
+          
+          // Si el cliente tiene servicios, sincronizar el estado pagado general con serviciosPagados
+          if (clienteData.servicios && Array.isArray(clienteData.servicios) && clienteData.servicios.length > 0) {
+            const serviciosPagados = estado?.serviciosPagados || {};
+            const todosPagadosCalculados = todosLosServiciosPagados(clienteData, serviciosPagados);
+            
+            // Si el estado calculado difiere del estado general, actualizar
+            if (clienteData.pagado !== todosPagadosCalculados) {
+              clienteData.pagado = todosPagadosCalculados;
+              setCliente(clienteData);
+            }
+          }
+          
           setEstadoPagoMes(estado || { serviciosPagados: {} });
         } else {
           console.error('Cliente no encontrado con ID:', id);
@@ -84,6 +99,11 @@ function ClienteDetailPageContent() {
       return () => clearTimeout(timer);
     }
   }, [id, searchParams]);
+
+  // Calcular estado real del cliente basado en serviciosPagados
+  const estadoRealCliente = cliente && cliente.servicios && Array.isArray(cliente.servicios) && cliente.servicios.length > 0
+    ? todosLosServiciosPagados(cliente, estadoPagoMes?.serviciosPagados || {})
+    : cliente?.pagado || false;
 
   const handleEliminar = async () => {
     setEliminando(true);
@@ -122,7 +142,11 @@ function ClienteDetailPageContent() {
     }
     
     // Para clientes sin servicios (compatibilidad)
-    const nuevoEstado = !cliente.pagado;
+    // Calcular estado actual basado en serviciosPagados si tiene servicios
+    const estadoActual = cliente.servicios && Array.isArray(cliente.servicios) && cliente.servicios.length > 0
+      ? todosLosServiciosPagados(cliente, serviciosPagados)
+      : cliente.pagado;
+    const nuevoEstado = !estadoActual;
     
     // Actualización optimista: cambiar estado inmediatamente en la UI
     setCliente(prev => prev ? { ...prev, pagado: nuevoEstado } : null);
@@ -552,24 +576,24 @@ function ClienteDetailPageContent() {
             <div className="flex items-center justify-between">
               <p><strong className="text-slate-300">Estado:</strong> 
                 <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
-                  cliente.pagado 
+                  estadoRealCliente
                     ? "bg-green-900/30 text-green-400 border border-green-700" 
                     : "bg-orange-900/30 text-orange-400 border border-orange-700"
                 }`}>
-                  {cliente.pagado ? "Pagado" : "Pendiente"}
+                  {estadoRealCliente ? "Pagado" : "Pendiente"}
                 </span>
               </p>
               <button
                 onClick={handleTogglePagado}
                 disabled={actualizandoPago}
                 className={`ml-4 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  cliente.pagado
+                  estadoRealCliente
                     ? "bg-orange-600 hover:bg-orange-700 text-white"
                     : "bg-green-600 hover:bg-green-700 text-white"
                 } disabled:opacity-50 disabled:cursor-not-allowed`}
-                title={cliente.pagado ? "Marcar como pendiente" : "Marcar como pagado"}
+                title={estadoRealCliente ? "Marcar como pendiente" : "Marcar como pagado"}
               >
-                {actualizandoPago ? "..." : cliente.pagado ? "Marcar Pendiente" : "Marcar Pagado"}
+                {actualizandoPago ? "..." : estadoRealCliente ? "Marcar Pendiente" : "Marcar Pagado"}
               </button>
             </div>
           )}
