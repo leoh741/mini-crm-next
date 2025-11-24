@@ -99,7 +99,7 @@ export async function POST(request) {
     // Preparar los datos del usuario con todos los campos requeridos
     // Asegurarse de que crmId esté presente y correctamente escrito
     const usuarioData = {
-      crmId: body.crmId || `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      crmId: body.crmId || `user-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
       nombre: String(body.nombre).trim(),
       email: String(body.email).trim().toLowerCase(),
       password: String(body.password),

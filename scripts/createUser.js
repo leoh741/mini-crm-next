@@ -50,7 +50,7 @@ async function createUser() {
     } else {
       // Crear nuevo usuario
       const usuarioData = {
-        crmId: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        crmId: `user-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
         nombre: nombre,
         email: email.toLowerCase().trim(),
         password: password,

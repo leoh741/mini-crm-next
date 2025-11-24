@@ -13,21 +13,21 @@ export default function ProtectedRoute({ children }) {
 
   useEffect(() => {
     // Marcar que el componente está montado en el cliente
-    setMounted(true);
-    
-    // Timeout de seguridad: si después de 3 segundos aún está cargando, forzar detención
-    const timeoutId = setTimeout(() => {
-      console.warn('ProtectedRoute: Timeout de carga alcanzado, forzando detención');
+    // Usar requestAnimationFrame para asegurar que se ejecute después del render inicial
+    if (typeof window !== 'undefined') {
+      requestAnimationFrame(() => {
+        setMounted(true);
+      });
+    } else {
+      // Si estamos en el servidor, marcar como montado inmediatamente
+      setMounted(true);
       setCargando(false);
-    }, 3000);
-
-    return () => clearTimeout(timeoutId);
+    }
   }, []);
 
   useEffect(() => {
     // Solo verificar autenticación cuando el componente esté montado en el cliente
     if (typeof window === 'undefined') {
-      // Si estamos en el servidor, marcar como no cargando inmediatamente
       setCargando(false);
       return;
     }
@@ -37,7 +37,7 @@ export default function ProtectedRoute({ children }) {
       return;
     }
 
-    // Verificar autenticación
+    // Verificar autenticación de forma síncrona (es rápido, solo lee localStorage)
     try {
       const estaAuth = estaAutenticado();
       setAutenticado(estaAuth);
@@ -55,7 +55,10 @@ export default function ProtectedRoute({ children }) {
       }
     } finally {
       // Siempre marcar como no cargando después de verificar
-      setCargando(false);
+      // Usar un pequeño delay para evitar parpadeos
+      setTimeout(() => {
+        setCargando(false);
+      }, 0);
     }
   }, [router, pathname, mounted]);
 

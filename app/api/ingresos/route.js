@@ -38,7 +38,7 @@ export async function POST(request) {
     
     // Generar crmId si no viene
     if (!body.crmId) {
-      body.crmId = `income-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      body.crmId = `income-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     }
     
     // Optimizado para servidor local: validadores habilitados

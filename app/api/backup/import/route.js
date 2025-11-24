@@ -57,7 +57,7 @@ export async function POST(request) {
     // Importar clientes
     if (Array.isArray(clientes) && clientes.length > 0) {
       const clientesImportados = clientes.map(cliente => ({
-        crmId: cliente.id || cliente.crmId || `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        crmId: cliente.id || cliente.crmId || `client-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
         nombre: cliente.nombre,
         rubro: cliente.rubro,
         ciudad: cliente.ciudad,
@@ -130,7 +130,7 @@ export async function POST(request) {
           for (const gasto of gastosDelPeriodo) {
             gastosArray.push({
               periodo,
-              crmId: gasto.id || gasto.crmId || `expense-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              crmId: gasto.id || gasto.crmId || `expense-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
               descripcion: gasto.descripcion,
               monto: parseFloat(gasto.monto) || 0,
               fecha: gasto.fecha ? new Date(gasto.fecha) : null,
@@ -155,7 +155,7 @@ export async function POST(request) {
           for (const ingreso of ingresosDelPeriodo) {
             ingresosArray.push({
               periodo,
-              crmId: ingreso.id || ingreso.crmId || `income-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              crmId: ingreso.id || ingreso.crmId || `income-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
               descripcion: ingreso.descripcion,
               monto: parseFloat(ingreso.monto) || 0,
               fecha: ingreso.fecha ? new Date(ingreso.fecha) : null,
@@ -175,7 +175,7 @@ export async function POST(request) {
     // Importar usuarios
     if (Array.isArray(usuarios) && usuarios.length > 0) {
       const usuariosImportados = usuarios.map(usuario => ({
-        crmId: usuario.id || usuario.crmId || `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        crmId: usuario.id || usuario.crmId || `user-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
         nombre: usuario.nombre,
         email: usuario.email ? usuario.email.trim().toLowerCase() : usuario.email, // Normalizar email
         password: usuario.password, // Mantener password tal cual

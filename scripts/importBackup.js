@@ -105,7 +105,7 @@ async function importBackup() {
     const clientesImportados = [];
     for (const cliente of clientes) {
       const clienteData = {
-        crmId: cliente.id || `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        crmId: cliente.id || `client-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
         nombre: cliente.nombre,
         rubro: cliente.rubro,
         ciudad: cliente.ciudad,
@@ -150,7 +150,7 @@ async function importBackup() {
         for (const gasto of gastosDelPeriodo) {
           const gastoData = {
             periodo,
-            crmId: gasto.id || `expense-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            crmId: gasto.id || `expense-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
             descripcion: gasto.descripcion,
             monto: parseFloat(gasto.monto) || 0,
             fecha: gasto.fecha ? new Date(gasto.fecha) : null,
@@ -172,7 +172,7 @@ async function importBackup() {
         for (const ingreso of ingresosDelPeriodo) {
           const ingresoData = {
             periodo,
-            crmId: ingreso.id || `income-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            crmId: ingreso.id || `income-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
             descripcion: ingreso.descripcion,
             monto: parseFloat(ingreso.monto) || 0,
             fecha: ingreso.fecha ? new Date(ingreso.fecha) : null,
@@ -191,7 +191,7 @@ async function importBackup() {
     const usuariosImportados = [];
     for (const usuario of usuarios) {
       const usuarioData = {
-        crmId: usuario.id || `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        crmId: usuario.id || `user-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
         nombre: usuario.nombre,
         email: usuario.email,
         password: usuario.password,

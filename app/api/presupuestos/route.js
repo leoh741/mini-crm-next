@@ -49,7 +49,7 @@ export async function POST(request) {
     
     // Generar presupuestoId si no viene
     if (!body.presupuestoId) {
-      body.presupuestoId = `presup-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      body.presupuestoId = `presup-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     }
     
     // Generar número de presupuesto si no viene
