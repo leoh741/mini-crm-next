@@ -23,7 +23,8 @@ export async function GET() {
 
     // Convertir clientes al formato esperado
     const clientesFormateados = clientes.map(cliente => ({
-      id: cliente.crmId || cliente._id.toString(),
+      id: cliente.crmId || cliente._id?.toString() || cliente._id,
+      crmId: cliente.crmId || cliente._id?.toString() || cliente._id, // Incluir también crmId explícitamente
       nombre: cliente.nombre,
       rubro: cliente.rubro,
       ciudad: cliente.ciudad,

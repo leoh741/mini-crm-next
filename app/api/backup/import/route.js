@@ -114,50 +114,96 @@ export async function POST(request) {
     // Importar clientes
     if (Array.isArray(clientes) && clientes.length > 0) {
       console.log('[BACKUP IMPORT] Preparando', clientes.length, 'clientes para importar...');
-      const clientesImportados = clientes.map(cliente => ({
-        crmId: cliente.id || cliente.crmId || `client-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
-        nombre: cliente.nombre,
-        rubro: cliente.rubro,
-        ciudad: cliente.ciudad,
-        email: cliente.email,
-        montoPago: cliente.montoPago,
-        fechaPago: cliente.fechaPago,
-        pagado: cliente.pagado || false,
-        pagoUnico: cliente.pagoUnico || false,
-        pagoMesSiguiente: cliente.pagoMesSiguiente || false,
-        servicios: cliente.servicios || [],
-        observaciones: cliente.observaciones
-      }));
       
-      if (clientesImportados.length > 0) {
+      // Log del primer cliente para debugging
+      if (clientes.length > 0) {
+        console.log('[BACKUP IMPORT] Ejemplo de cliente del backup:', JSON.stringify(clientes[0], null, 2));
+      }
+      
+      const clientesImportados = clientes.map((cliente, index) => {
+        const crmId = cliente.id || cliente.crmId || `client-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+        
+        // Log si falta nombre (requerido)
+        if (!cliente.nombre) {
+          console.warn(`[BACKUP IMPORT] Cliente ${index} sin nombre, crmId: ${crmId}`);
+        }
+        
+        return {
+          crmId: crmId,
+          nombre: cliente.nombre,
+          rubro: cliente.rubro,
+          ciudad: cliente.ciudad,
+          email: cliente.email,
+          montoPago: cliente.montoPago,
+          fechaPago: cliente.fechaPago,
+          pagado: cliente.pagado || false,
+          pagoUnico: cliente.pagoUnico || false,
+          pagoMesSiguiente: cliente.pagoMesSiguiente || false,
+          servicios: cliente.servicios || [],
+          observaciones: cliente.observaciones
+        };
+      });
+      
+      // Filtrar clientes sin nombre (requerido)
+      const clientesValidos = clientesImportados.filter(c => c.nombre);
+      const clientesInvalidos = clientesImportados.filter(c => !c.nombre);
+      
+      if (clientesInvalidos.length > 0) {
+        console.warn(`[BACKUP IMPORT] ${clientesInvalidos.length} clientes sin nombre fueron omitidos`);
+      }
+      
+      console.log('[BACKUP IMPORT] Clientes válidos para importar:', clientesValidos.length);
+      
+      if (clientesValidos.length > 0) {
         try {
-          const result = await Client.insertMany(clientesImportados, { ordered: false });
+          console.log('[BACKUP IMPORT] Intentando insertar', clientesValidos.length, 'clientes...');
+          const result = await Client.insertMany(clientesValidos, { ordered: false });
           resultados.clientes = result.length;
           console.log('[BACKUP IMPORT] Clientes insertados exitosamente:', result.length);
+          
+          // Log de los primeros 3 clientes insertados para verificación
+          if (result.length > 0) {
+            console.log('[BACKUP IMPORT] Primeros clientes insertados:');
+            result.slice(0, 3).forEach((c, i) => {
+              console.log(`[BACKUP IMPORT]   ${i + 1}. ${c.nombre} (crmId: ${c.crmId})`);
+            });
+          }
         } catch (insertError) {
           console.error('[BACKUP IMPORT] Error al insertar clientes:', insertError);
+          console.error('[BACKUP IMPORT] Detalles del error:', {
+            code: insertError.code,
+            name: insertError.name,
+            message: insertError.message,
+            writeErrors: insertError.writeErrors ? insertError.writeErrors.length : 0
+          });
+          
           // Si hay errores de duplicados, intentar uno por uno
           if (insertError.code === 11000 || insertError.name === 'BulkWriteError') {
             console.log('[BACKUP IMPORT] Intentando insertar clientes uno por uno...');
             let insertados = 0;
-            for (const cliente of clientesImportados) {
+            let errores = 0;
+            for (const cliente of clientesValidos) {
               try {
-                await Client.findOneAndUpdate(
+                const resultado = await Client.findOneAndUpdate(
                   { crmId: cliente.crmId },
                   cliente,
-                  { upsert: true }
+                  { upsert: true, new: true }
                 );
                 insertados++;
+                console.log(`[BACKUP IMPORT] Cliente insertado/actualizado: ${cliente.nombre} (crmId: ${cliente.crmId})`);
               } catch (e) {
-                console.warn('[BACKUP IMPORT] Error al insertar cliente individual:', e.message);
+                errores++;
+                console.error(`[BACKUP IMPORT] Error al insertar cliente "${cliente.nombre}" (crmId: ${cliente.crmId}):`, e.message);
               }
             }
             resultados.clientes = insertados;
-            console.log('[BACKUP IMPORT] Clientes insertados uno por uno:', insertados);
+            console.log('[BACKUP IMPORT] Clientes insertados uno por uno:', insertados, 'errores:', errores);
           } else {
             throw insertError;
           }
         }
+      } else {
+        console.warn('[BACKUP IMPORT] No hay clientes válidos para importar (todos sin nombre)');
       }
     } else {
       console.warn('[BACKUP IMPORT] No hay clientes para importar o no es un array válido');
@@ -375,6 +421,12 @@ export async function POST(request) {
     console.log('[BACKUP IMPORT] - Clientes en BD:', clientesVerificados, '(esperados:', resultados.clientes, ')');
     console.log('[BACKUP IMPORT] - Pagos en BD:', pagosVerificados, '(esperados:', resultados.pagosMensuales, ')');
     
+    // Listar algunos clientes para verificación
+    if (clientesVerificados > 0) {
+      const algunosClientes = await Client.find({}).select('nombre crmId').limit(5).lean();
+      console.log('[BACKUP IMPORT] Primeros clientes en BD:', algunosClientes.map(c => `${c.nombre} (${c.crmId})`).join(', '));
+    }
+    
     if (resultados.clientes > 0 && clientesVerificados === 0) {
       console.error('[BACKUP IMPORT] ERROR CRÍTICO: Se reportaron clientes insertados pero la BD está vacía');
       return NextResponse.json({
@@ -382,6 +434,10 @@ export async function POST(request) {
         error: 'Error crítico: Los clientes no se insertaron correctamente en la base de datos',
         resultados
       }, { status: 500 });
+    }
+    
+    if (resultados.clientes > clientesVerificados) {
+      console.warn(`[BACKUP IMPORT] ADVERTENCIA: Se esperaban ${resultados.clientes} clientes pero solo hay ${clientesVerificados} en BD`);
     }
 
     console.log('[BACKUP IMPORT] Importación completada exitosamente');
