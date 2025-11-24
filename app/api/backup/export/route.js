@@ -45,6 +45,7 @@ export async function GET() {
       }
       pagosMensualesFormateados[pago.mes][pago.crmClientId] = {
         pagado: pago.pagado || false,
+        serviciosPagados: pago.serviciosPagados || {},
         fechaActualizacion: pago.fechaActualizacion || null
       };
     });

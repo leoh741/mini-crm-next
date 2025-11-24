@@ -9,11 +9,16 @@ import Budget from '../../../../models/Budget';
 
 export async function POST(request) {
   try {
+    console.log('[BACKUP IMPORT] Iniciando importación de backup...');
     await connectDB();
+    console.log('[BACKUP IMPORT] Conectado a MongoDB');
+    
     const body = await request.json();
+    console.log('[BACKUP IMPORT] Body recibido, keys:', Object.keys(body));
     
     // Validar estructura básica
     if (!body.clientes && !body.pagosMensuales) {
+      console.error('[BACKUP IMPORT] Error: Formato inválido, no hay clientes ni pagosMensuales');
       return NextResponse.json(
         { success: false, error: 'Formato de datos inválido. Se requieren al menos clientes o pagosMensuales.' },
         { status: 400 }
@@ -35,19 +40,65 @@ export async function POST(request) {
       ingresos = typeof body.ingresos === 'string' ? JSON.parse(body.ingresos) : (body.ingresos || {});
       usuarios = typeof body.usuarios === 'string' ? JSON.parse(body.usuarios) : (body.usuarios || []);
       presupuestos = typeof body.presupuestos === 'string' ? JSON.parse(body.presupuestos) : (body.presupuestos || []);
+      
+      console.log('[BACKUP IMPORT] Datos parseados:');
+      console.log('[BACKUP IMPORT] - Clientes:', Array.isArray(clientes) ? clientes.length : 'NO ES ARRAY');
+      console.log('[BACKUP IMPORT] - Pagos:', typeof pagosMensuales === 'object' ? Object.keys(pagosMensuales).length + ' meses' : 'NO ES OBJETO');
+      console.log('[BACKUP IMPORT] - Gastos:', typeof gastos === 'object' ? Object.keys(gastos).length + ' periodos' : 'NO ES OBJETO');
+      console.log('[BACKUP IMPORT] - Ingresos:', typeof ingresos === 'object' ? Object.keys(ingresos).length + ' periodos' : 'NO ES OBJETO');
+      console.log('[BACKUP IMPORT] - Usuarios:', Array.isArray(usuarios) ? usuarios.length : 'NO ES ARRAY');
+      console.log('[BACKUP IMPORT] - Presupuestos:', Array.isArray(presupuestos) ? presupuestos.length : 'NO ES ARRAY');
     } catch (parseError) {
+      console.error('[BACKUP IMPORT] Error al parsear JSON:', parseError);
       return NextResponse.json(
         { success: false, error: 'Error al parsear los datos JSON: ' + parseError.message },
         { status: 400 }
       );
     }
 
-    // Limpiar colecciones existentes (EXCEPTO usuarios - se mantienen)
-    await Client.deleteMany({});
-    await MonthlyPayment.deleteMany({});
-    await Expense.deleteMany({});
-    await Income.deleteMany({});
-    await Budget.deleteMany({});
+    // VALIDAR que hay datos para importar ANTES de borrar
+    const tieneClientes = Array.isArray(clientes) && clientes.length > 0;
+    const tienePagos = typeof pagosMensuales === 'object' && pagosMensuales !== null && Object.keys(pagosMensuales).length > 0;
+    const tieneGastos = typeof gastos === 'object' && gastos !== null && Object.keys(gastos).length > 0;
+    const tieneIngresos = typeof ingresos === 'object' && ingresos !== null && Object.keys(ingresos).length > 0;
+    const tienePresupuestos = Array.isArray(presupuestos) && presupuestos.length > 0;
+
+    if (!tieneClientes && !tienePagos && !tieneGastos && !tieneIngresos && !tienePresupuestos) {
+      console.error('[BACKUP IMPORT] Error: No hay datos válidos para importar');
+      return NextResponse.json(
+        { success: false, error: 'No hay datos válidos para importar. El backup está vacío o tiene formato incorrecto.' },
+        { status: 400 }
+      );
+    }
+
+    console.log('[BACKUP IMPORT] Validación exitosa, procediendo a limpiar colecciones...');
+    
+    // Limpiar colecciones existentes SOLO si hay datos para importar (EXCEPTO usuarios - se mantienen)
+    if (tieneClientes) {
+      const countAntes = await Client.countDocuments();
+      await Client.deleteMany({});
+      console.log('[BACKUP IMPORT] Clientes eliminados:', countAntes);
+    }
+    if (tienePagos) {
+      const countAntes = await MonthlyPayment.countDocuments();
+      await MonthlyPayment.deleteMany({});
+      console.log('[BACKUP IMPORT] Pagos eliminados:', countAntes);
+    }
+    if (tieneGastos) {
+      const countAntes = await Expense.countDocuments();
+      await Expense.deleteMany({});
+      console.log('[BACKUP IMPORT] Gastos eliminados:', countAntes);
+    }
+    if (tieneIngresos) {
+      const countAntes = await Income.countDocuments();
+      await Income.deleteMany({});
+      console.log('[BACKUP IMPORT] Ingresos eliminados:', countAntes);
+    }
+    if (tienePresupuestos) {
+      const countAntes = await Budget.countDocuments();
+      await Budget.deleteMany({});
+      console.log('[BACKUP IMPORT] Presupuestos eliminados:', countAntes);
+    }
     // NO eliminamos usuarios - se mantienen y se hace merge
 
     const resultados = {
@@ -62,6 +113,7 @@ export async function POST(request) {
 
     // Importar clientes
     if (Array.isArray(clientes) && clientes.length > 0) {
+      console.log('[BACKUP IMPORT] Preparando', clientes.length, 'clientes para importar...');
       const clientesImportados = clientes.map(cliente => ({
         crmId: cliente.id || cliente.crmId || `client-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
         nombre: cliente.nombre,
@@ -78,9 +130,37 @@ export async function POST(request) {
       }));
       
       if (clientesImportados.length > 0) {
-        await Client.insertMany(clientesImportados);
-        resultados.clientes = clientesImportados.length;
+        try {
+          const result = await Client.insertMany(clientesImportados, { ordered: false });
+          resultados.clientes = result.length;
+          console.log('[BACKUP IMPORT] Clientes insertados exitosamente:', result.length);
+        } catch (insertError) {
+          console.error('[BACKUP IMPORT] Error al insertar clientes:', insertError);
+          // Si hay errores de duplicados, intentar uno por uno
+          if (insertError.code === 11000 || insertError.name === 'BulkWriteError') {
+            console.log('[BACKUP IMPORT] Intentando insertar clientes uno por uno...');
+            let insertados = 0;
+            for (const cliente of clientesImportados) {
+              try {
+                await Client.findOneAndUpdate(
+                  { crmId: cliente.crmId },
+                  cliente,
+                  { upsert: true }
+                );
+                insertados++;
+              } catch (e) {
+                console.warn('[BACKUP IMPORT] Error al insertar cliente individual:', e.message);
+              }
+            }
+            resultados.clientes = insertados;
+            console.log('[BACKUP IMPORT] Clientes insertados uno por uno:', insertados);
+          } else {
+            throw insertError;
+          }
+        }
       }
+    } else {
+      console.warn('[BACKUP IMPORT] No hay clientes para importar o no es un array válido');
     }
 
     // Importar pagos mensuales
@@ -93,6 +173,7 @@ export async function POST(request) {
               mes,
               crmClientId,
               pagado: datosPago?.pagado || false,
+              serviciosPagados: datosPago?.serviciosPagados || {},
               fechaActualizacion: datosPago?.fechaActualizacion ? new Date(datosPago.fechaActualizacion) : null
             });
           }
@@ -100,13 +181,17 @@ export async function POST(request) {
       }
       
       if (pagosArray.length > 0) {
+        console.log('[BACKUP IMPORT] Preparando', pagosArray.length, 'pagos para importar...');
         // Usar insertMany con ordered: false para evitar errores por duplicados
         try {
-          await MonthlyPayment.insertMany(pagosArray, { ordered: false });
-          resultados.pagosMensuales = pagosArray.length;
+          const result = await MonthlyPayment.insertMany(pagosArray, { ordered: false });
+          resultados.pagosMensuales = result.length;
+          console.log('[BACKUP IMPORT] Pagos insertados exitosamente:', result.length);
         } catch (error) {
+          console.error('[BACKUP IMPORT] Error al insertar pagos:', error);
           // Si hay errores de duplicados, intentar uno por uno
           if (error.code === 11000) {
+            console.log('[BACKUP IMPORT] Intentando insertar pagos uno por uno...');
             let insertados = 0;
             for (const pago of pagosArray) {
               try {
@@ -117,14 +202,17 @@ export async function POST(request) {
                 );
                 insertados++;
               } catch (e) {
-                console.warn('Error al insertar pago:', e.message);
+                console.warn('[BACKUP IMPORT] Error al insertar pago individual:', e.message);
               }
             }
             resultados.pagosMensuales = insertados;
+            console.log('[BACKUP IMPORT] Pagos insertados uno por uno:', insertados);
           } else {
             throw error;
           }
         }
+      } else {
+        console.warn('[BACKUP IMPORT] No hay pagos para importar');
       }
     }
 
@@ -279,13 +367,33 @@ export async function POST(request) {
       }
     }
 
+    // Verificar que los datos se insertaron correctamente
+    const clientesVerificados = await Client.countDocuments();
+    const pagosVerificados = await MonthlyPayment.countDocuments();
+    
+    console.log('[BACKUP IMPORT] Verificación final:');
+    console.log('[BACKUP IMPORT] - Clientes en BD:', clientesVerificados, '(esperados:', resultados.clientes, ')');
+    console.log('[BACKUP IMPORT] - Pagos en BD:', pagosVerificados, '(esperados:', resultados.pagosMensuales, ')');
+    
+    if (resultados.clientes > 0 && clientesVerificados === 0) {
+      console.error('[BACKUP IMPORT] ERROR CRÍTICO: Se reportaron clientes insertados pero la BD está vacía');
+      return NextResponse.json({
+        success: false,
+        error: 'Error crítico: Los clientes no se insertaron correctamente en la base de datos',
+        resultados
+      }, { status: 500 });
+    }
+
+    console.log('[BACKUP IMPORT] Importación completada exitosamente');
+    
     return NextResponse.json({
       success: true,
       message: 'Datos importados correctamente',
       resultados
     });
   } catch (error) {
-    console.error('Error al importar backup:', error);
+    console.error('[BACKUP IMPORT] Error al importar backup:', error);
+    console.error('[BACKUP IMPORT] Stack:', error.stack);
     return NextResponse.json(
       { success: false, error: error.message || 'Error al importar los datos' },
       { status: 500 }
