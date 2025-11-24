@@ -402,7 +402,7 @@ function ClienteDetailPageContent() {
           <h2 className="text-xl sm:text-2xl font-semibold break-words pr-2">{cliente.nombre}</h2>
           <div className="flex flex-wrap gap-2 sm:flex-nowrap">
             <button
-              onClick={() => generarResumenPagoPDF(cliente)}
+              onClick={() => generarResumenPagoPDF(cliente, estadoPagoMes)}
               className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap"
             >
               📄 PDF
