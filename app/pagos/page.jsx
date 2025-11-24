@@ -72,22 +72,34 @@ function PagosPageContent() {
         const añoActual = fechaActual.getFullYear();
         const esMesActual = añoSeleccionado === añoActual && mesIndex === mesActual;
         
-        // OPTIMIZACIÓN CRÍTICA: NO limpiar caché al cargar, solo al actualizar
-        // Cargar clientes y estados en paralelo para mayor velocidad
-        const clientesData = await getClientes();
+        // Cargar clientes forzando recarga para obtener datos frescos
+        // Esto asegura que los cambios recientes se reflejen
+        const clientesData = await getClientes(true); // true = forzar recarga sin caché
+        
+        // Verificar que se obtuvieron todos los clientes
+        if (!clientesData || !Array.isArray(clientesData)) {
+          console.error('Error: getClientes no devolvió un array válido', clientesData);
+          setError('Error al cargar los clientes. Por favor, recarga la página.');
+          setClientes([]);
+          setClientesConEstado([]);
+          setLoading(false);
+          return;
+        }
+        
+        console.log(`Cargados ${clientesData.length} clientes en página de pagos`);
         
         // Mientras tanto, preparar IDs para la query de estados
-        const clientesIds = (clientesData || []).map(c => c._id || c.id);
+        const clientesIds = clientesData.map(c => c._id || c.id || c.crmId).filter(Boolean);
         
-        // Cargar estados en paralelo (o inmediatamente después si no hay clientes)
+        // Cargar estados sin caché para obtener datos frescos después de actualizaciones
         const estadosMap = clientesIds.length > 0 
-          ? await getEstadosPagoMes(clientesIds, mesIndex, añoSeleccionado, true) // usar caché
+          ? await getEstadosPagoMes(clientesIds, mesIndex, añoSeleccionado, false) // false = no usar caché
           : {};
         
-        setClientes(clientesData || []);
+        setClientes(clientesData);
         
-        const clientesConEstados = (clientesData || []).map(cliente => {
-          const clienteId = cliente._id || cliente.id;
+        const clientesConEstados = clientesData.map(cliente => {
+          const clienteId = cliente._id || cliente.id || cliente.crmId;
           const estadoMes = estadosMap[clienteId];
           return {
             ...cliente,
