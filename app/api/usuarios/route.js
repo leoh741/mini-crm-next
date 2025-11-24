@@ -85,20 +85,44 @@ export async function POST(request) {
     await connectDB();
     const body = await request.json();
     
-    // Generar crmId si no viene
-    if (!body.crmId) {
-      body.crmId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Validar que los campos requeridos estén presentes
+    if (!body.nombre || !body.email || !body.password) {
+      return NextResponse.json(
+        { success: false, error: 'Faltan campos requeridos: nombre, email o password' },
+        { status: 400 }
+      );
     }
     
-    // Optimizado para MongoDB Free: sin validadores para mayor velocidad
-    const usuario = await User.create(body, { 
-      runValidators: false,
+    // Preparar los datos del usuario con todos los campos requeridos
+    const usuarioData = {
+      crmId: body.crmId || `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      nombre: body.nombre.trim(),
+      email: body.email.trim().toLowerCase(),
+      password: body.password,
+      rol: body.rol || 'usuario',
+      fechaCreacion: body.fechaCreacion || new Date()
+    };
+    
+    // Crear el usuario
+    const usuario = await User.create(usuarioData, { 
       maxTimeMS: 3000 
     });
+    
     return NextResponse.json({ success: true, data: usuario }, { status: 201 });
   } catch (error) {
+    console.error('[API POST /usuarios] Error:', error);
+    
+    // Manejar errores de duplicado
+    if (error.code === 11000) {
+      const campo = Object.keys(error.keyPattern)[0];
+      return NextResponse.json(
+        { success: false, error: `El ${campo === 'email' ? 'email' : campo} ya está registrado` },
+        { status: 400 }
+      );
+    }
+    
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: error.message || 'Error al crear usuario' },
       { status: 400 }
     );
   }
