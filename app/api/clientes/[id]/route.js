@@ -18,7 +18,7 @@ export async function GET(request, { params }) {
           cliente = await Client.findById(searchId)
             .select('crmId nombre rubro ciudad email montoPago fechaPago pagado pagoUnico pagoMesSiguiente servicios observaciones')
             .lean()
-            .maxTimeMS(5000); // Timeout adecuado para servidor local
+            .maxTimeMS(30000); // Timeout aumentado a 30 segundos para servidor VPS
         } catch (idError) {
           // Si falla, continuar para buscar por crmId
           console.warn('Error al buscar por _id:', idError.message);
@@ -30,7 +30,7 @@ export async function GET(request, { params }) {
         cliente = await Client.findOne({ crmId: searchId })
           .select('crmId nombre rubro ciudad email montoPago fechaPago pagado pagoUnico pagoMesSiguiente servicios observaciones')
           .lean()
-          .maxTimeMS(5000); // Timeout adecuado para servidor local
+          .maxTimeMS(30000); // Timeout aumentado a 30 segundos para servidor VPS
       }
     
     if (!cliente) {
@@ -131,10 +131,10 @@ export async function PUT(request, { params }) {
     const clienteActualizado = await Client.findByIdAndUpdate(
       cliente._id,
       { $set: updateData },
-      { 
+        { 
         new: true, 
-        runValidators: true, // Habilitar validadores para servidor local
-        maxTimeMS: 5000, // Timeout adecuado para servidor local
+        runValidators: true, // Habilitar validadores para servidor VPS
+        maxTimeMS: 30000, // Timeout aumentado a 30 segundos para servidor VPS
         lean: true // Usar lean() directamente para mejor rendimiento
       }
     )
@@ -193,9 +193,9 @@ export async function DELETE(request, { params }) {
       );
     }
     
-    // Eliminar usando el _id encontrado (optimizado para servidor local)
+    // Eliminar usando el _id encontrado (optimizado para servidor VPS)
     await Client.findByIdAndDelete(cliente._id, { 
-      maxTimeMS: 5000 // Timeout adecuado para servidor local
+      maxTimeMS: 30000 // Timeout aumentado a 30 segundos para servidor VPS
     });
     
     return NextResponse.json({ success: true, data: cliente });
