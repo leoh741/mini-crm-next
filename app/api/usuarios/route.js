@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import connectDB from '../../../lib/mongo';
 import User from '../../../models/User';
 
@@ -85,6 +86,8 @@ export async function POST(request) {
     await connectDB();
     const body = await request.json();
     
+    console.log('[API POST /usuarios] Body recibido:', JSON.stringify(body, null, 2));
+    
     // Validar que los campos requeridos estén presentes
     if (!body.nombre || !body.email || !body.password) {
       return NextResponse.json(
@@ -94,29 +97,62 @@ export async function POST(request) {
     }
     
     // Preparar los datos del usuario con todos los campos requeridos
+    // Asegurarse de que crmId esté presente y correctamente escrito
     const usuarioData = {
       crmId: body.crmId || `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      nombre: body.nombre.trim(),
-      email: body.email.trim().toLowerCase(),
-      password: body.password,
+      nombre: String(body.nombre).trim(),
+      email: String(body.email).trim().toLowerCase(),
+      password: String(body.password),
       rol: body.rol || 'usuario',
       fechaCreacion: body.fechaCreacion || new Date()
     };
     
-    // Crear el usuario
-    const usuario = await User.create(usuarioData, { 
-      maxTimeMS: 3000 
+    // Verificar que todos los campos requeridos estén presentes
+    if (!usuarioData.crmId || !usuarioData.nombre || !usuarioData.email || !usuarioData.password) {
+      return NextResponse.json(
+        { success: false, error: 'Todos los campos requeridos deben estar presentes: crmId, nombre, email, password' },
+        { status: 400 }
+      );
+    }
+    
+    console.log('[API POST /usuarios] Datos a crear:', JSON.stringify(usuarioData, null, 2));
+    console.log('[API POST /usuarios] Campos verificados:', {
+      crmId: !!usuarioData.crmId,
+      nombre: !!usuarioData.nombre,
+      email: !!usuarioData.email,
+      password: !!usuarioData.password
     });
     
-    return NextResponse.json({ success: true, data: usuario }, { status: 201 });
+    // Crear el usuario usando new y save para tener más control sobre la validación
+    const nuevoUsuario = new User(usuarioData);
+    await nuevoUsuario.save();
+    
+    console.log('[API POST /usuarios] Usuario creado exitosamente:', nuevoUsuario._id);
+    
+    return NextResponse.json({ success: true, data: nuevoUsuario }, { status: 201 });
   } catch (error) {
-    console.error('[API POST /usuarios] Error:', error);
+    console.error('[API POST /usuarios] Error completo:', {
+      message: error.message,
+      name: error.name,
+      code: error.code,
+      errors: error.errors,
+      stack: error.stack
+    });
     
     // Manejar errores de duplicado
     if (error.code === 11000) {
       const campo = Object.keys(error.keyPattern)[0];
       return NextResponse.json(
         { success: false, error: `El ${campo === 'email' ? 'email' : campo} ya está registrado` },
+        { status: 400 }
+      );
+    }
+    
+    // Manejar errores de validación de Mongoose
+    if (error.name === 'ValidationError') {
+      const mensajes = Object.values(error.errors || {}).map(e => e.message).join(', ');
+      return NextResponse.json(
+        { success: false, error: `Error de validación: ${mensajes || error.message}` },
         { status: 400 }
       );
     }
