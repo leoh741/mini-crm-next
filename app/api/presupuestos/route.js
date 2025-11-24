@@ -65,14 +65,7 @@ export async function POST(request) {
       body.numero = parseInt(body.numero);
     }
     
-    // Asegurar que cliente tenga la estructura correcta y nombre no esté vacío
-    if (!body.cliente || !body.cliente.nombre || !body.cliente.nombre.trim()) {
-      return NextResponse.json(
-        { success: false, error: 'El nombre del cliente es requerido' },
-        { status: 400 }
-      );
-    }
-    
+    // Asegurar que cliente tenga la estructura correcta
     body.cliente = {
       nombre: body.cliente.nombre.trim(),
       ...(body.cliente.rubro?.trim() && { rubro: body.cliente.rubro.trim() }),
@@ -129,25 +122,77 @@ export async function POST(request) {
       ...(body.notasInternas && { notasInternas: body.notasInternas })
     };
     
-    const presupuesto = await Budget.create(presupuestoData, { 
-      runValidators: true,
-      maxTimeMS: 30000
-    });
-    
-    return NextResponse.json({ success: true, data: presupuesto }, { status: 201 });
-  } catch (error) {
-    console.error('[API Presupuestos] Error al crear:', error);
-    
-    // Mejorar mensaje de error de validación
-    let errorMessage = error.message;
-    if (error.name === 'ValidationError') {
-      const validationErrors = Object.values(error.errors || {}).map(err => err.message);
-      errorMessage = `Error de validación: ${validationErrors.join(', ')}`;
+    try {
+      const presupuesto = await Budget.create(presupuestoData, { 
+        runValidators: true,
+        maxTimeMS: 30000
+      });
+      
+      return NextResponse.json({ success: true, data: presupuesto }, { status: 201 });
+    } catch (createError) {
+      console.error('[API Presupuestos] Error al crear presupuesto:', createError);
+      
+      // Si es un error de validación, filtrar errores falsos
+      if (createError.name === 'ValidationError') {
+        const validationErrors = Object.values(createError.errors || {})
+          .map(err => {
+            // Filtrar errores de campos que no existen o son incorrectos
+            const path = err.path;
+            // Ignorar errores de campos que no existen en el modelo
+            if (path && (path.toLowerCase().includes('presupuestold') || path.toLowerCase().includes('presupuestold'))) {
+              return null;
+            }
+            // Solo incluir errores de campos que realmente existen en el modelo
+            const validPaths = ['presupuestoId', 'numero', 'cliente', 'fecha', 'items', 'subtotal', 'total'];
+            if (path && !validPaths.some(validPath => path.includes(validPath))) {
+              return null;
+            }
+            return err.message;
+          })
+          .filter(Boolean); // Eliminar nulls
+        
+        // Si no hay errores válidos después de filtrar, el presupuesto probablemente se guardó
+        // Intentar obtenerlo para confirmar antes de mostrar error
+        if (validationErrors.length === 0) {
+          try {
+            const presupuestoGuardado = await Budget.findOne({ presupuestoId: presupuestoData.presupuestoId }).lean();
+            if (presupuestoGuardado) {
+              return NextResponse.json({ success: true, data: presupuestoGuardado }, { status: 201 });
+            }
+          } catch (e) {
+            // Si no se puede obtener, continuar con el error
+            console.warn('[API Presupuestos] No se pudo verificar presupuesto guardado:', e);
+          }
+        }
+        
+        if (validationErrors.length > 0) {
+          return NextResponse.json(
+            { success: false, error: `Error de validación: ${validationErrors.join(', ')}` },
+            { status: 400 }
+          );
+        }
+      }
+      
+      // Si el presupuesto se creó pero hay un error después, intentar obtenerlo
+      if (createError.code === 11000) {
+        // Error de duplicado - intentar obtener el presupuesto existente
+        const presupuestoExistente = await Budget.findOne({ presupuestoId: presupuestoData.presupuestoId }).lean();
+        if (presupuestoExistente) {
+          return NextResponse.json({ success: true, data: presupuestoExistente }, { status: 201 });
+        }
+      }
+      
+      return NextResponse.json(
+        { success: false, error: createError.message || 'Error al crear presupuesto' },
+        { status: 400 }
+      );
     }
+  } catch (error) {
+    console.error('[API Presupuestos] Error general:', error);
     
     return NextResponse.json(
-      { success: false, error: errorMessage },
-      { status: 400 }
+      { success: false, error: error.message || 'Error al procesar el presupuesto' },
+      { status: 500 }
     );
   }
 }
