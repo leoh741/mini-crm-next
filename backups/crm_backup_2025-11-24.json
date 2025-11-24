@@ -1,0 +1,10 @@
+{
+  "clientes": "[]",
+  "pagosMensuales": "{}",
+  "clientesEliminados": "[]",
+  "gastos": "{}",
+  "ingresos": "{}",
+  "usuarios": "[{\"id\":\"user-1764017345885-eqmvuzu4n\",\"nombre\":\"Leonel Reynoso\",\"email\":\"leoh741@gmail.com\",\"password\":\"Leonel1234\",\"rol\":\"admin\",\"fechaCreacion\":\"2025-11-24T20:49:05.885Z\"}]",
+  "fechaExportacion": "2025-11-24T21:23:42.086Z",
+  "version": "2.0"
+}

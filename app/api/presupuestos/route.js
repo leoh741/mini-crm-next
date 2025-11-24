@@ -47,27 +47,38 @@ export async function POST(request) {
       );
     }
     
-    // Generar presupuestoId si no viene
-    if (!body.presupuestoId) {
+    // Generar presupuestoId si no viene (asegurar que siempre esté presente)
+    if (!body.presupuestoId || body.presupuestoId.trim() === '') {
       body.presupuestoId = `presup-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     }
     
-    // Generar número de presupuesto si no viene
-    if (!body.numero) {
+    // Generar número de presupuesto si no viene (asegurar que siempre esté presente)
+    if (!body.numero || isNaN(body.numero)) {
       const ultimoPresupuesto = await Budget.findOne({})
         .sort({ numero: -1 })
         .select('numero')
-        .lean();
-      body.numero = ultimoPresupuesto ? ultimoPresupuesto.numero + 1 : 1;
+        .lean()
+        .maxTimeMS(5000);
+      body.numero = ultimoPresupuesto && ultimoPresupuesto.numero ? ultimoPresupuesto.numero + 1 : 1;
+    } else {
+      // Asegurar que sea un número
+      body.numero = parseInt(body.numero);
     }
     
-    // Asegurar que cliente tenga la estructura correcta
+    // Asegurar que cliente tenga la estructura correcta y nombre no esté vacío
+    if (!body.cliente || !body.cliente.nombre || !body.cliente.nombre.trim()) {
+      return NextResponse.json(
+        { success: false, error: 'El nombre del cliente es requerido' },
+        { status: 400 }
+      );
+    }
+    
     body.cliente = {
       nombre: body.cliente.nombre.trim(),
-      rubro: body.cliente.rubro?.trim() || undefined,
-      ciudad: body.cliente.ciudad?.trim() || undefined,
-      email: body.cliente.email?.trim() || undefined,
-      telefono: body.cliente.telefono?.trim() || undefined
+      ...(body.cliente.rubro?.trim() && { rubro: body.cliente.rubro.trim() }),
+      ...(body.cliente.ciudad?.trim() && { ciudad: body.cliente.ciudad.trim() }),
+      ...(body.cliente.email?.trim() && { email: body.cliente.email.trim() }),
+      ...(body.cliente.telefono?.trim() && { telefono: body.cliente.telefono.trim() })
     };
     
     // Calcular subtotales y total si no vienen
@@ -96,9 +107,31 @@ export async function POST(request) {
     body.validez = body.validez || 30;
     body.fecha = body.fecha ? new Date(body.fecha) : new Date();
     
-    const presupuesto = await Budget.create(body, { 
+    // Asegurar que subtotal y total sean números válidos
+    body.subtotal = parseFloat(body.subtotal) || 0;
+    body.descuento = parseFloat(body.descuento) || 0;
+    body.total = parseFloat(body.total) || 0;
+    
+    // Crear objeto limpio solo con los campos del modelo
+    const presupuestoData = {
+      presupuestoId: body.presupuestoId,
+      numero: body.numero,
+      cliente: body.cliente,
+      fecha: body.fecha,
+      validez: body.validez,
+      items: body.items,
+      subtotal: body.subtotal,
+      descuento: body.descuento,
+      porcentajeDescuento: body.porcentajeDescuento || 0,
+      total: body.total,
+      estado: body.estado,
+      ...(body.observaciones && { observaciones: body.observaciones }),
+      ...(body.notasInternas && { notasInternas: body.notasInternas })
+    };
+    
+    const presupuesto = await Budget.create(presupuestoData, { 
       runValidators: true,
-      maxTimeMS: 5000
+      maxTimeMS: 30000
     });
     
     return NextResponse.json({ success: true, data: presupuesto }, { status: 201 });
