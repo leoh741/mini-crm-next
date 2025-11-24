@@ -64,9 +64,9 @@ export async function GET(request) {
     // Mensaje de error más descriptivo
     let errorMessage = error.message;
     if (error.message.includes('MONGODB_URI')) {
-      errorMessage = 'Error de configuración: MONGODB_URI no está configurada en Vercel. Ve a Settings → Environment Variables y agrega MONGODB_URI.';
+      errorMessage = 'Error de configuración: MONGODB_URI no está configurada. Configura la variable de entorno MONGODB_URI en el archivo .env.local o variables de entorno del sistema.';
     } else if (error.message.includes('MongoNetworkError') || error.message.includes('ENOTFOUND')) {
-      errorMessage = 'Error de conexión: No se pudo conectar a MongoDB. Verifica que MONGODB_URI sea correcta y que tu IP esté permitida en MongoDB Atlas.';
+      errorMessage = 'Error de conexión: No se pudo conectar a MongoDB. Verifica que MONGODB_URI sea correcta y que MongoDB esté corriendo.';
     }
     
     return NextResponse.json(

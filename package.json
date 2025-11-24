@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "setup-env": "node scripts/setup-env.js",
     "import-backup": "node scripts/importBackup.js",
     "create-user": "node scripts/createUser.js"
   },

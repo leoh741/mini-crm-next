@@ -1,13 +1,25 @@
 # INSTRUCCIONES:
 # 1. Copia este contenido
 # 2. Crea un archivo llamado .env.local en la raíz del proyecto
-# 3. Pega este contenido y reemplaza TU_PASSWORD_AQUI con tu contraseña real
+# 3. Pega este contenido y ajusta según tu configuración
 
-MONGODB_URI=mongodb+srv://Leoh741:TU_PASSWORD_AQUI@cluster0.9ihvdgz.mongodb.net/mini-crm?retryWrites=true&w=majority
-NEXT_PUBLIC_BASE_URL=
+# Configuración para MongoDB local en el mismo VPS
+MONGODB_URI=mongodb://localhost:27017/mini-crm
+NEXT_PUBLIC_BASE_URL=http://localhost:3000
+
+# OPCIONES ALTERNATIVAS:
+
+# Si MongoDB tiene autenticación:
+# MONGODB_URI=mongodb://usuario:password@localhost:27017/mini-crm
+
+# Si MongoDB está en otro puerto:
+# MONGODB_URI=mongodb://localhost:27018/mini-crm
+
+# Si usas MongoDB Atlas (en la nube):
+# MONGODB_URI=mongodb+srv://usuario:password@cluster.mongodb.net/mini-crm?retryWrites=true&w=majority
 
 # IMPORTANTE:
-# - Reemplaza TU_PASSWORD_AQUI con tu contraseña real de MongoDB Atlas
-# - No uses comillas
+# - No uses comillas en los valores
 # - El nombre de la base de datos es "mini-crm" (puedes cambiarlo si quieres)
+# - En producción, actualiza NEXT_PUBLIC_BASE_URL con tu dominio real (ej: https://tu-dominio.com)
 
