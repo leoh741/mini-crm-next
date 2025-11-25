@@ -48,6 +48,7 @@ export async function POST(request) {
     }
 
     // Parsear los datos (pueden venir como strings JSON o como objetos)
+    // IMPORTANTE: Manejar doble serialización (cuando JSON.stringify escapa strings JSON)
     let clientes = [];
     let pagosMensuales = {};
     let gastos = {};
@@ -55,23 +56,66 @@ export async function POST(request) {
     let usuarios = [];
     let presupuestos = [];
 
+    // Función helper para parsear strings JSON que pueden estar doblemente serializados
+    const parseJsonField = (field, fieldName) => {
+      if (!field) {
+        return fieldName.includes('clientes') || fieldName.includes('usuarios') || fieldName.includes('presupuestos') ? [] : {};
+      }
+      
+      // Si ya es un objeto/array, devolverlo directamente
+      if (typeof field !== 'string') {
+        return field;
+      }
+      
+      // Es un string, intentar parsearlo
+      try {
+        let parsed = JSON.parse(field);
+        
+        // Si después de parsear sigue siendo un string, probablemente está doblemente serializado
+        if (typeof parsed === 'string') {
+          try {
+            parsed = JSON.parse(parsed);
+          } catch (e2) {
+            // Si falla el segundo parse, devolver el primero
+            console.warn(`[BACKUP IMPORT] [${timestamp}] Campo ${fieldName}: doble parse falló, usando primer parse`);
+          }
+        }
+        
+        return parsed;
+      } catch (parseError) {
+        console.error(`[BACKUP IMPORT] [${timestamp}] Error al parsear ${fieldName}:`, parseError.message);
+        // Si falla, devolver valor por defecto
+        return fieldName.includes('clientes') || fieldName.includes('usuarios') || fieldName.includes('presupuestos') ? [] : {};
+      }
+    };
+
     try {
-      clientes = typeof body.clientes === 'string' ? JSON.parse(body.clientes) : (body.clientes || []);
-      pagosMensuales = typeof body.pagosMensuales === 'string' ? JSON.parse(body.pagosMensuales) : (body.pagosMensuales || {});
-      gastos = typeof body.gastos === 'string' ? JSON.parse(body.gastos) : (body.gastos || {});
-      ingresos = typeof body.ingresos === 'string' ? JSON.parse(body.ingresos) : (body.ingresos || {});
-      usuarios = typeof body.usuarios === 'string' ? JSON.parse(body.usuarios) : (body.usuarios || []);
-      presupuestos = typeof body.presupuestos === 'string' ? JSON.parse(body.presupuestos) : (body.presupuestos || []);
+      console.log(`[BACKUP IMPORT] [${timestamp}] Parseando datos recibidos...`);
+      console.log(`[BACKUP IMPORT] [${timestamp}] Tipo de body.clientes:`, typeof body.clientes);
+      if (body.clientes && typeof body.clientes === 'string') {
+        console.log(`[BACKUP IMPORT] [${timestamp}] body.clientes (primeros 200 chars):`, body.clientes.substring(0, 200));
+      }
+      
+      clientes = parseJsonField(body.clientes, 'clientes');
+      pagosMensuales = parseJsonField(body.pagosMensuales, 'pagosMensuales');
+      gastos = parseJsonField(body.gastos, 'gastos');
+      ingresos = parseJsonField(body.ingresos, 'ingresos');
+      usuarios = parseJsonField(body.usuarios, 'usuarios');
+      presupuestos = parseJsonField(body.presupuestos, 'presupuestos');
       
       console.log(`[BACKUP IMPORT] [${timestamp}] Datos parseados:`);
-      console.log(`[BACKUP IMPORT] [${timestamp}] - Clientes:`, Array.isArray(clientes) ? clientes.length : 'NO ES ARRAY');
-      console.log(`[BACKUP IMPORT] [${timestamp}] - Pagos:`, typeof pagosMensuales === 'object' ? Object.keys(pagosMensuales).length + ' meses' : 'NO ES OBJETO');
-      console.log(`[BACKUP IMPORT] [${timestamp}] - Gastos:`, typeof gastos === 'object' ? Object.keys(gastos).length + ' periodos' : 'NO ES OBJETO');
-      console.log(`[BACKUP IMPORT] [${timestamp}] - Ingresos:`, typeof ingresos === 'object' ? Object.keys(ingresos).length + ' periodos' : 'NO ES OBJETO');
-      console.log(`[BACKUP IMPORT] [${timestamp}] - Usuarios:`, Array.isArray(usuarios) ? usuarios.length : 'NO ES ARRAY');
-      console.log(`[BACKUP IMPORT] [${timestamp}] - Presupuestos:`, Array.isArray(presupuestos) ? presupuestos.length : 'NO ES ARRAY');
+      console.log(`[BACKUP IMPORT] [${timestamp}] - Clientes:`, Array.isArray(clientes) ? `${clientes.length} clientes` : `NO ES ARRAY (tipo: ${typeof clientes})`);
+      if (Array.isArray(clientes) && clientes.length > 0) {
+        console.log(`[BACKUP IMPORT] [${timestamp}]   Ejemplo de cliente parseado:`, JSON.stringify(clientes[0], null, 2).substring(0, 200));
+      }
+      console.log(`[BACKUP IMPORT] [${timestamp}] - Pagos:`, typeof pagosMensuales === 'object' && pagosMensuales !== null ? `${Object.keys(pagosMensuales).length} meses` : `NO ES OBJETO (tipo: ${typeof pagosMensuales})`);
+      console.log(`[BACKUP IMPORT] [${timestamp}] - Gastos:`, typeof gastos === 'object' && gastos !== null ? `${Object.keys(gastos).length} periodos` : `NO ES OBJETO (tipo: ${typeof gastos})`);
+      console.log(`[BACKUP IMPORT] [${timestamp}] - Ingresos:`, typeof ingresos === 'object' && ingresos !== null ? `${Object.keys(ingresos).length} periodos` : `NO ES OBJETO (tipo: ${typeof ingresos})`);
+      console.log(`[BACKUP IMPORT] [${timestamp}] - Usuarios:`, Array.isArray(usuarios) ? `${usuarios.length} usuarios` : `NO ES ARRAY (tipo: ${typeof usuarios})`);
+      console.log(`[BACKUP IMPORT] [${timestamp}] - Presupuestos:`, Array.isArray(presupuestos) ? `${presupuestos.length} presupuestos` : `NO ES ARRAY (tipo: ${typeof presupuestos})`);
     } catch (parseError) {
       console.error(`[BACKUP IMPORT] [${timestamp}] Error al parsear JSON:`, parseError);
+      console.error(`[BACKUP IMPORT] [${timestamp}] Stack:`, parseError.stack);
       return NextResponse.json(
         { success: false, error: 'Error al parsear los datos JSON: ' + parseError.message },
         { status: 400 }

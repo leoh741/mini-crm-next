@@ -111,15 +111,16 @@ export async function GET() {
       notasInternas: presupuesto.notasInternas || ''
     }));
 
-    // Formato compatible con el formato antiguo de localStorage (strings JSON)
+    // Formato compatible: devolver como objetos/arrays directamente
+    // El frontend los serializará cuando cree el archivo JSON
     const datos = {
-      clientes: JSON.stringify(clientesFormateados),
-      pagosMensuales: JSON.stringify(pagosMensualesFormateados),
-      clientesEliminados: JSON.stringify([]),
-      gastos: JSON.stringify(gastosFormateados),
-      ingresos: JSON.stringify(ingresosFormateados),
-      usuarios: JSON.stringify(usuariosFormateados),
-      presupuestos: JSON.stringify(presupuestosFormateados),
+      clientes: clientesFormateados, // Array directamente, no string JSON
+      pagosMensuales: pagosMensualesFormateados, // Objeto directamente
+      clientesEliminados: [], // Array directamente
+      gastos: gastosFormateados, // Objeto directamente
+      ingresos: ingresosFormateados, // Objeto directamente
+      usuarios: usuariosFormateados, // Array directamente
+      presupuestos: presupuestosFormateados, // Array directamente
       fechaExportacion: new Date().toISOString(),
       version: '2.1'
     };
