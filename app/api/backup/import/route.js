@@ -114,61 +114,22 @@ export async function POST(request) {
     };
     
     console.log(`[BACKUP IMPORT] [${timestamp}] Documentos existentes que se borrarán:`, documentosExistentes);
-    console.log(`[BACKUP IMPORT] [${timestamp}] Validación exitosa, procediendo a limpiar colecciones...`);
     
-    // Limpiar colecciones existentes SOLO si hay datos válidos para importar (EXCEPTO usuarios - se mantienen)
+    // PROTECCIÓN CRÍTICA: Preparar TODOS los datos ANTES de borrar nada
+    // Esto asegura que si algo falla, no perdemos datos
+    let clientesPreparados = [];
+    let pagosPreparados = [];
+    let gastosPreparados = [];
+    let ingresosPreparados = [];
+    let presupuestosPreparados = [];
+    
+    // Preparar clientes ANTES de borrar
     if (tieneClientes && clientesValidos.length > 0) {
-      const countAntes = documentosExistentes.clientes;
-      await Client.deleteMany({});
-      console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Clientes eliminados: ${countAntes} (se importarán ${clientesValidos.length})`);
-    }
-    if (tienePagos) {
-      const countAntes = documentosExistentes.pagos;
-      await MonthlyPayment.deleteMany({});
-      console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Pagos eliminados: ${countAntes}`);
-    }
-    if (tieneGastos) {
-      const countAntes = documentosExistentes.gastos;
-      await Expense.deleteMany({});
-      console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Gastos eliminados: ${countAntes}`);
-    }
-    if (tieneIngresos) {
-      const countAntes = documentosExistentes.ingresos;
-      await Income.deleteMany({});
-      console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Ingresos eliminados: ${countAntes}`);
-    }
-    if (tienePresupuestos) {
-      const countAntes = documentosExistentes.presupuestos;
-      await Budget.deleteMany({});
-      console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Presupuestos eliminados: ${countAntes}`);
-    }
-    // NO eliminamos usuarios - se mantienen y se hace merge
-
-    const resultados = {
-      clientes: 0,
-      pagosMensuales: 0,
-      gastos: 0,
-      ingresos: 0,
-      usuarios: 0,
-      usuariosMantenidos: 0,
-      presupuestos: 0
-    };
-
-    // Importar clientes (usar solo los válidos)
-    if (clientesValidos.length > 0) {
-      console.log(`[BACKUP IMPORT] [${timestamp}] Preparando ${clientesValidos.length} clientes válidos para importar...`);
-      
-      // Log del primer cliente para debugging
-      if (clientesValidos.length > 0) {
-        console.log(`[BACKUP IMPORT] [${timestamp}] Ejemplo de cliente del backup:`, JSON.stringify(clientesValidos[0], null, 2));
-      }
-      
-      const clientesImportados = clientesValidos.map((cliente, index) => {
+      clientesPreparados = clientesValidos.map((cliente, index) => {
         const crmId = cliente.id || cliente.crmId || `client-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
         
-        // Log si falta nombre (requerido)
-        if (!cliente.nombre) {
-          console.warn(`[BACKUP IMPORT] Cliente ${index} sin nombre, crmId: ${crmId}`);
+        if (!cliente.nombre || typeof cliente.nombre !== 'string' || cliente.nombre.trim().length === 0) {
+          console.warn(`[BACKUP IMPORT] Cliente ${index} sin nombre válido, crmId: ${crmId}`);
         }
         
         return {
@@ -185,83 +146,26 @@ export async function POST(request) {
           servicios: cliente.servicios || [],
           observaciones: cliente.observaciones
         };
-      });
+      }).filter(c => c.nombre && c.nombre.trim()); // Filtrar nuevamente por seguridad
       
-      // Ya están filtrados arriba, pero verificar nuevamente por seguridad
-      const clientesFinales = clientesImportados.filter(c => c.nombre && c.nombre.trim());
-      
-      if (clientesFinales.length === 0) {
-        console.error(`[BACKUP IMPORT] [${timestamp}] ERROR CRÍTICO: Después del procesamiento, no quedan clientes válidos. Los datos ya fueron borrados.`);
+      // VALIDACIÓN FINAL: Verificar que tenemos clientes válidos preparados
+      if (clientesPreparados.length === 0) {
+        console.error(`[BACKUP IMPORT] [${timestamp}] ERROR CRÍTICO: Después de preparar, no quedan clientes válidos. NO se borrará nada.`);
         return NextResponse.json(
-          { success: false, error: 'Error crítico: No quedan clientes válidos después del procesamiento. Los datos fueron borrados pero no se pudo importar nada.' },
-          { status: 500 }
+          { success: false, error: 'Error crítico: No quedan clientes válidos después de preparar. Los datos NO fueron borrados.' },
+          { status: 400 }
         );
       }
       
-      console.log(`[BACKUP IMPORT] [${timestamp}] Clientes finales válidos para importar: ${clientesFinales.length}`);
-      
-      if (clientesFinales.length > 0) {
-        try {
-          console.log(`[BACKUP IMPORT] [${timestamp}] Intentando insertar ${clientesFinales.length} clientes...`);
-          const result = await Client.insertMany(clientesFinales, { ordered: false });
-          resultados.clientes = result.length;
-          console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Clientes insertados exitosamente: ${result.length}`);
-          
-          // Log de los primeros 3 clientes insertados para verificación
-          if (result.length > 0) {
-            console.log('[BACKUP IMPORT] Primeros clientes insertados:');
-            result.slice(0, 3).forEach((c, i) => {
-              console.log(`[BACKUP IMPORT]   ${i + 1}. ${c.nombre} (crmId: ${c.crmId})`);
-            });
-          }
-        } catch (insertError) {
-          console.error('[BACKUP IMPORT] Error al insertar clientes:', insertError);
-          console.error('[BACKUP IMPORT] Detalles del error:', {
-            code: insertError.code,
-            name: insertError.name,
-            message: insertError.message,
-            writeErrors: insertError.writeErrors ? insertError.writeErrors.length : 0
-          });
-          
-          // Si hay errores de duplicados, intentar uno por uno
-          if (insertError.code === 11000 || insertError.name === 'BulkWriteError') {
-            console.log('[BACKUP IMPORT] Intentando insertar clientes uno por uno...');
-            let insertados = 0;
-            let errores = 0;
-            for (const cliente of clientesValidos) {
-              try {
-                const resultado = await Client.findOneAndUpdate(
-                  { crmId: cliente.crmId },
-                  cliente,
-                  { upsert: true, new: true }
-                );
-                insertados++;
-                console.log(`[BACKUP IMPORT] Cliente insertado/actualizado: ${cliente.nombre} (crmId: ${cliente.crmId})`);
-              } catch (e) {
-                errores++;
-                console.error(`[BACKUP IMPORT] Error al insertar cliente "${cliente.nombre}" (crmId: ${cliente.crmId}):`, e.message);
-              }
-            }
-            resultados.clientes = insertados;
-            console.log('[BACKUP IMPORT] Clientes insertados uno por uno:', insertados, 'errores:', errores);
-          } else {
-            throw insertError;
-          }
-        }
-      } else {
-        console.warn('[BACKUP IMPORT] No hay clientes válidos para importar (todos sin nombre)');
-      }
-    } else {
-      console.warn('[BACKUP IMPORT] No hay clientes para importar o no es un array válido');
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ ${clientesPreparados.length} clientes preparados y validados para importar`);
     }
-
-    // Importar pagos mensuales
-    if (typeof pagosMensuales === 'object' && pagosMensuales !== null) {
-      const pagosArray = [];
+    
+    // Preparar pagos ANTES de borrar
+    if (tienePagos && typeof pagosMensuales === 'object' && pagosMensuales !== null) {
       for (const [mes, pagosDelMes] of Object.entries(pagosMensuales)) {
         if (typeof pagosDelMes === 'object' && pagosDelMes !== null) {
           for (const [crmClientId, datosPago] of Object.entries(pagosDelMes)) {
-            pagosArray.push({
+            pagosPreparados.push({
               mes,
               crmClientId,
               pagado: datosPago?.pagado || false,
@@ -271,50 +175,15 @@ export async function POST(request) {
           }
         }
       }
-      
-      if (pagosArray.length > 0) {
-        console.log('[BACKUP IMPORT] Preparando', pagosArray.length, 'pagos para importar...');
-        // Usar insertMany con ordered: false para evitar errores por duplicados
-        try {
-          const result = await MonthlyPayment.insertMany(pagosArray, { ordered: false });
-          resultados.pagosMensuales = result.length;
-          console.log('[BACKUP IMPORT] Pagos insertados exitosamente:', result.length);
-        } catch (error) {
-          console.error('[BACKUP IMPORT] Error al insertar pagos:', error);
-          // Si hay errores de duplicados, intentar uno por uno
-          if (error.code === 11000) {
-            console.log('[BACKUP IMPORT] Intentando insertar pagos uno por uno...');
-            let insertados = 0;
-            for (const pago of pagosArray) {
-              try {
-                await MonthlyPayment.findOneAndUpdate(
-                  { mes: pago.mes, crmClientId: pago.crmClientId },
-                  pago,
-                  { upsert: true }
-                );
-                insertados++;
-              } catch (e) {
-                console.warn('[BACKUP IMPORT] Error al insertar pago individual:', e.message);
-              }
-            }
-            resultados.pagosMensuales = insertados;
-            console.log('[BACKUP IMPORT] Pagos insertados uno por uno:', insertados);
-          } else {
-            throw error;
-          }
-        }
-      } else {
-        console.warn('[BACKUP IMPORT] No hay pagos para importar');
-      }
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ ${pagosPreparados.length} pagos preparados para importar`);
     }
-
-    // Importar gastos
-    if (typeof gastos === 'object' && gastos !== null) {
-      const gastosArray = [];
+    
+    // Preparar gastos ANTES de borrar
+    if (tieneGastos && typeof gastos === 'object' && gastos !== null) {
       for (const [periodo, gastosDelPeriodo] of Object.entries(gastos)) {
         if (Array.isArray(gastosDelPeriodo)) {
           for (const gasto of gastosDelPeriodo) {
-            gastosArray.push({
+            gastosPreparados.push({
               periodo,
               crmId: gasto.id || gasto.crmId || `expense-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
               descripcion: gasto.descripcion,
@@ -326,20 +195,15 @@ export async function POST(request) {
           }
         }
       }
-      
-      if (gastosArray.length > 0) {
-        await Expense.insertMany(gastosArray);
-        resultados.gastos = gastosArray.length;
-      }
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ ${gastosPreparados.length} gastos preparados para importar`);
     }
-
-    // Importar ingresos
-    if (typeof ingresos === 'object' && ingresos !== null) {
-      const ingresosArray = [];
+    
+    // Preparar ingresos ANTES de borrar
+    if (tieneIngresos && typeof ingresos === 'object' && ingresos !== null) {
       for (const [periodo, ingresosDelPeriodo] of Object.entries(ingresos)) {
         if (Array.isArray(ingresosDelPeriodo)) {
           for (const ingreso of ingresosDelPeriodo) {
-            ingresosArray.push({
+            ingresosPreparados.push({
               periodo,
               crmId: ingreso.id || ingreso.crmId || `income-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
               descripcion: ingreso.descripcion,
@@ -351,10 +215,205 @@ export async function POST(request) {
           }
         }
       }
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ ${ingresosPreparados.length} ingresos preparados para importar`);
+    }
+    
+    // Preparar presupuestos ANTES de borrar
+    if (tienePresupuestos && Array.isArray(presupuestos) && presupuestos.length > 0) {
+      presupuestosPreparados = presupuestos.map(presupuesto => ({
+        presupuestoId: presupuesto.presupuestoId || presupuesto.id || `budget-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+        numero: presupuesto.numero,
+        cliente: presupuesto.cliente || {},
+        fecha: presupuesto.fecha ? new Date(presupuesto.fecha) : new Date(),
+        validez: presupuesto.validez || 30,
+        items: presupuesto.items || [],
+        subtotal: presupuesto.subtotal || 0,
+        descuento: presupuesto.descuento || 0,
+        porcentajeDescuento: presupuesto.porcentajeDescuento || 0,
+        total: presupuesto.total || 0,
+        estado: presupuesto.estado || 'borrador',
+        observaciones: presupuesto.observaciones || '',
+        notasInternas: presupuesto.notasInternas || ''
+      }));
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ ${presupuestosPreparados.length} presupuestos preparados para importar`);
+    }
+    
+    // VALIDACIÓN FINAL ANTES DE BORRAR: Verificar que tenemos al menos algunos datos válidos
+    const totalDatosPreparados = clientesPreparados.length + pagosPreparados.length + gastosPreparados.length + ingresosPreparados.length + presupuestosPreparados.length;
+    if (totalDatosPreparados === 0) {
+      console.error(`[BACKUP IMPORT] [${timestamp}] ERROR CRÍTICO: No hay datos válidos preparados. NO se borrará nada.`);
+      return NextResponse.json(
+        { success: false, error: 'Error crítico: No hay datos válidos para importar después de preparar. Los datos existentes NO fueron borrados.' },
+        { status: 400 }
+      );
+    }
+    
+    console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Validación final exitosa. Total de datos preparados: ${totalDatosPreparados}`);
+    console.log(`[BACKUP IMPORT] [${timestamp}] Procediendo a limpiar colecciones y importar datos...`);
+    
+    // SOLO AHORA borrar colecciones existentes (después de preparar y validar todo)
+    if (tieneClientes && clientesPreparados.length > 0) {
+      const countAntes = documentosExistentes.clientes;
+      // LOG DE AUDITORÍA: Registrar antes de borrar
+      console.log(`[AUDIT] [${timestamp}] ⚠️ ELIMINACIÓN DE DATOS - Clientes: ${countAntes} documentos serán eliminados`);
+      console.log(`[AUDIT] [${timestamp}] Razón: Importación de backup con ${clientesPreparados.length} clientes válidos preparados`);
+      console.log(`[AUDIT] [${timestamp}] Usuario/IP: ${userAgent} | Referer: ${referer}`);
       
-      if (ingresosArray.length > 0) {
-        await Income.insertMany(ingresosArray);
-        resultados.ingresos = ingresosArray.length;
+      await Client.deleteMany({});
+      console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Clientes eliminados: ${countAntes} (se importarán ${clientesPreparados.length})`);
+      console.log(`[AUDIT] [${timestamp}] ✅ Eliminación completada: ${countAntes} clientes eliminados`);
+    }
+    if (tienePagos && pagosPreparados.length > 0) {
+      const countAntes = documentosExistentes.pagos;
+      console.log(`[AUDIT] [${timestamp}] ⚠️ ELIMINACIÓN DE DATOS - Pagos: ${countAntes} documentos serán eliminados`);
+      await MonthlyPayment.deleteMany({});
+      console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Pagos eliminados: ${countAntes} (se importarán ${pagosPreparados.length})`);
+      console.log(`[AUDIT] [${timestamp}] ✅ Eliminación completada: ${countAntes} pagos eliminados`);
+    }
+    if (tieneGastos && gastosPreparados.length > 0) {
+      const countAntes = documentosExistentes.gastos;
+      console.log(`[AUDIT] [${timestamp}] ⚠️ ELIMINACIÓN DE DATOS - Gastos: ${countAntes} documentos serán eliminados`);
+      await Expense.deleteMany({});
+      console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Gastos eliminados: ${countAntes} (se importarán ${gastosPreparados.length})`);
+      console.log(`[AUDIT] [${timestamp}] ✅ Eliminación completada: ${countAntes} gastos eliminados`);
+    }
+    if (tieneIngresos && ingresosPreparados.length > 0) {
+      const countAntes = documentosExistentes.ingresos;
+      console.log(`[AUDIT] [${timestamp}] ⚠️ ELIMINACIÓN DE DATOS - Ingresos: ${countAntes} documentos serán eliminados`);
+      await Income.deleteMany({});
+      console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Ingresos eliminados: ${countAntes} (se importarán ${ingresosPreparados.length})`);
+      console.log(`[AUDIT] [${timestamp}] ✅ Eliminación completada: ${countAntes} ingresos eliminados`);
+    }
+    if (tienePresupuestos && presupuestosPreparados.length > 0) {
+      const countAntes = documentosExistentes.presupuestos;
+      console.log(`[AUDIT] [${timestamp}] ⚠️ ELIMINACIÓN DE DATOS - Presupuestos: ${countAntes} documentos serán eliminados`);
+      await Budget.deleteMany({});
+      console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Presupuestos eliminados: ${countAntes} (se importarán ${presupuestosPreparados.length})`);
+      console.log(`[AUDIT] [${timestamp}] ✅ Eliminación completada: ${countAntes} presupuestos eliminados`);
+    }
+    // NO eliminamos usuarios - se mantienen y se hace merge
+
+    const resultados = {
+      clientes: 0,
+      pagosMensuales: 0,
+      gastos: 0,
+      ingresos: 0,
+      usuarios: 0,
+      usuariosMantenidos: 0,
+      presupuestos: 0
+    };
+
+    // Importar clientes (usar los ya preparados y validados)
+    if (clientesPreparados.length > 0) {
+      console.log(`[BACKUP IMPORT] [${timestamp}] Intentando insertar ${clientesPreparados.length} clientes preparados...`);
+      
+      // Log del primer cliente para debugging
+      if (clientesPreparados.length > 0) {
+        console.log(`[BACKUP IMPORT] [${timestamp}] Ejemplo de cliente preparado:`, JSON.stringify(clientesPreparados[0], null, 2));
+      }
+      
+      try {
+        const result = await Client.insertMany(clientesPreparados, { ordered: false });
+        resultados.clientes = result.length;
+        console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Clientes insertados exitosamente: ${result.length}`);
+        
+        // Log de los primeros 3 clientes insertados para verificación
+        if (result.length > 0) {
+          console.log('[BACKUP IMPORT] Primeros clientes insertados:');
+          result.slice(0, 3).forEach((c, i) => {
+            console.log(`[BACKUP IMPORT]   ${i + 1}. ${c.nombre} (crmId: ${c.crmId})`);
+          });
+        }
+      } catch (insertError) {
+        console.error('[BACKUP IMPORT] Error al insertar clientes:', insertError);
+        console.error('[BACKUP IMPORT] Detalles del error:', {
+          code: insertError.code,
+          name: insertError.name,
+          message: insertError.message,
+          writeErrors: insertError.writeErrors ? insertError.writeErrors.length : 0
+        });
+        
+        // Si hay errores de duplicados, intentar uno por uno
+        if (insertError.code === 11000 || insertError.name === 'BulkWriteError') {
+          console.log('[BACKUP IMPORT] Intentando insertar clientes uno por uno...');
+          let insertados = 0;
+          let errores = 0;
+          for (const cliente of clientesPreparados) {
+            try {
+              const resultado = await Client.findOneAndUpdate(
+                { crmId: cliente.crmId },
+                cliente,
+                { upsert: true, new: true }
+              );
+              insertados++;
+              console.log(`[BACKUP IMPORT] Cliente insertado/actualizado: ${cliente.nombre} (crmId: ${cliente.crmId})`);
+            } catch (e) {
+              errores++;
+              console.error(`[BACKUP IMPORT] Error al insertar cliente "${cliente.nombre}" (crmId: ${cliente.crmId}):`, e.message);
+            }
+          }
+          resultados.clientes = insertados;
+          console.log('[BACKUP IMPORT] Clientes insertados uno por uno:', insertados, 'errores:', errores);
+        } else {
+          throw insertError;
+        }
+      }
+    }
+
+    // Importar pagos mensuales (usar los ya preparados)
+    if (pagosPreparados.length > 0) {
+      console.log('[BACKUP IMPORT] Intentando insertar', pagosPreparados.length, 'pagos preparados...');
+      try {
+        const result = await MonthlyPayment.insertMany(pagosPreparados, { ordered: false });
+        resultados.pagosMensuales = result.length;
+        console.log('[BACKUP IMPORT] Pagos insertados exitosamente:', result.length);
+      } catch (error) {
+        console.error('[BACKUP IMPORT] Error al insertar pagos:', error);
+        // Si hay errores de duplicados, intentar uno por uno
+        if (error.code === 11000) {
+          console.log('[BACKUP IMPORT] Intentando insertar pagos uno por uno...');
+          let insertados = 0;
+          for (const pago of pagosPreparados) {
+            try {
+              await MonthlyPayment.findOneAndUpdate(
+                { mes: pago.mes, crmClientId: pago.crmClientId },
+                pago,
+                { upsert: true }
+              );
+              insertados++;
+            } catch (e) {
+              console.warn('[BACKUP IMPORT] Error al insertar pago individual:', e.message);
+            }
+          }
+          resultados.pagosMensuales = insertados;
+          console.log('[BACKUP IMPORT] Pagos insertados uno por uno:', insertados);
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    // Importar gastos (usar los ya preparados)
+    if (gastosPreparados.length > 0) {
+      try {
+        await Expense.insertMany(gastosPreparados);
+        resultados.gastos = gastosPreparados.length;
+        console.log('[BACKUP IMPORT] Gastos insertados exitosamente:', gastosPreparados.length);
+      } catch (error) {
+        console.error('[BACKUP IMPORT] Error al insertar gastos:', error);
+        throw error;
+      }
+    }
+
+    // Importar ingresos (usar los ya preparados)
+    if (ingresosPreparados.length > 0) {
+      try {
+        await Income.insertMany(ingresosPreparados);
+        resultados.ingresos = ingresosPreparados.length;
+        console.log('[BACKUP IMPORT] Ingresos insertados exitosamente:', ingresosPreparados.length);
+      } catch (error) {
+        console.error('[BACKUP IMPORT] Error al insertar ingresos:', error);
+        throw error;
       }
     }
 
@@ -413,48 +472,32 @@ export async function POST(request) {
     const usuariosMantenidos = Array.from(emailsExistentes).filter(email => !emailsDelBackup.has(email));
     resultados.usuariosMantenidos = usuariosMantenidos.length;
 
-    // Importar presupuestos
-    if (Array.isArray(presupuestos) && presupuestos.length > 0) {
-      const presupuestosImportados = presupuestos.map(presupuesto => ({
-        presupuestoId: presupuesto.presupuestoId || presupuesto.id || `budget-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
-        numero: presupuesto.numero,
-        cliente: presupuesto.cliente || {},
-        fecha: presupuesto.fecha ? new Date(presupuesto.fecha) : new Date(),
-        validez: presupuesto.validez || 30,
-        items: presupuesto.items || [],
-        subtotal: presupuesto.subtotal || 0,
-        descuento: presupuesto.descuento || 0,
-        porcentajeDescuento: presupuesto.porcentajeDescuento || 0,
-        total: presupuesto.total || 0,
-        estado: presupuesto.estado || 'borrador',
-        observaciones: presupuesto.observaciones || '',
-        notasInternas: presupuesto.notasInternas || ''
-      }));
-      
-      if (presupuestosImportados.length > 0) {
-        try {
-          await Budget.insertMany(presupuestosImportados, { ordered: false });
-          resultados.presupuestos = presupuestosImportados.length;
-        } catch (error) {
-          // Si hay errores de duplicados, intentar uno por uno
-          if (error.code === 11000) {
-            let insertados = 0;
-            for (const presupuesto of presupuestosImportados) {
-              try {
-                await Budget.findOneAndUpdate(
-                  { presupuestoId: presupuesto.presupuestoId },
-                  presupuesto,
-                  { upsert: true }
-                );
-                insertados++;
-              } catch (e) {
-                console.warn('Error al insertar presupuesto:', e.message);
-              }
+    // Importar presupuestos (usar los ya preparados)
+    if (presupuestosPreparados.length > 0) {
+      try {
+        await Budget.insertMany(presupuestosPreparados, { ordered: false });
+        resultados.presupuestos = presupuestosPreparados.length;
+        console.log('[BACKUP IMPORT] Presupuestos insertados exitosamente:', presupuestosPreparados.length);
+      } catch (error) {
+        console.error('[BACKUP IMPORT] Error al insertar presupuestos:', error);
+        // Si hay errores de duplicados, intentar uno por uno
+        if (error.code === 11000) {
+          let insertados = 0;
+          for (const presupuesto of presupuestosPreparados) {
+            try {
+              await Budget.findOneAndUpdate(
+                { presupuestoId: presupuesto.presupuestoId },
+                presupuesto,
+                { upsert: true }
+              );
+              insertados++;
+            } catch (e) {
+              console.warn('Error al insertar presupuesto:', e.message);
             }
-            resultados.presupuestos = insertados;
-          } else {
-            throw error;
           }
+          resultados.presupuestos = insertados;
+        } else {
+          throw error;
         }
       }
     }
