@@ -194,9 +194,9 @@ function HomePageContent() {
             <h3 className="text-sm font-semibold text-slate-300">Usuarios</h3>
             <Link
               href="/admin/usuarios"
-              className="group relative w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-pink-500/30 overflow-hidden text-center"
+              className="group relative w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-pink-500/30 overflow-hidden text-center flex items-center justify-center"
             >
-              <span className="relative z-10 flex items-center gap-1.5">
+              <span className="relative z-10 flex items-center justify-center gap-1.5">
                 <span className="text-sm">👤</span>
                 <span>Gestionar Usuarios</span>
               </span>

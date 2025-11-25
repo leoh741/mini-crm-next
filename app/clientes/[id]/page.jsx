@@ -402,7 +402,7 @@ function ClienteDetailPageContent() {
           <h2 className="text-xl sm:text-2xl font-semibold break-words pr-2">{cliente.nombre}</h2>
           <div className="flex flex-wrap gap-2 sm:flex-nowrap">
             <button
-              onClick={() => generarResumenPagoPDF(cliente, estadoPagoMes)}
+              onClick={async () => await generarResumenPagoPDF(cliente, estadoPagoMes)}
               className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap"
             >
               📄 PDF
@@ -479,10 +479,10 @@ function ClienteDetailPageContent() {
                       }`}
                     >
                       <div className="flex justify-between items-center gap-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-slate-200 font-medium">{servicio.nombre}</span>
-                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-slate-200 font-medium break-words">{servicio.nombre}</span>
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${
                               servicioPagado 
                                 ? 'bg-green-900/30 text-green-400 border border-green-700' 
                                 : 'bg-orange-900/30 text-orange-400 border border-orange-700'
@@ -495,7 +495,7 @@ function ClienteDetailPageContent() {
                         <button
                           onClick={() => handleToggleServicioPagado(index)}
                           disabled={estaActualizando || actualizandoPago}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
                             servicioPagado
                               ? "bg-orange-600 hover:bg-orange-700 text-white"
                               : "bg-green-600 hover:bg-green-700 text-white"
