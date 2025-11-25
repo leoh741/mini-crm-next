@@ -436,69 +436,133 @@ export async function POST(request) {
 
     // Importar clientes (usar los ya preparados y validados)
     // PROTECCIÓN: Si borramos clientes, DEBEMOS insertar al menos algunos, o revertir
+    // CAMBIO: Usar upsert directamente para evitar problemas de duplicados y garantizar que todos se importen
     let clientesInsertadosExitosamente = false;
     if (clientesPreparados.length > 0) {
-      console.log(`[BACKUP IMPORT] [${timestamp}] Intentando insertar ${clientesPreparados.length} clientes preparados...`);
+      console.log(`[BACKUP IMPORT] [${timestamp}] Insertando ${clientesPreparados.length} clientes usando upsert (uno por uno)...`);
       
       // Log del primer cliente para debugging
       if (clientesPreparados.length > 0) {
         console.log(`[BACKUP IMPORT] [${timestamp}] Ejemplo de cliente preparado:`, JSON.stringify(clientesPreparados[0], null, 2));
       }
       
-      try {
-        const result = await Client.insertMany(clientesPreparados, { ordered: false });
-        resultados.clientes = result.length;
-        clientesInsertadosExitosamente = result.length > 0;
-        console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Clientes insertados exitosamente: ${result.length}`);
-        
-        // Log de los primeros 3 clientes insertados para verificación
-        if (result.length > 0) {
-          console.log('[BACKUP IMPORT] Primeros clientes insertados:');
-          result.slice(0, 3).forEach((c, i) => {
-            console.log(`[BACKUP IMPORT]   ${i + 1}. ${c.nombre} (crmId: ${c.crmId})`);
-          });
-        }
-      } catch (insertError) {
-        console.error('[BACKUP IMPORT] Error al insertar clientes:', insertError);
-        console.error('[BACKUP IMPORT] Detalles del error:', {
-          code: insertError.code,
-          name: insertError.name,
-          message: insertError.message,
-          writeErrors: insertError.writeErrors ? insertError.writeErrors.length : 0
-        });
-        
-        // Si hay errores de duplicados, intentar uno por uno
-        if (insertError.code === 11000 || insertError.name === 'BulkWriteError') {
-          console.log('[BACKUP IMPORT] Intentando insertar clientes uno por uno...');
-          let insertados = 0;
-          let errores = 0;
-          for (const cliente of clientesPreparados) {
-            try {
-              const resultado = await Client.findOneAndUpdate(
-                { crmId: cliente.crmId },
-                cliente,
-                { upsert: true, new: true }
-              );
-              insertados++;
-              console.log(`[BACKUP IMPORT] Cliente insertado/actualizado: ${cliente.nombre} (crmId: ${cliente.crmId})`);
-            } catch (e) {
-              errores++;
-              console.error(`[BACKUP IMPORT] Error al insertar cliente "${cliente.nombre}" (crmId: ${cliente.crmId}):`, e.message);
+      let insertados = 0;
+      let actualizados = 0;
+      let errores = 0;
+      const erroresDetallados = [];
+      
+      // Insertar/actualizar cada cliente uno por uno usando upsert
+      // Esto garantiza que todos se importen correctamente, incluso si hay duplicados
+      for (let i = 0; i < clientesPreparados.length; i++) {
+        const cliente = clientesPreparados[i];
+        try {
+          // Validar que el cliente tenga crmId y nombre (requeridos)
+          if (!cliente.crmId || !cliente.nombre || !cliente.nombre.trim()) {
+            console.warn(`[BACKUP IMPORT] Cliente ${i + 1} omitido: falta crmId o nombre válido`, {
+              crmId: cliente.crmId,
+              nombre: cliente.nombre
+            });
+            errores++;
+            erroresDetallados.push({
+              index: i + 1,
+              crmId: cliente.crmId,
+              nombre: cliente.nombre,
+              error: 'Falta crmId o nombre válido'
+            });
+            continue;
+          }
+          
+          // Usar upsert para insertar o actualizar
+          const resultado = await Client.findOneAndUpdate(
+            { crmId: cliente.crmId },
+            { 
+              $set: cliente,
+              // Asegurar que los campos requeridos estén presentes
+              $setOnInsert: {
+                crmId: cliente.crmId,
+                nombre: cliente.nombre
+              }
+            },
+            { 
+              upsert: true, 
+              new: true,
+              runValidators: true,
+              setDefaultsOnInsert: true
+            }
+          );
+          
+          // Verificar si fue insertado o actualizado comparando timestamps
+          const ahora = Date.now();
+          const creado = resultado.createdAt ? new Date(resultado.createdAt).getTime() : 0;
+          const actualizado = resultado.updatedAt ? new Date(resultado.updatedAt).getTime() : 0;
+          
+          // Si la diferencia entre createdAt y updatedAt es muy pequeña (< 1 segundo), fue insertado
+          if (Math.abs(creado - actualizado) < 1000) {
+            insertados++;
+            if (insertados <= 3 || (insertados % 10 === 0)) {
+              console.log(`[BACKUP IMPORT] [${i + 1}/${clientesPreparados.length}] ✅ Cliente insertado: ${cliente.nombre} (crmId: ${cliente.crmId})`);
+            }
+          } else {
+            actualizados++;
+            if (actualizados <= 3 || (actualizados % 10 === 0)) {
+              console.log(`[BACKUP IMPORT] [${i + 1}/${clientesPreparados.length}] 🔄 Cliente actualizado: ${cliente.nombre} (crmId: ${cliente.crmId})`);
             }
           }
-          resultados.clientes = insertados;
-          clientesInsertadosExitosamente = insertados > 0;
-          console.log('[BACKUP IMPORT] Clientes insertados uno por uno:', insertados, 'errores:', errores);
-        } else {
-          // ERROR CRÍTICO: Si borramos clientes pero no pudimos insertar, tenemos un problema
-          if (documentosExistentes.clientes > 0) {
-            console.error(`[BACKUP IMPORT] [${timestamp}] ❌ ERROR CRÍTICO: Se borraron ${documentosExistentes.clientes} clientes pero NO se pudieron insertar nuevos.`);
-            console.error(`[BACKUP IMPORT] [${timestamp}] ⚠️ Los datos fueron borrados pero la inserción falló.`);
-            console.error(`[BACKUP IMPORT] [${timestamp}] 💾 Backup automático disponible para restaurar.`);
-            // NO lanzar error aquí, continuar para intentar restaurar desde backup
+        } catch (e) {
+          errores++;
+          erroresDetallados.push({
+            index: i + 1,
+            crmId: cliente.crmId,
+            nombre: cliente.nombre,
+            error: e.message
+          });
+          console.error(`[BACKUP IMPORT] [${i + 1}/${clientesPreparados.length}] ❌ Error al insertar cliente "${cliente.nombre}" (crmId: ${cliente.crmId}):`, e.message);
+          
+          // Si hay muchos errores seguidos, log adicional
+          if (errores === 1 || errores === 5 || errores === 10) {
+            console.error(`[BACKUP IMPORT] Detalle del error ${errores}:`, {
+              cliente: cliente,
+              error: {
+                name: e.name,
+                message: e.message,
+                code: e.code,
+                stack: e.stack?.split('\n').slice(0, 3).join('\n')
+              }
+            });
           }
-          throw insertError;
         }
+      }
+      
+      resultados.clientes = insertados + actualizados;
+      clientesInsertadosExitosamente = resultados.clientes > 0;
+      
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Resumen de importación de clientes:`);
+      console.log(`[BACKUP IMPORT] [${timestamp}]   - Insertados: ${insertados}`);
+      console.log(`[BACKUP IMPORT] [${timestamp}]   - Actualizados: ${actualizados}`);
+      console.log(`[BACKUP IMPORT] [${timestamp}]   - Errores: ${errores}`);
+      console.log(`[BACKUP IMPORT] [${timestamp}]   - Total procesados: ${insertados + actualizados + errores} de ${clientesPreparados.length}`);
+      
+      if (errores > 0) {
+        console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ Hubo ${errores} errores al importar clientes.`);
+        if (errores <= 10) {
+          console.warn(`[BACKUP IMPORT] [${timestamp}] Errores detallados:`, erroresDetallados);
+        } else {
+          console.warn(`[BACKUP IMPORT] [${timestamp}] Primeros 5 errores:`, erroresDetallados.slice(0, 5));
+          console.warn(`[BACKUP IMPORT] [${timestamp}] ... y ${errores - 5} errores más`);
+        }
+      }
+      
+      // Log de los primeros 3 clientes insertados para verificación
+      if (insertados > 0) {
+        const primerosInsertados = await Client.find({})
+          .sort({ createdAt: -1 })
+          .limit(3)
+          .select('nombre crmId')
+          .lean();
+        console.log('[BACKUP IMPORT] Primeros clientes en BD después de importar:');
+        primerosInsertados.forEach((c, idx) => {
+          console.log(`[BACKUP IMPORT]   ${idx + 1}. ${c.nombre} (crmId: ${c.crmId})`);
+        });
       }
       
       // VERIFICACIÓN FINAL: Si borramos clientes, debemos haber insertado al menos algunos
@@ -509,41 +573,62 @@ export async function POST(request) {
           success: false,
           error: `Error crítico: Se borraron ${documentosExistentes.clientes} clientes pero no se pudieron insertar nuevos. El backup automático está disponible para restaurar.`,
           backupAutomatico: backupAutomatico,
-          resultados
+          resultados,
+          errores: erroresDetallados
         }, { status: 500 });
+      }
+      
+      // ADVERTENCIA si no se importaron todos los clientes esperados
+      if (resultados.clientes < clientesPreparados.length) {
+        const faltantes = clientesPreparados.length - resultados.clientes;
+        console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ ADVERTENCIA: Solo se importaron ${resultados.clientes} de ${clientesPreparados.length} clientes esperados (${faltantes} faltantes)`);
       }
     }
 
     // Importar pagos mensuales (usar los ya preparados)
+    // CAMBIO: Usar upsert directamente para evitar problemas de duplicados
     if (pagosPreparados.length > 0) {
-      console.log('[BACKUP IMPORT] Intentando insertar', pagosPreparados.length, 'pagos preparados...');
-      try {
-        const result = await MonthlyPayment.insertMany(pagosPreparados, { ordered: false });
-        resultados.pagosMensuales = result.length;
-        console.log('[BACKUP IMPORT] Pagos insertados exitosamente:', result.length);
-      } catch (error) {
-        console.error('[BACKUP IMPORT] Error al insertar pagos:', error);
-        // Si hay errores de duplicados, intentar uno por uno
-        if (error.code === 11000) {
-          console.log('[BACKUP IMPORT] Intentando insertar pagos uno por uno...');
-          let insertados = 0;
-          for (const pago of pagosPreparados) {
-            try {
-              await MonthlyPayment.findOneAndUpdate(
-                { mes: pago.mes, crmClientId: pago.crmClientId },
-                pago,
-                { upsert: true }
-              );
-              insertados++;
-            } catch (e) {
-              console.warn('[BACKUP IMPORT] Error al insertar pago individual:', e.message);
-            }
+      console.log(`[BACKUP IMPORT] [${timestamp}] Insertando ${pagosPreparados.length} pagos usando upsert...`);
+      let insertados = 0;
+      let actualizados = 0;
+      let errores = 0;
+      
+      for (let i = 0; i < pagosPreparados.length; i++) {
+        const pago = pagosPreparados[i];
+        try {
+          const resultado = await MonthlyPayment.findOneAndUpdate(
+            { mes: pago.mes, crmClientId: pago.crmClientId },
+            { $set: pago },
+            { upsert: true, new: true, runValidators: true }
+          );
+          
+          // Verificar si fue insertado o actualizado
+          const ahora = Date.now();
+          const creado = resultado.createdAt ? new Date(resultado.createdAt).getTime() : 0;
+          const actualizado = resultado.updatedAt ? new Date(resultado.updatedAt).getTime() : 0;
+          
+          if (Math.abs(creado - actualizado) < 1000) {
+            insertados++;
+          } else {
+            actualizados++;
           }
-          resultados.pagosMensuales = insertados;
-          console.log('[BACKUP IMPORT] Pagos insertados uno por uno:', insertados);
-        } else {
-          throw error;
+          
+          if ((insertados + actualizados) % 50 === 0) {
+            console.log(`[BACKUP IMPORT] [${timestamp}] Procesados ${insertados + actualizados}/${pagosPreparados.length} pagos...`);
+          }
+        } catch (e) {
+          errores++;
+          if (errores <= 5) {
+            console.error(`[BACKUP IMPORT] Error al insertar pago [${i + 1}]:`, e.message);
+          }
         }
+      }
+      
+      resultados.pagosMensuales = insertados + actualizados;
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Pagos importados: ${insertados} insertados, ${actualizados} actualizados, ${errores} errores`);
+      
+      if (errores > 0) {
+        console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ Hubo ${errores} errores al importar pagos`);
       }
     }
 
