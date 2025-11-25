@@ -45,9 +45,10 @@ export async function POST(req) {
       observaciones: cliente.observaciones
     }));
 
-    // OPCIONAL: limpiar la colección antes de importar
-    // Descomentar si quieres que la importación siempre reemplace todo:
-    // await Client.deleteMany({});
+    // ⚠️ IMPORTANTE: NO descomentar deleteMany() - Esta función NO debe borrar datos existentes
+    // Esta ruta está diseñada para agregar/actualizar clientes sin borrar los existentes
+    // Si necesitas reemplazar todos los datos, usa /api/backup/import en su lugar
+    // await Client.deleteMany({}); // ❌ NUNCA DESCOMENTAR - BORRARÍA TODOS LOS CLIENTES
 
     // Intentar insertar los clientes en MongoDB
     console.log('[IMPORT CLIENTS] Preparando insertar', clientesImportados.length, 'clientes');

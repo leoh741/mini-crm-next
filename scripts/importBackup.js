@@ -92,13 +92,171 @@ async function importBackup() {
     const ingresos = JSON.parse(backup.ingresos || '{}');
     const usuarios = JSON.parse(backup.usuarios || '[]');
 
+    // PROTECCIÓN CRÍTICA: Validar que hay datos para importar ANTES de borrar
+    console.log('\n🔒 Validando datos antes de borrar...');
+    const tieneClientes = Array.isArray(clientes) && clientes.length > 0;
+    const tienePagos = typeof pagosMensuales === 'object' && pagosMensuales !== null && Object.keys(pagosMensuales).length > 0;
+    const tieneGastos = typeof gastos === 'object' && gastos !== null && Object.keys(gastos).length > 0;
+    const tieneIngresos = typeof ingresos === 'object' && ingresos !== null && Object.keys(ingresos).length > 0;
+    const tieneUsuarios = Array.isArray(usuarios) && usuarios.length > 0;
+    
+    if (!tieneClientes && !tienePagos && !tieneGastos && !tieneIngresos && !tieneUsuarios) {
+      throw new Error('❌ ERROR: No hay datos válidos para importar. NO se borrará nada.');
+    }
+    
+    // Validar que los clientes tienen nombre válido
+    if (tieneClientes) {
+      const clientesValidos = clientes.filter(c => c.nombre && typeof c.nombre === 'string' && c.nombre.trim().length > 0);
+      if (clientesValidos.length === 0) {
+        throw new Error('❌ ERROR: No hay clientes con nombre válido. NO se borrará nada.');
+      }
+      console.log(`✅ Validación: ${clientesValidos.length} clientes válidos de ${clientes.length} totales`);
+    }
+    
+    // PROTECCIÓN: Crear backup automático antes de borrar
+    console.log('\n🔒 Creando backup automático de seguridad...');
+    try {
+      const [clientesExistentes, pagosExistentes, gastosExistentes, ingresosExistentes, usuariosExistentes] = await Promise.all([
+        Client.find({}).lean(),
+        MonthlyPayment.find({}).lean(),
+        Expense.find({}).lean(),
+        Income.find({}).lean(),
+        User.find({}).lean()
+      ]);
+      
+      const clientesBackup = clientesExistentes.map(c => ({
+        id: c.crmId || c._id?.toString(),
+        crmId: c.crmId || c._id?.toString(),
+        nombre: c.nombre,
+        rubro: c.rubro,
+        ciudad: c.ciudad,
+        email: c.email,
+        montoPago: c.montoPago,
+        fechaPago: c.fechaPago,
+        pagado: c.pagado || false,
+        pagoUnico: c.pagoUnico || false,
+        pagoMesSiguiente: c.pagoMesSiguiente || false,
+        servicios: c.servicios || [],
+        observaciones: c.observaciones
+      }));
+      
+      // Formatear pagos mensuales
+      const pagosMensualesBackup = {};
+      pagosExistentes.forEach(pago => {
+        if (!pagosMensualesBackup[pago.mes]) {
+          pagosMensualesBackup[pago.mes] = {};
+        }
+        pagosMensualesBackup[pago.mes][pago.crmClientId] = {
+          pagado: pago.pagado || false,
+          serviciosPagados: pago.serviciosPagados || {},
+          fechaActualizacion: pago.fechaActualizacion || null
+        };
+      });
+      
+      // Formatear gastos
+      const gastosBackup = {};
+      gastosExistentes.forEach(gasto => {
+        if (!gastosBackup[gasto.periodo]) {
+          gastosBackup[gasto.periodo] = [];
+        }
+        gastosBackup[gasto.periodo].push({
+          id: gasto.crmId || gasto._id.toString(),
+          descripcion: gasto.descripcion,
+          monto: gasto.monto,
+          fecha: gasto.fecha || null,
+          categoria: gasto.categoria || '',
+          fechaCreacion: gasto.fechaCreacion || null
+        });
+      });
+      
+      // Formatear ingresos
+      const ingresosBackup = {};
+      ingresosExistentes.forEach(ingreso => {
+        if (!ingresosBackup[ingreso.periodo]) {
+          ingresosBackup[ingreso.periodo] = [];
+        }
+        ingresosBackup[ingreso.periodo].push({
+          id: ingreso.crmId || ingreso._id.toString(),
+          descripcion: ingreso.descripcion,
+          monto: ingreso.monto,
+          fecha: ingreso.fecha || null,
+          categoria: ingreso.categoria || '',
+          fechaCreacion: ingreso.fechaCreacion || null
+        });
+      });
+      
+      // Formatear usuarios
+      const usuariosBackup = usuariosExistentes.map(u => ({
+        id: u.crmId || u._id.toString(),
+        nombre: u.nombre,
+        email: u.email,
+        password: u.password,
+        rol: u.rol || 'usuario',
+        fechaCreacion: u.fechaCreacion || null
+      }));
+      
+      const totalItems = clientesBackup.length + Object.keys(pagosMensualesBackup).length + 
+                         Object.keys(gastosBackup).length + Object.keys(ingresosBackup).length + 
+                         usuariosBackup.length;
+      
+      if (totalItems > 0) {
+        const backupPath = path.join(__dirname, '../backups');
+        if (!fs.existsSync(backupPath)) {
+          fs.mkdirSync(backupPath, { recursive: true });
+        }
+        const fechaBackup = new Date().toISOString().split('T')[0];
+        const backupFileName = `crm_backup_automatico_${fechaBackup}_${Date.now()}.json`;
+        const backupFilePath = path.join(backupPath, backupFileName);
+        
+        const backupData = {
+          clientes: JSON.stringify(clientesBackup),
+          pagosMensuales: JSON.stringify(pagosMensualesBackup),
+          gastos: JSON.stringify(gastosBackup),
+          ingresos: JSON.stringify(ingresosBackup),
+          usuarios: JSON.stringify(usuariosBackup),
+          fechaExportacion: new Date().toISOString(),
+          version: '2.1',
+          tipo: 'backup_automatico_pre_importacion'
+        };
+        
+        fs.writeFileSync(backupFilePath, JSON.stringify(backupData, null, 2), 'utf8');
+        console.log(`✅ Backup automático guardado en: ${backupFileName}`);
+        console.log(`   - ${clientesBackup.length} clientes`);
+        console.log(`   - ${Object.keys(pagosMensualesBackup).length} meses de pagos`);
+        console.log(`   - ${Object.keys(gastosBackup).length} periodos de gastos`);
+        console.log(`   - ${Object.keys(ingresosBackup).length} periodos de ingresos`);
+        console.log(`   - ${usuariosBackup.length} usuarios`);
+        console.log(`   Total: ${totalItems} items guardados`);
+      } else {
+        console.log('⚠️ No hay datos existentes para hacer backup (primera importación)');
+      }
+    } catch (backupError) {
+      console.error('❌ ERROR CRÍTICO: No se pudo crear backup automático:', backupError);
+      throw new Error('No se puede proceder sin crear backup de seguridad. Los datos NO fueron modificados.');
+    }
+    
     console.log('\nLimpiando colecciones existentes...');
-    await Client.deleteMany({});
-    await MonthlyPayment.deleteMany({});
-    await Expense.deleteMany({});
-    await Income.deleteMany({});
-    await User.deleteMany({});
-    console.log('✅ Colecciones limpiadas');
+    // SOLO borrar si tenemos datos válidos para importar
+    if (tieneClientes) {
+      await Client.deleteMany({});
+      console.log('✅ Colección de clientes limpiada');
+    }
+    if (tienePagos) {
+      await MonthlyPayment.deleteMany({});
+      console.log('✅ Colección de pagos limpiada');
+    }
+    if (tieneGastos) {
+      await Expense.deleteMany({});
+      console.log('✅ Colección de gastos limpiada');
+    }
+    if (tieneIngresos) {
+      await Income.deleteMany({});
+      console.log('✅ Colección de ingresos limpiada');
+    }
+    if (tieneUsuarios) {
+      await User.deleteMany({});
+      console.log('✅ Colección de usuarios limpiada');
+    }
 
     // Importar clientes
     console.log('\nImportando clientes...');

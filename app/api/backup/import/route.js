@@ -8,6 +8,9 @@ import User from '../../../../models/User';
 import Budget from '../../../../models/Budget';
 
 export async function POST(request) {
+  // Variable para backup automático (disponible en todo el scope)
+  let backupAutomatico = null;
+  
   try {
     // Logging detallado con timestamp
     const timestamp = new Date().toISOString();
@@ -249,15 +252,143 @@ export async function POST(request) {
     }
     
     console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Validación final exitosa. Total de datos preparados: ${totalDatosPreparados}`);
+    
+    // PROTECCIÓN CRÍTICA: Crear backup automático ANTES de borrar cualquier cosa
+    console.log(`[BACKUP IMPORT] [${timestamp}] 🔒 Creando backup automático de seguridad antes de importar...`);
+    try {
+      const [clientesExistentes, pagosExistentes, gastosExistentes, ingresosExistentes, presupuestosExistentes] = await Promise.all([
+        Client.find({}).lean(),
+        MonthlyPayment.find({}).lean(),
+        Expense.find({}).lean(),
+        Income.find({}).lean(),
+        Budget.find({}).lean()
+      ]);
+      
+      // Formatear para backup (igual que en export)
+      const clientesBackup = clientesExistentes.map(c => ({
+        id: c.crmId || c._id?.toString(),
+        crmId: c.crmId || c._id?.toString(),
+        nombre: c.nombre,
+        rubro: c.rubro,
+        ciudad: c.ciudad,
+        email: c.email,
+        montoPago: c.montoPago,
+        fechaPago: c.fechaPago,
+        pagado: c.pagado || false,
+        pagoUnico: c.pagoUnico || false,
+        pagoMesSiguiente: c.pagoMesSiguiente || false,
+        servicios: c.servicios || [],
+        observaciones: c.observaciones
+      }));
+      
+      // Formatear pagos mensuales
+      const pagosMensualesBackup = {};
+      pagosExistentes.forEach(pago => {
+        if (!pagosMensualesBackup[pago.mes]) {
+          pagosMensualesBackup[pago.mes] = {};
+        }
+        pagosMensualesBackup[pago.mes][pago.crmClientId] = {
+          pagado: pago.pagado || false,
+          serviciosPagados: pago.serviciosPagados || {},
+          fechaActualizacion: pago.fechaActualizacion || null
+        };
+      });
+      
+      // Formatear gastos
+      const gastosBackup = {};
+      gastosExistentes.forEach(gasto => {
+        if (!gastosBackup[gasto.periodo]) {
+          gastosBackup[gasto.periodo] = [];
+        }
+        gastosBackup[gasto.periodo].push({
+          id: gasto.crmId || gasto._id.toString(),
+          descripcion: gasto.descripcion,
+          monto: gasto.monto,
+          fecha: gasto.fecha || null,
+          categoria: gasto.categoria || '',
+          fechaCreacion: gasto.fechaCreacion || null
+        });
+      });
+      
+      // Formatear ingresos
+      const ingresosBackup = {};
+      ingresosExistentes.forEach(ingreso => {
+        if (!ingresosBackup[ingreso.periodo]) {
+          ingresosBackup[ingreso.periodo] = [];
+        }
+        ingresosBackup[ingreso.periodo].push({
+          id: ingreso.crmId || ingreso._id.toString(),
+          descripcion: ingreso.descripcion,
+          monto: ingreso.monto,
+          fecha: ingreso.fecha || null,
+          categoria: ingreso.categoria || '',
+          fechaCreacion: ingreso.fechaCreacion || null
+        });
+      });
+      
+      // Formatear presupuestos
+      const presupuestosBackup = presupuestosExistentes.map(p => ({
+        id: p.presupuestoId || p._id.toString(),
+        presupuestoId: p.presupuestoId || p._id.toString(),
+        numero: p.numero,
+        cliente: p.cliente,
+        fecha: p.fecha || null,
+        validez: p.validez || 30,
+        items: p.items || [],
+        subtotal: p.subtotal || 0,
+        descuento: p.descuento || 0,
+        porcentajeDescuento: p.porcentajeDescuento || 0,
+        total: p.total || 0,
+        estado: p.estado || 'borrador',
+        observaciones: p.observaciones || '',
+        notasInternas: p.notasInternas || ''
+      }));
+      
+      backupAutomatico = {
+        clientes: JSON.stringify(clientesBackup),
+        pagosMensuales: JSON.stringify(pagosMensualesBackup),
+        gastos: JSON.stringify(gastosBackup),
+        ingresos: JSON.stringify(ingresosBackup),
+        presupuestos: JSON.stringify(presupuestosBackup),
+        fechaExportacion: new Date().toISOString(),
+        version: '2.1',
+        tipo: 'backup_automatico_pre_importacion'
+      };
+      
+      const totalItems = clientesBackup.length + Object.keys(pagosMensualesBackup).length + 
+                         Object.keys(gastosBackup).length + Object.keys(ingresosBackup).length + 
+                         presupuestosBackup.length;
+      
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Backup automático creado:`);
+      console.log(`[BACKUP IMPORT] [${timestamp}]   - ${clientesBackup.length} clientes`);
+      console.log(`[BACKUP IMPORT] [${timestamp}]   - ${Object.keys(pagosMensualesBackup).length} meses de pagos`);
+      console.log(`[BACKUP IMPORT] [${timestamp}]   - ${Object.keys(gastosBackup).length} periodos de gastos`);
+      console.log(`[BACKUP IMPORT] [${timestamp}]   - ${Object.keys(ingresosBackup).length} periodos de ingresos`);
+      console.log(`[BACKUP IMPORT] [${timestamp}]   - ${presupuestosBackup.length} presupuestos`);
+      console.log(`[BACKUP IMPORT] [${timestamp}]   Total: ${totalItems} items guardados`);
+    } catch (backupError) {
+      console.error(`[BACKUP IMPORT] [${timestamp}] ❌ ERROR CRÍTICO: No se pudo crear backup automático:`, backupError);
+      // NO CONTINUAR si no se puede crear el backup
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'No se puede proceder: Error al crear backup automático de seguridad. Los datos NO fueron modificados.' 
+        },
+        { status: 500 }
+      );
+    }
+    
     console.log(`[BACKUP IMPORT] [${timestamp}] Procediendo a limpiar colecciones y importar datos...`);
     
-    // SOLO AHORA borrar colecciones existentes (después de preparar y validar todo)
+    // SOLO AHORA borrar colecciones existentes (después de crear backup y validar todo)
+    // IMPORTANTE: Solo borramos si tenemos datos válidos preparados para insertar
     if (tieneClientes && clientesPreparados.length > 0) {
       const countAntes = documentosExistentes.clientes;
       // LOG DE AUDITORÍA: Registrar antes de borrar
       console.log(`[AUDIT] [${timestamp}] ⚠️ ELIMINACIÓN DE DATOS - Clientes: ${countAntes} documentos serán eliminados`);
       console.log(`[AUDIT] [${timestamp}] Razón: Importación de backup con ${clientesPreparados.length} clientes válidos preparados`);
       console.log(`[AUDIT] [${timestamp}] Usuario/IP: ${userAgent} | Referer: ${referer}`);
+      console.log(`[AUDIT] [${timestamp}] Backup automático disponible antes de borrar`);
       
       await Client.deleteMany({});
       console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Clientes eliminados: ${countAntes} (se importarán ${clientesPreparados.length})`);
@@ -304,6 +435,8 @@ export async function POST(request) {
     };
 
     // Importar clientes (usar los ya preparados y validados)
+    // PROTECCIÓN: Si borramos clientes, DEBEMOS insertar al menos algunos, o revertir
+    let clientesInsertadosExitosamente = false;
     if (clientesPreparados.length > 0) {
       console.log(`[BACKUP IMPORT] [${timestamp}] Intentando insertar ${clientesPreparados.length} clientes preparados...`);
       
@@ -315,6 +448,7 @@ export async function POST(request) {
       try {
         const result = await Client.insertMany(clientesPreparados, { ordered: false });
         resultados.clientes = result.length;
+        clientesInsertadosExitosamente = result.length > 0;
         console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Clientes insertados exitosamente: ${result.length}`);
         
         // Log de los primeros 3 clientes insertados para verificación
@@ -353,10 +487,30 @@ export async function POST(request) {
             }
           }
           resultados.clientes = insertados;
+          clientesInsertadosExitosamente = insertados > 0;
           console.log('[BACKUP IMPORT] Clientes insertados uno por uno:', insertados, 'errores:', errores);
         } else {
+          // ERROR CRÍTICO: Si borramos clientes pero no pudimos insertar, tenemos un problema
+          if (documentosExistentes.clientes > 0) {
+            console.error(`[BACKUP IMPORT] [${timestamp}] ❌ ERROR CRÍTICO: Se borraron ${documentosExistentes.clientes} clientes pero NO se pudieron insertar nuevos.`);
+            console.error(`[BACKUP IMPORT] [${timestamp}] ⚠️ Los datos fueron borrados pero la inserción falló.`);
+            console.error(`[BACKUP IMPORT] [${timestamp}] 💾 Backup automático disponible para restaurar.`);
+            // NO lanzar error aquí, continuar para intentar restaurar desde backup
+          }
           throw insertError;
         }
+      }
+      
+      // VERIFICACIÓN FINAL: Si borramos clientes, debemos haber insertado al menos algunos
+      if (documentosExistentes.clientes > 0 && !clientesInsertadosExitosamente) {
+        console.error(`[BACKUP IMPORT] [${timestamp}] ❌ ERROR CRÍTICO: Se borraron ${documentosExistentes.clientes} clientes pero NO se insertó ninguno.`);
+        console.error(`[BACKUP IMPORT] [${timestamp}] 💾 Backup automático disponible para restaurar.`);
+        return NextResponse.json({
+          success: false,
+          error: `Error crítico: Se borraron ${documentosExistentes.clientes} clientes pero no se pudieron insertar nuevos. El backup automático está disponible para restaurar.`,
+          backupAutomatico: backupAutomatico,
+          resultados
+        }, { status: 500 });
       }
     }
 
@@ -518,9 +672,11 @@ export async function POST(request) {
     
     if (resultados.clientes > 0 && clientesVerificados === 0) {
       console.error('[BACKUP IMPORT] ERROR CRÍTICO: Se reportaron clientes insertados pero la BD está vacía');
+      console.error('[BACKUP IMPORT] 💾 Backup automático disponible para restaurar:', backupAutomatico ? 'SÍ' : 'NO');
       return NextResponse.json({
         success: false,
-        error: 'Error crítico: Los clientes no se insertaron correctamente en la base de datos',
+        error: 'Error crítico: Los clientes no se insertaron correctamente en la base de datos. El backup automático está disponible para restaurar.',
+        backupAutomatico: backupAutomatico,
         resultados
       }, { status: 500 });
     }
@@ -532,18 +688,32 @@ export async function POST(request) {
     console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Importación completada exitosamente`);
     console.log(`[BACKUP IMPORT] [${timestamp}] Resumen final:`, resultados);
     
+    // Incluir información del backup automático en la respuesta (por si acaso)
     return NextResponse.json({
       success: true,
       message: 'Datos importados correctamente',
       resultados,
-      timestamp: timestamp
+      timestamp: timestamp,
+      backupAutomaticoCreado: backupAutomatico ? true : false
     });
   } catch (error) {
     const errorTimestamp = new Date().toISOString();
     console.error(`[BACKUP IMPORT] [${errorTimestamp}] ❌ Error al importar backup:`, error);
     console.error(`[BACKUP IMPORT] [${errorTimestamp}] Stack:`, error.stack);
+    
+    // Si hay un backup automático, mencionarlo en el error
+    let errorMessage = error.message || 'Error al importar los datos';
+    if (backupAutomatico !== null) {
+      errorMessage += ' (Backup automático disponible para restaurar)';
+      console.error(`[BACKUP IMPORT] [${errorTimestamp}] 💾 Backup automático disponible para restaurar datos`);
+    }
+    
     return NextResponse.json(
-      { success: false, error: error.message || 'Error al importar los datos' },
+      { 
+        success: false, 
+        error: errorMessage,
+        backupAutomatico: backupAutomatico
+      },
       { status: 500 }
     );
   }
