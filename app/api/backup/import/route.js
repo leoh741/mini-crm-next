@@ -88,15 +88,37 @@ export async function POST(request) {
     // VALIDACIÓN CRÍTICA: Verificar que los clientes tienen nombre válido ANTES de borrar
     let clientesValidos = [];
     if (tieneClientes) {
-      clientesValidos = clientes.filter(c => c.nombre && typeof c.nombre === 'string' && c.nombre.trim().length > 0);
+      console.log(`[BACKUP IMPORT] [${timestamp}] Analizando ${clientes.length} clientes recibidos...`);
+      console.log(`[BACKUP IMPORT] [${timestamp}] Tipo de clientes:`, Array.isArray(clientes) ? 'Array' : typeof clientes);
+      if (clientes.length > 0) {
+        console.log(`[BACKUP IMPORT] [${timestamp}] Ejemplo de cliente recibido:`, JSON.stringify(clientes[0], null, 2));
+      }
+      
+      clientesValidos = clientes.filter(c => {
+        const tieneNombre = c.nombre && typeof c.nombre === 'string' && c.nombre.trim().length > 0;
+        if (!tieneNombre) {
+          console.warn(`[BACKUP IMPORT] Cliente sin nombre válido:`, {
+            id: c.id,
+            crmId: c.crmId,
+            nombre: c.nombre,
+            tipoNombre: typeof c.nombre
+          });
+        }
+        return tieneNombre;
+      });
+      
       if (clientesValidos.length === 0) {
-        console.error(`[BACKUP IMPORT] [${timestamp}] ERROR CRÍTICO: No hay clientes con nombre válido. NO se borrará nada.`);
+        console.error(`[BACKUP IMPORT] [${timestamp}] ERROR CRÍTICO: No hay clientes con nombre válido.`);
+        console.error(`[BACKUP IMPORT] [${timestamp}] Total recibidos: ${clientes.length}`);
+        if (clientes.length > 0) {
+          console.error(`[BACKUP IMPORT] [${timestamp}] Ejemplos de clientes inválidos:`, clientes.slice(0, 3));
+        }
         return NextResponse.json(
-          { success: false, error: 'No se puede importar: ningún cliente tiene nombre válido. Los datos NO fueron borrados.' },
+          { success: false, error: `No se puede importar: ningún cliente tiene nombre válido. Recibidos: ${clientes.length}, válidos: 0. Los datos NO fueron borrados.` },
           { status: 400 }
         );
       }
-      console.log(`[BACKUP IMPORT] [${timestamp}] Validación de clientes: ${clientesValidos.length} válidos de ${clientes.length} totales`);
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Validación de clientes: ${clientesValidos.length} válidos de ${clientes.length} totales`);
     }
 
     if (!tieneClientes && !tienePagos && !tieneGastos && !tieneIngresos && !tienePresupuestos) {
@@ -128,28 +150,57 @@ export async function POST(request) {
     
     // Preparar clientes ANTES de borrar
     if (tieneClientes && clientesValidos.length > 0) {
+      console.log(`[BACKUP IMPORT] [${timestamp}] Preparando ${clientesValidos.length} clientes válidos...`);
+      
       clientesPreparados = clientesValidos.map((cliente, index) => {
-        const crmId = cliente.id || cliente.crmId || `client-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+        // Asegurar que siempre haya un crmId válido
+        const crmId = cliente.id || cliente.crmId;
         
-        if (!cliente.nombre || typeof cliente.nombre !== 'string' || cliente.nombre.trim().length === 0) {
-          console.warn(`[BACKUP IMPORT] Cliente ${index} sin nombre válido, crmId: ${crmId}`);
+        if (!crmId) {
+          // Generar crmId si no existe, basado en el nombre o un ID único
+          const nombreBase = cliente.nombre ? cliente.nombre.substring(0, 20).toLowerCase().replace(/[^a-z0-9]/g, '') : 'cliente';
+          const nuevoCrmId = `${nombreBase}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          console.warn(`[BACKUP IMPORT] Cliente ${index + 1} sin crmId, generando: ${nuevoCrmId}`, {
+            nombre: cliente.nombre
+          });
+          return {
+            crmId: nuevoCrmId,
+            nombre: cliente.nombre.trim(),
+            rubro: cliente.rubro || undefined,
+            ciudad: cliente.ciudad || undefined,
+            email: cliente.email || undefined,
+            montoPago: cliente.montoPago !== undefined && cliente.montoPago !== null ? Number(cliente.montoPago) : undefined,
+            fechaPago: cliente.fechaPago !== undefined && cliente.fechaPago !== null ? Number(cliente.fechaPago) : undefined,
+            pagado: Boolean(cliente.pagado),
+            pagoUnico: Boolean(cliente.pagoUnico),
+            pagoMesSiguiente: Boolean(cliente.pagoMesSiguiente),
+            servicios: Array.isArray(cliente.servicios) ? cliente.servicios : [],
+            observaciones: cliente.observaciones || undefined
+          };
         }
         
         return {
-          crmId: crmId,
-          nombre: cliente.nombre,
-          rubro: cliente.rubro,
-          ciudad: cliente.ciudad,
-          email: cliente.email,
-          montoPago: cliente.montoPago,
-          fechaPago: cliente.fechaPago,
-          pagado: cliente.pagado || false,
-          pagoUnico: cliente.pagoUnico || false,
-          pagoMesSiguiente: cliente.pagoMesSiguiente || false,
-          servicios: cliente.servicios || [],
-          observaciones: cliente.observaciones
+          crmId: String(crmId), // Asegurar que sea string
+          nombre: cliente.nombre.trim(),
+          rubro: cliente.rubro || undefined,
+          ciudad: cliente.ciudad || undefined,
+          email: cliente.email || undefined,
+          montoPago: cliente.montoPago !== undefined && cliente.montoPago !== null ? Number(cliente.montoPago) : undefined,
+          fechaPago: cliente.fechaPago !== undefined && cliente.fechaPago !== null ? Number(cliente.fechaPago) : undefined,
+          pagado: Boolean(cliente.pagado),
+          pagoUnico: Boolean(cliente.pagoUnico),
+          pagoMesSiguiente: Boolean(cliente.pagoMesSiguiente),
+          servicios: Array.isArray(cliente.servicios) ? cliente.servicios : [],
+          observaciones: cliente.observaciones || undefined
         };
-      }).filter(c => c.nombre && c.nombre.trim()); // Filtrar nuevamente por seguridad
+      }).filter(c => {
+        // Filtrar nuevamente por seguridad - debe tener crmId y nombre válidos
+        const valido = c.crmId && c.nombre && c.nombre.trim().length > 0;
+        if (!valido) {
+          console.warn(`[BACKUP IMPORT] Cliente preparado inválido filtrado:`, c);
+        }
+        return valido;
+      });
       
       // VALIDACIÓN FINAL: Verificar que tenemos clientes válidos preparados
       if (clientesPreparados.length === 0) {
@@ -451,6 +502,9 @@ export async function POST(request) {
       let errores = 0;
       const erroresDetallados = [];
       
+      // Verificar cuántos clientes hay antes de insertar (para detectar si fueron insertados)
+      const countAntes = await Client.countDocuments({});
+      
       // Insertar/actualizar cada cliente uno por uno usando upsert
       // Esto garantiza que todos se importen correctamente, incluso si hay duplicados
       for (let i = 0; i < clientesPreparados.length; i++) {
@@ -472,17 +526,15 @@ export async function POST(request) {
             continue;
           }
           
+          // Verificar si el cliente ya existe
+          const existeAntes = await Client.findOne({ crmId: cliente.crmId }).select('_id').lean();
+          const eraNuevo = !existeAntes;
+          
           // Usar upsert para insertar o actualizar
+          // Simplificar: usar $set directamente sin $setOnInsert (Mongoose lo maneja automáticamente)
           const resultado = await Client.findOneAndUpdate(
             { crmId: cliente.crmId },
-            { 
-              $set: cliente,
-              // Asegurar que los campos requeridos estén presentes
-              $setOnInsert: {
-                crmId: cliente.crmId,
-                nombre: cliente.nombre
-              }
-            },
+            cliente, // Pasamos el objeto completo directamente
             { 
               upsert: true, 
               new: true,
@@ -491,13 +543,13 @@ export async function POST(request) {
             }
           );
           
-          // Verificar si fue insertado o actualizado comparando timestamps
-          const ahora = Date.now();
-          const creado = resultado.createdAt ? new Date(resultado.createdAt).getTime() : 0;
-          const actualizado = resultado.updatedAt ? new Date(resultado.updatedAt).getTime() : 0;
+          // Verificar que realmente se guardó
+          if (!resultado || !resultado._id) {
+            throw new Error('El documento no se guardó correctamente (sin _id)');
+          }
           
-          // Si la diferencia entre createdAt y updatedAt es muy pequeña (< 1 segundo), fue insertado
-          if (Math.abs(creado - actualizado) < 1000) {
+          // Contar como insertado o actualizado según si existía antes
+          if (eraNuevo) {
             insertados++;
             if (insertados <= 3 || (insertados % 10 === 0)) {
               console.log(`[BACKUP IMPORT] [${i + 1}/${clientesPreparados.length}] ✅ Cliente insertado: ${cliente.nombre} (crmId: ${cliente.crmId})`);
@@ -521,17 +573,21 @@ export async function POST(request) {
           // Si hay muchos errores seguidos, log adicional
           if (errores === 1 || errores === 5 || errores === 10) {
             console.error(`[BACKUP IMPORT] Detalle del error ${errores}:`, {
-              cliente: cliente,
+              cliente: JSON.stringify(cliente, null, 2),
               error: {
                 name: e.name,
                 message: e.message,
                 code: e.code,
-                stack: e.stack?.split('\n').slice(0, 3).join('\n')
+                stack: e.stack?.split('\n').slice(0, 5).join('\n')
               }
             });
           }
         }
       }
+      
+      // Verificar cuántos clientes hay después de insertar
+      const countDespues = await Client.countDocuments({});
+      console.log(`[BACKUP IMPORT] [${timestamp}] Clientes en BD: ${countAntes} antes → ${countDespues} después (esperados: ${countAntes + insertados})`);
       
       resultados.clientes = insertados + actualizados;
       clientesInsertadosExitosamente = resultados.clientes > 0;
@@ -589,6 +645,7 @@ export async function POST(request) {
     // CAMBIO: Usar upsert directamente para evitar problemas de duplicados
     if (pagosPreparados.length > 0) {
       console.log(`[BACKUP IMPORT] [${timestamp}] Insertando ${pagosPreparados.length} pagos usando upsert...`);
+      const countPagosAntes = await MonthlyPayment.countDocuments({});
       let insertados = 0;
       let actualizados = 0;
       let errores = 0;
@@ -596,18 +653,32 @@ export async function POST(request) {
       for (let i = 0; i < pagosPreparados.length; i++) {
         const pago = pagosPreparados[i];
         try {
+          // Validar que tenga los campos requeridos
+          if (!pago.mes || !pago.crmClientId) {
+            console.warn(`[BACKUP IMPORT] Pago ${i + 1} omitido: falta mes o crmClientId`, pago);
+            errores++;
+            continue;
+          }
+          
+          // Verificar si el pago ya existe
+          const existeAntes = await MonthlyPayment.findOne({ 
+            mes: pago.mes, 
+            crmClientId: pago.crmClientId 
+          }).select('_id').lean();
+          const eraNuevo = !existeAntes;
+          
           const resultado = await MonthlyPayment.findOneAndUpdate(
             { mes: pago.mes, crmClientId: pago.crmClientId },
-            { $set: pago },
+            pago, // Pasar el objeto completo
             { upsert: true, new: true, runValidators: true }
           );
           
-          // Verificar si fue insertado o actualizado
-          const ahora = Date.now();
-          const creado = resultado.createdAt ? new Date(resultado.createdAt).getTime() : 0;
-          const actualizado = resultado.updatedAt ? new Date(resultado.updatedAt).getTime() : 0;
+          // Verificar que se guardó
+          if (!resultado || !resultado._id) {
+            throw new Error('El pago no se guardó correctamente (sin _id)');
+          }
           
-          if (Math.abs(creado - actualizado) < 1000) {
+          if (eraNuevo) {
             insertados++;
           } else {
             actualizados++;
@@ -624,8 +695,10 @@ export async function POST(request) {
         }
       }
       
+      const countPagosDespues = await MonthlyPayment.countDocuments({});
       resultados.pagosMensuales = insertados + actualizados;
       console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Pagos importados: ${insertados} insertados, ${actualizados} actualizados, ${errores} errores`);
+      console.log(`[BACKUP IMPORT] [${timestamp}] Pagos en BD: ${countPagosAntes} antes → ${countPagosDespues} después (esperados: ${countPagosAntes + insertados})`);
       
       if (errores > 0) {
         console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ Hubo ${errores} errores al importar pagos`);
@@ -745,41 +818,71 @@ export async function POST(request) {
     const clientesVerificados = await Client.countDocuments();
     const pagosVerificados = await MonthlyPayment.countDocuments();
     
-    console.log('[BACKUP IMPORT] Verificación final:');
-    console.log('[BACKUP IMPORT] - Clientes en BD:', clientesVerificados, '(esperados:', resultados.clientes, ')');
-    console.log('[BACKUP IMPORT] - Pagos en BD:', pagosVerificados, '(esperados:', resultados.pagosMensuales, ')');
+    console.log(`[BACKUP IMPORT] [${timestamp}] Verificación final:`);
+    console.log(`[BACKUP IMPORT] [${timestamp}] - Clientes en BD: ${clientesVerificados} (esperados: ${resultados.clientes}, preparados: ${clientesPreparados.length})`);
+    console.log(`[BACKUP IMPORT] [${timestamp}] - Pagos en BD: ${pagosVerificados} (esperados: ${resultados.pagosMensuales}, preparados: ${pagosPreparados.length})`);
     
     // Listar algunos clientes para verificación
     if (clientesVerificados > 0) {
       const algunosClientes = await Client.find({}).select('nombre crmId').limit(5).lean();
-      console.log('[BACKUP IMPORT] Primeros clientes en BD:', algunosClientes.map(c => `${c.nombre} (${c.crmId})`).join(', '));
+      console.log(`[BACKUP IMPORT] [${timestamp}] Primeros clientes en BD:`, algunosClientes.map(c => `${c.nombre} (${c.crmId})`).join(', '));
+    } else {
+      console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ ADVERTENCIA: No hay clientes en la BD después de la importación`);
     }
     
-    if (resultados.clientes > 0 && clientesVerificados === 0) {
-      console.error('[BACKUP IMPORT] ERROR CRÍTICO: Se reportaron clientes insertados pero la BD está vacía');
-      console.error('[BACKUP IMPORT] 💾 Backup automático disponible para restaurar:', backupAutomatico ? 'SÍ' : 'NO');
+    // Verificar si hubo problemas críticos con clientes
+    let hayErrorCritico = false;
+    let mensajeError = '';
+    
+    if (clientesPreparados.length > 0 && clientesVerificados === 0 && resultados.clientes === 0) {
+      hayErrorCritico = true;
+      mensajeError = `Error crítico: Se intentaron importar ${clientesPreparados.length} clientes pero ninguno se importó correctamente. El backup automático está disponible para restaurar.`;
+      console.error(`[BACKUP IMPORT] [${timestamp}] ❌ ${mensajeError}`);
+      console.error(`[BACKUP IMPORT] [${timestamp}] 💾 Backup automático disponible para restaurar:`, backupAutomatico ? 'SÍ' : 'NO');
+    } else if (resultados.clientes > 0 && clientesVerificados === 0) {
+      hayErrorCritico = true;
+      mensajeError = `Error crítico: Se reportaron ${resultados.clientes} clientes insertados pero la BD está vacía. El backup automático está disponible para restaurar.`;
+      console.error(`[BACKUP IMPORT] [${timestamp}] ❌ ${mensajeError}`);
+      console.error(`[BACKUP IMPORT] [${timestamp}] 💾 Backup automático disponible para restaurar:`, backupAutomatico ? 'SÍ' : 'NO');
+    } else if (resultados.clientes < clientesPreparados.length && clientesPreparados.length > 0) {
+      const faltantes = clientesPreparados.length - resultados.clientes;
+      console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ ADVERTENCIA: Solo se importaron ${resultados.clientes} de ${clientesPreparados.length} clientes esperados (${faltantes} faltantes)`);
+      // No es crítico si al menos se importaron algunos
+    }
+    
+    // Si hay error crítico, devolver error
+    if (hayErrorCritico) {
       return NextResponse.json({
         success: false,
-        error: 'Error crítico: Los clientes no se insertaron correctamente en la base de datos. El backup automático está disponible para restaurar.',
+        error: mensajeError,
         backupAutomatico: backupAutomatico,
-        resultados
+        resultados,
+        verificacion: {
+          clientesEnBD: clientesVerificados,
+          clientesEsperados: resultados.clientes,
+          clientesPreparados: clientesPreparados.length
+        }
       }, { status: 500 });
     }
-    
-    if (resultados.clientes > clientesVerificados) {
-      console.warn(`[BACKUP IMPORT] ADVERTENCIA: Se esperaban ${resultados.clientes} clientes pero solo hay ${clientesVerificados} en BD`);
-    }
 
-    console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Importación completada exitosamente`);
+    // Si todo está bien, pero no se importaron clientes cuando se esperaba, al menos advertir
+    const exitoCompleto = clientesPreparados.length === 0 || (resultados.clientes > 0 && clientesVerificados > 0);
+    
+    console.log(`[BACKUP IMPORT] [${timestamp}] ${exitoCompleto ? '✅' : '⚠️'} Importación ${exitoCompleto ? 'completada exitosamente' : 'completada con advertencias'}`);
     console.log(`[BACKUP IMPORT] [${timestamp}] Resumen final:`, resultados);
     
     // Incluir información del backup automático en la respuesta (por si acaso)
     return NextResponse.json({
-      success: true,
-      message: 'Datos importados correctamente',
+      success: exitoCompleto,
+      message: exitoCompleto ? 'Datos importados correctamente' : `Datos importados con advertencias. Clientes: ${resultados.clientes}/${clientesPreparados.length}`,
       resultados,
       timestamp: timestamp,
-      backupAutomaticoCreado: backupAutomatico ? true : false
+      backupAutomaticoCreado: backupAutomatico ? true : false,
+      verificacion: {
+        clientesEnBD: clientesVerificados,
+        clientesEsperados: resultados.clientes,
+        clientesPreparados: clientesPreparados.length
+      }
     });
   } catch (error) {
     const errorTimestamp = new Date().toISOString();
