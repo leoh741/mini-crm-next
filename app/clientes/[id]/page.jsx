@@ -555,20 +555,21 @@ function ClienteDetailPageContent() {
             </div>
           )}
           {cliente.servicios && Array.isArray(cliente.servicios) && cliente.servicios.length > 1 && (
-            <div className="flex items-center justify-between">
-              <p><strong className="text-slate-300">Estado General:</strong> 
-                <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex items-center flex-wrap gap-2">
+                <strong className="text-slate-300">Estado General:</strong> 
+                <span className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${
                   todosLosServiciosPagados(cliente, estadoPagoMes?.serviciosPagados || {})
                     ? "bg-green-900/30 text-green-400 border border-green-700" 
                     : "bg-orange-900/30 text-orange-400 border border-orange-700"
                 }`}>
                   {todosLosServiciosPagados(cliente, estadoPagoMes?.serviciosPagados || {}) ? "Todos Pagados" : "Pendiente"}
                 </span>
-              </p>
+              </div>
               <button
                 onClick={handleTogglePagado}
                 disabled={actualizandoPago}
-                className={`ml-4 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap self-start sm:self-auto ${
                   todosLosServiciosPagados(cliente, estadoPagoMes?.serviciosPagados || {})
                     ? "bg-orange-600 hover:bg-orange-700 text-white"
                     : "bg-green-600 hover:bg-green-700 text-white"

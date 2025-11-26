@@ -207,6 +207,11 @@ function PagosPageContent() {
   const clientesConAlerta = esMesActual ? clientesMensuales.filter(cliente => {
     if (cliente.pagado) return false;
     
+    // Verificar que realmente tenga algo pendiente por pagar
+    const serviciosPagados = cliente.serviciosPagados || {};
+    const montoPendiente = getTotalPendienteCliente(cliente, serviciosPagados);
+    if (montoPendiente <= 0) return false;
+    
     let diasHastaPago = cliente.fechaPago - diaActual;
     
     // Si el pago corresponde al mes siguiente y ya pasó la fecha este mes
@@ -375,6 +380,10 @@ function PagosPageContent() {
             {clientesConAlerta.map(cliente => {
               const estado = getEstadoPago(cliente);
               const diasHastaPago = cliente.fechaPago - diaActual;
+              // Calcular solo lo que falta por pagar
+              const serviciosPagados = cliente.serviciosPagados || {};
+              const montoPendiente = getTotalPendienteCliente(cliente, serviciosPagados);
+              
               return (
                 <Link
                   key={cliente.id}
@@ -392,7 +401,7 @@ function PagosPageContent() {
                         : `Vence en ${diasHastaPago} día(s)`}
                     </p>
                   </div>
-                  <p className="font-semibold text-yellow-400">{formatearMoneda(getTotalCliente(cliente))}</p>
+                  <p className="font-semibold text-yellow-400">{formatearMoneda(montoPendiente)}</p>
                 </Link>
               );
             })}
