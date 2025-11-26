@@ -20,8 +20,16 @@ export async function POST(request) {
     const headers = request.headers;
     const userAgent = headers.get('user-agent') || 'unknown';
     const referer = headers.get('referer') || 'unknown';
+    const ip = headers.get('x-forwarded-for') || headers.get('x-real-ip') || request.ip || 'unknown';
+    const origin = headers.get('origin') || 'unknown';
+    
+    console.log(`[BACKUP IMPORT] [${timestamp}] ==========================================`);
+    console.log(`[BACKUP IMPORT] [${timestamp}] 🔔 IMPORTACIÓN INICIADA`);
     console.log(`[BACKUP IMPORT] [${timestamp}] User-Agent: ${userAgent}`);
     console.log(`[BACKUP IMPORT] [${timestamp}] Referer: ${referer}`);
+    console.log(`[BACKUP IMPORT] [${timestamp}] Origin: ${origin}`);
+    console.log(`[BACKUP IMPORT] [${timestamp}] IP: ${ip}`);
+    console.log(`[BACKUP IMPORT] [${timestamp}] ==========================================`);
     
     await connectDB();
     console.log(`[BACKUP IMPORT] [${timestamp}] Conectado a MongoDB`);
@@ -166,7 +174,9 @@ export async function POST(request) {
     }
 
     if (!tieneClientes && !tienePagos && !tieneGastos && !tieneIngresos && !tienePresupuestos) {
-      console.error(`[BACKUP IMPORT] [${timestamp}] Error: No hay datos válidos para importar`);
+      console.error(`[BACKUP IMPORT] [${timestamp}] ❌ Error: No hay datos válidos para importar`);
+      console.error(`[BACKUP IMPORT] [${timestamp}] User-Agent: ${userAgent}`);
+      console.error(`[BACKUP IMPORT] [${timestamp}] Referer: ${referer}`);
       return NextResponse.json(
         { success: false, error: 'No hay datos válidos para importar. El backup está vacío o tiene formato incorrecto. Los datos NO fueron borrados.' },
         { status: 400 }
@@ -575,10 +585,13 @@ export async function POST(request) {
           const eraNuevo = !existeAntes;
           
           // Usar upsert para insertar o actualizar
-          // Simplificar: usar $set directamente sin $setOnInsert (Mongoose lo maneja automáticamente)
+          // IMPORTANTE: Excluir crmId del update porque ya está en el filtro
+          // Si intentamos actualizar crmId que está en el filtro, Mongoose lanza error de conflicto
+          const { crmId, ...clienteParaActualizar } = cliente;
+          
           const resultado = await Client.findOneAndUpdate(
             { crmId: cliente.crmId },
-            cliente, // Pasamos el objeto completo directamente
+            { $set: clienteParaActualizar }, // Excluir crmId del update para evitar conflicto
             { 
               upsert: true, 
               new: true,
@@ -711,9 +724,12 @@ export async function POST(request) {
           }).select('_id').lean();
           const eraNuevo = !existeAntes;
           
+          // Excluir los campos del filtro del update para evitar conflictos
+          const { mes, crmClientId, ...pagoParaActualizar } = pago;
+          
           const resultado = await MonthlyPayment.findOneAndUpdate(
             { mes: pago.mes, crmClientId: pago.crmClientId },
-            pago, // Pasar el objeto completo
+            { $set: pagoParaActualizar }, // Excluir campos del filtro del update
             { upsert: true, new: true, runValidators: true }
           );
           
