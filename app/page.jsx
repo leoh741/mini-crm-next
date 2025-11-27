@@ -341,14 +341,14 @@ function HomePageContent() {
         </Link>
 
         <Link href="/tareas" className="group" prefetch={true}>
-          <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-indigo-500/20 flex flex-col justify-between">
+          <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-pink-600 via-pink-700 to-pink-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-pink-500/20 flex flex-col justify-between">
             <div className="flex items-start justify-between mb-2">
               <div className="text-3xl group-hover:scale-110 transition-transform duration-300">✅</div>
-              <div className="w-1.5 h-1.5 bg-indigo-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="w-1.5 h-1.5 bg-pink-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
             <div>
               <h3 className="text-lg font-bold text-white mb-1">Tareas</h3>
-              <p className="text-xs text-indigo-100/90">Gestionar pendientes</p>
+              <p className="text-xs text-pink-100/90">Gestionar pendientes</p>
             </div>
             <div className="absolute bottom-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mb-12 group-hover:scale-150 transition-transform duration-500"></div>
           </div>

@@ -56,29 +56,29 @@ function Header() {
         
         {/* Menú desktop */}
         <nav className="hidden md:flex gap-4 text-sm items-center flex-shrink-0">
-          <Link href="/" prefetch={true} className={pathname === "/" ? "text-blue-300" : ""}>
+          <Link href="/" prefetch={true} className={pathname === "/" ? "text-blue-300" : "text-slate-300 hover:text-white"}>
             Inicio
           </Link>
-          <Link href="/clientes" prefetch={true} className={pathname?.startsWith("/clientes") ? "text-blue-300" : ""}>
+          <Link href="/clientes" prefetch={true} className={pathname?.startsWith("/clientes") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
             Clientes
           </Link>
-          <Link href="/pagos" prefetch={true} className={pathname === "/pagos" ? "text-blue-300" : ""}>
+          <Link href="/pagos" prefetch={true} className={pathname === "/pagos" ? "text-blue-300" : "text-slate-300 hover:text-white"}>
             Pagos
           </Link>
-          <Link href="/balance" prefetch={true} className={pathname === "/balance" ? "text-blue-300" : ""}>
+          <Link href="/balance" prefetch={true} className={pathname === "/balance" ? "text-blue-300" : "text-slate-300 hover:text-white"}>
             Balance
           </Link>
-          <Link href="/presupuestos" prefetch={true} className={pathname?.startsWith("/presupuestos") ? "text-blue-300" : ""}>
+          <Link href="/presupuestos" prefetch={true} className={pathname?.startsWith("/presupuestos") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
             Presupuestos
           </Link>
-          <Link href="/reuniones" prefetch={true} className={pathname?.startsWith("/reuniones") ? "text-blue-300" : ""}>
+          <Link href="/reuniones" prefetch={true} className={pathname?.startsWith("/reuniones") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
             Reuniones
           </Link>
-          <Link href="/tareas" prefetch={true} className={pathname?.startsWith("/tareas") ? "text-blue-300" : ""}>
+          <Link href="/tareas" prefetch={true} className={pathname?.startsWith("/tareas") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
             Tareas
           </Link>
           {esAdminUser && (
-            <Link href="/admin/usuarios" prefetch={true} className={pathname?.startsWith("/admin") ? "text-blue-300" : ""}>
+            <Link href="/admin/usuarios" prefetch={true} className={pathname?.startsWith("/admin") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
               Usuarios
             </Link>
           )}
