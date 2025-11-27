@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { getReuniones, crearReunion, eliminarReunion, actualizarReunion } from "../../lib/reunionesUtils";
 import ProtectedRoute from "../../components/ProtectedRoute";
+import { Icons } from "../../components/Icons";
 
 function ReunionesPageContent() {
   const [reuniones, setReuniones] = useState([]);
@@ -336,18 +337,18 @@ function ReunionesPageContent() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap mb-2">
                       <h3 className={`font-semibold ${reunion.completada ? 'line-through text-slate-400' : ''}`}>{reunion.titulo}</h3>
-                      <span className={`px-2 py-1 rounded text-xs border ${reunion.tipo === 'meet' ? 'bg-blue-900/30 text-blue-400 border-blue-700' : 'bg-green-900/30 text-green-400 border-green-700'}`}>
-                        {reunion.tipo === 'meet' ? '📹 Meet' : '🏢 Presencial'}
+                      <span className={`px-2 py-1 rounded text-xs border flex items-center gap-1 ${reunion.tipo === 'meet' ? 'bg-blue-900/30 text-blue-400 border-blue-700' : 'bg-green-900/30 text-green-400 border-green-700'}`}>
+                        {reunion.tipo === 'meet' ? <><Icons.VideoCamera className="inline" /> Meet</> : <><Icons.OfficeBuilding className="inline" /> Presencial</>}
                       </span>
-                      {reunion.completada && <span className="px-2 py-1 rounded text-xs bg-green-900/30 text-green-400 border border-green-700">✓ Completada</span>}
+                      {reunion.completada && <span className="px-2 py-1 rounded text-xs bg-green-900/30 text-green-400 border border-green-700 flex items-center gap-1"><Icons.Check className="inline" /> Completada</span>}
                     </div>
-                    <p className="text-sm text-slate-300">📅 {formatearFecha(reunion.fecha)} a las {reunion.hora}</p>
-                    {reunion.cliente?.nombre && <p className="text-sm text-slate-300">👤 {reunion.cliente.nombre}</p>}
-                    {reunion.linkMeet && <p className="text-sm"><a href={reunion.linkMeet} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">🔗 Link Meet</a></p>}
-                    {reunion.observaciones && <p className="text-sm text-slate-400 mt-1">📝 {reunion.observaciones}</p>}
+                    <p className="text-sm text-slate-300 flex items-center gap-1"><Icons.Calendar className="inline" /> {formatearFecha(reunion.fecha)} a las {reunion.hora}</p>
+                    {reunion.cliente?.nombre && <p className="text-sm text-slate-300 flex items-center gap-1"><Icons.User className="inline" /> {reunion.cliente.nombre}</p>}
+                    {reunion.linkMeet && <p className="text-sm"><a href={reunion.linkMeet} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline flex items-center gap-1"><Icons.Link className="inline" /> Link Meet</a></p>}
+                    {reunion.observaciones && <p className="text-sm text-slate-400 mt-1 flex items-center gap-1"><Icons.DocumentText className="inline" /> {reunion.observaciones}</p>}
                     {reunion.asignados?.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
-                        <span className="text-xs text-slate-400 mr-1">👤 Asignados:</span>
+                        <span className="text-xs text-slate-400 mr-1 flex items-center gap-1"><Icons.User className="inline" /> Asignados:</span>
                         {reunion.asignados.map((asignado, i) => (
                           <span key={i} className="px-2 py-0.5 bg-purple-900/30 text-purple-400 text-xs rounded border border-purple-700">{asignado}</span>
                         ))}
@@ -360,20 +361,20 @@ function ReunionesPageContent() {
                         onClick={() => toggleCompletada(reunion)} 
                         className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded-lg text-xs font-medium transition-colors duration-200"
                       >
-                        ✓ Completar
+                        <Icons.Check className="inline mr-1" /> Completar
                       </button>
                     )}
                     <button 
                       onClick={() => abrirEdicion(reunion)} 
                       className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs font-medium transition-colors duration-200"
                     >
-                      ✏️ Editar
+                      <Icons.Pencil className="inline mr-1" /> Editar
                     </button>
                     <button 
                       onClick={() => setMostrarConfirmacion(reunion.reunionId)} 
                       className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded-lg text-xs font-medium transition-colors duration-200"
                     >
-                      🗑️ Eliminar
+                      <Icons.Trash className="inline mr-1" /> Eliminar
                     </button>
                   </div>
                 </div>
@@ -406,8 +407,8 @@ function ReunionesPageContent() {
                 <div>
                   <label htmlFor="reunion-tipo" className="block text-sm font-medium mb-1">Tipo *</label>
                   <select id="reunion-tipo" name="tipo" value={formData.tipo} onChange={(e) => setFormData({ ...formData, tipo: e.target.value })} className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100" required>
-                    <option value="meet">📹 Meet</option>
-                    <option value="oficina">🏢 Presencial</option>
+                    <option value="meet">Meet</option>
+                    <option value="oficina">Presencial</option>
                   </select>
                 </div>
                 {formData.tipo === 'meet' && (

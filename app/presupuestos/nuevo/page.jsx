@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { crearPresupuesto, calcularTotales, calcularTotalConDescuento } from "../../../lib/presupuestosUtils";
 import ProtectedRoute from "../../../components/ProtectedRoute";
+import { Icons } from "../../../components/Icons";
 
 function NuevoPresupuestoPageContent() {
   const router = useRouter();
@@ -188,7 +189,7 @@ function NuevoPresupuestoPageContent() {
 
         {success && (
           <div className="p-4 bg-green-900/30 border border-green-700 rounded-lg text-green-400">
-            ✓ Presupuesto creado exitosamente. Redirigiendo...
+            <span className="flex items-center gap-2"><Icons.Check className="inline" /> Presupuesto creado exitosamente. Redirigiendo...</span>
           </div>
         )}
 

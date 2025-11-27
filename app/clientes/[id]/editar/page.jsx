@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { getClienteById, actualizarCliente, getEstadoPagoMes, guardarEstadoPagoMes, limpiarCacheClientes } from "../../../../lib/clientesUtils";
 import { todosLosServiciosPagados } from "../../../../lib/clienteHelpers";
 import ProtectedRoute from "../../../../components/ProtectedRoute";
+import { Icons } from "../../../../components/Icons";
 
 function EditarClientePageContent() {
   const router = useRouter();
@@ -337,7 +338,7 @@ function EditarClientePageContent() {
 
         {success && (
           <div className="p-4 bg-green-900/30 border border-green-700 rounded-lg text-green-400">
-            ✓ Cliente actualizado exitosamente. Redirigiendo...
+            <span className="flex items-center gap-2"><Icons.Check className="inline" /> Cliente actualizado exitosamente. Redirigiendo...</span>
           </div>
         )}
 

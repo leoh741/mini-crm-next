@@ -7,6 +7,7 @@ import { getTotalCliente, getTotalPagadoCliente, getTotalPendienteCliente, todos
 import { generarResumenPagoPDF } from "../../../lib/pdfGenerator";
 import Link from "next/link";
 import ProtectedRoute from "../../../components/ProtectedRoute";
+import { Icons } from "../../../components/Icons";
 
 function ClienteDetailPageContent() {
   const params = useParams();
@@ -405,19 +406,19 @@ function ClienteDetailPageContent() {
               onClick={async () => await generarResumenPagoPDF(cliente, estadoPagoMes)}
               className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap"
             >
-              📄 PDF
+              <Icons.Document className="inline mr-1" /> PDF
             </button>
             <Link
               href={`/clientes/${id}/editar`}
               className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap text-center"
             >
-              ✏️ Editar
+              <Icons.Pencil className="inline mr-1" /> Editar
             </Link>
             <button
               onClick={() => setMostrarConfirmacion(true)}
               className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap"
             >
-              🗑️ Eliminar
+              <Icons.Trash className="inline mr-1" /> Eliminar
             </button>
           </div>
         </div>

@@ -7,6 +7,7 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import { esAdmin } from "../lib/authUtils";
 import { getReuniones } from "../lib/reunionesUtils";
 import { getTareas } from "../lib/tareasUtils";
+import { Icons } from "../components/Icons";
 
 function HomePageContent() {
   const [dateTime, setDateTime] = useState(new Date());
@@ -140,7 +141,9 @@ function HomePageContent() {
       <div className="flex-shrink-0">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <div>
-            <h2 className="text-lg md:text-xl font-semibold">Bienvenido 👋</h2>
+            <h2 className="text-lg md:text-xl font-semibold flex items-center gap-2">
+              Bienvenido <Icons.WavingHand className="text-xl" />
+            </h2>
             <p className="text-xs md:text-sm text-slate-400">
               Digital Space CRM
             </p>
@@ -158,7 +161,7 @@ function HomePageContent() {
         <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-4 space-y-2">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span className="text-lg">🔔</span>
+              <Icons.Bell className="text-lg" />
               <h3 className="font-semibold text-blue-300">Reuniones Próximas</h3>
             </div>
             <Link 
@@ -176,14 +179,14 @@ function HomePageContent() {
                     <p className="font-medium text-sm text-blue-200 truncate">{reunion.titulo}</p>
                     <p className="text-xs text-blue-300/80">
                       {formatearFechaReunion(reunion.fecha)} a las {formatearHoraReunion(reunion.fecha, reunion.hora)}
-                      {reunion.tipo === 'meet' ? ' 📹' : ' 🏢'}
+                      {reunion.tipo === 'meet' ? <Icons.VideoCamera className="inline ml-1" /> : <Icons.OfficeBuilding className="inline ml-1" />}
                     </p>
                     {reunion.cliente?.nombre && (
                       <p className="text-xs text-blue-300/70">Cliente: {reunion.cliente.nombre}</p>
                     )}
                     {reunion.asignados?.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1">
-                        <span className="text-xs text-blue-300/70 mr-1">👤 Asignados:</span>
+                        <span className="text-xs text-blue-300/70 mr-1 flex items-center gap-1"><Icons.User className="inline" /> Asignados:</span>
                         {reunion.asignados.map((asignado, i) => (
                           <span key={i} className="px-1.5 py-0.5 bg-purple-900/30 text-purple-300 text-xs rounded border border-purple-700">{asignado}</span>
                         ))}
@@ -207,7 +210,7 @@ function HomePageContent() {
         <div className="bg-indigo-900/30 border border-indigo-700 rounded-lg p-4 space-y-2">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span className="text-lg">✅</span>
+              <Icons.CheckCircle className="text-lg" />
               <h3 className="font-semibold text-indigo-300">Tareas Pendientes</h3>
             </div>
             <Link 
@@ -232,7 +235,7 @@ function HomePageContent() {
                         </span>
                         {tarea.estado === 'en_progreso' && (
                           <span className="px-2 py-0.5 rounded text-xs bg-yellow-900/30 text-yellow-400 border border-yellow-700">
-                            🔄 En Proceso
+                            <Icons.Refresh className="inline mr-1" /> En Proceso
                           </span>
                         )}
                       </div>
@@ -241,7 +244,7 @@ function HomePageContent() {
                       )}
                       {tarea.fechaVencimiento && (
                         <p className={`text-xs ${esVencida ? 'text-red-400 font-medium' : 'text-indigo-300/80'}`}>
-                          📅 Vence: {formatearFechaTarea(tarea.fechaVencimiento)}
+                          <span className="flex items-center gap-1"><Icons.Calendar className="inline" /> Vence: {formatearFechaTarea(tarea.fechaVencimiento)}</span>
                         </p>
                       )}
                       {tarea.cliente?.nombre && (
@@ -249,7 +252,7 @@ function HomePageContent() {
                       )}
                       {tarea.asignados?.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
-                          <span className="text-xs text-indigo-300/70 mr-1">👤 Asignados:</span>
+                          <span className="text-xs text-indigo-300/70 mr-1 flex items-center gap-1"><Icons.User className="inline" /> Asignados:</span>
                           {tarea.asignados.map((asignado, i) => (
                             <span key={i} className="px-1.5 py-0.5 bg-purple-900/30 text-purple-300 text-xs rounded border border-purple-700">{asignado}</span>
                           ))}
@@ -273,7 +276,7 @@ function HomePageContent() {
         <Link href="/clientes" className="group" prefetch={true}>
           <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-blue-500/20 flex flex-col justify-between">
             <div className="flex items-start justify-between mb-2">
-              <div className="text-3xl group-hover:scale-110 transition-transform duration-300">👥</div>
+              <Icons.Users className="text-3xl group-hover:scale-110 transition-transform duration-300" />
               <div className="w-1.5 h-1.5 bg-blue-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
             <div>
@@ -287,7 +290,7 @@ function HomePageContent() {
         <Link href="/pagos" className="group" prefetch={true}>
           <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-green-600 via-green-700 to-green-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-green-500/20 flex flex-col justify-between">
             <div className="flex items-start justify-between mb-2">
-              <div className="text-3xl group-hover:scale-110 transition-transform duration-300">💰</div>
+              <Icons.CurrencyDollar className="text-3xl group-hover:scale-110 transition-transform duration-300" />
               <div className="w-1.5 h-1.5 bg-green-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
             <div>
@@ -301,7 +304,7 @@ function HomePageContent() {
         <Link href="/clientes/nuevo" className="group" prefetch={true}>
           <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-purple-600 via-purple-700 to-purple-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-purple-500/20 flex flex-col justify-between">
             <div className="flex items-start justify-between mb-2">
-              <div className="text-3xl group-hover:scale-110 transition-transform duration-300">➕</div>
+              <Icons.Plus className="text-3xl group-hover:scale-110 transition-transform duration-300" />
               <div className="w-1.5 h-1.5 bg-purple-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
             <div>
@@ -315,7 +318,7 @@ function HomePageContent() {
         <Link href="/balance" className="group" prefetch={true}>
           <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-orange-600 via-orange-700 to-orange-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-orange-500/20 flex flex-col justify-between">
             <div className="flex items-start justify-between mb-2">
-              <div className="text-3xl group-hover:scale-110 transition-transform duration-300">📊</div>
+              <Icons.ChartBar className="text-3xl group-hover:scale-110 transition-transform duration-300" />
               <div className="w-1.5 h-1.5 bg-orange-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
             <div>
@@ -329,7 +332,7 @@ function HomePageContent() {
         <Link href="/reuniones" className="group" prefetch={true}>
           <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-cyan-600 via-cyan-700 to-cyan-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-cyan-500/20 flex flex-col justify-between">
             <div className="flex items-start justify-between mb-2">
-              <div className="text-3xl group-hover:scale-110 transition-transform duration-300">📅</div>
+              <Icons.Calendar className="text-3xl group-hover:scale-110 transition-transform duration-300" />
               <div className="w-1.5 h-1.5 bg-cyan-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
             <div>
@@ -343,7 +346,7 @@ function HomePageContent() {
         <Link href="/tareas" className="group" prefetch={true}>
           <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-pink-600 via-pink-700 to-pink-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-pink-500/20 flex flex-col justify-between">
             <div className="flex items-start justify-between mb-2">
-              <div className="text-3xl group-hover:scale-110 transition-transform duration-300">✅</div>
+              <Icons.CheckCircle className="text-3xl group-hover:scale-110 transition-transform duration-300" />
               <div className="w-1.5 h-1.5 bg-pink-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
             <div>
@@ -364,7 +367,7 @@ function HomePageContent() {
               className="group relative flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-cyan-500/30 overflow-hidden text-center"
             >
               <span className="relative z-10 flex items-center justify-center gap-1.5">
-                <span className="text-sm">📋</span>
+                <Icons.Clipboard className="text-sm" />
                 <span>Nuevo Presupuesto</span>
               </span>
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
@@ -374,7 +377,7 @@ function HomePageContent() {
               className="group relative flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-cyan-500/30 overflow-hidden text-center"
             >
               <span className="relative z-10 flex items-center justify-center gap-1.5">
-                <span className="text-sm">📑</span>
+                <Icons.Folder className="text-sm" />
                 <span>Ver Presupuestos</span>
               </span>
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
@@ -392,14 +395,14 @@ function HomePageContent() {
               className="group relative flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-indigo-500/30 overflow-hidden"
             >
               <span className="relative z-10 flex items-center justify-center gap-1.5">
-                <span className="text-sm">📥</span>
+                <Icons.Download className="text-sm" />
                 <span>Exportar</span>
               </span>
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
             </button>
             <label className="group relative flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-indigo-500/30 cursor-pointer overflow-hidden">
               <span className="relative z-10 flex items-center justify-center gap-1.5">
-                <span className="text-sm">📤</span>
+                <Icons.Upload className="text-sm" />
                 <span>Importar</span>
               </span>
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
@@ -440,7 +443,7 @@ function HomePageContent() {
               className="group relative w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-pink-500/30 overflow-hidden text-center flex items-center justify-center"
             >
               <span className="relative z-10 flex items-center justify-center gap-1.5">
-                <span className="text-sm">👤</span>
+                <Icons.User className="text-sm" />
                 <span>Gestionar Usuarios</span>
               </span>
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>

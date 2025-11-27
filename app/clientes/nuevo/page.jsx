@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { agregarCliente, guardarEstadoPagoMes, limpiarCacheClientes } from "../../../lib/clientesUtils";
 import { todosLosServiciosPagados } from "../../../lib/clienteHelpers";
 import ProtectedRoute from "../../../components/ProtectedRoute";
+import { Icons } from "../../../components/Icons";
 
 function NuevoClientePageContent() {
   const router = useRouter();
@@ -199,7 +200,7 @@ function NuevoClientePageContent() {
 
         {success && (
           <div className="p-4 bg-green-900/30 border border-green-700 rounded-lg text-green-400">
-            ✓ Cliente agregado exitosamente. Redirigiendo...
+            <span className="flex items-center gap-2"><Icons.Check className="inline" /> Cliente agregado exitosamente. Redirigiendo...</span>
           </div>
         )}
 

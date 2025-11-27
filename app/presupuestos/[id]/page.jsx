@@ -6,6 +6,7 @@ import { getPresupuestoById, actualizarPresupuesto, eliminarPresupuesto, calcula
 import { generarPresupuestoPDF } from "../../../lib/pdfGenerator";
 import Link from "next/link";
 import ProtectedRoute from "../../../components/ProtectedRoute";
+import { Icons } from "../../../components/Icons";
 
 function PresupuestoDetailPageContent() {
   const params = useParams();
@@ -295,7 +296,7 @@ function PresupuestoDetailPageContent() {
               onClick={async () => await generarPresupuestoPDF(presupuesto)}
               className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap"
             >
-              📄 PDF
+              <Icons.Document className="inline mr-1" /> PDF
             </button>
             {!editando ? (
               <>
@@ -303,13 +304,13 @@ function PresupuestoDetailPageContent() {
                   onClick={() => setEditando(true)}
                   className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap"
                 >
-                  ✏️ Editar
+                  <Icons.Pencil className="inline mr-1" /> Editar
                 </button>
                 <button
                   onClick={() => setMostrarConfirmacion(true)}
                   className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap"
                 >
-                  🗑️ Eliminar
+                  <Icons.Trash className="inline mr-1" /> Eliminar
                 </button>
               </>
             ) : (

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { getTareas, crearTarea, eliminarTarea, actualizarTarea } from "../../lib/tareasUtils";
 import ProtectedRoute from "../../components/ProtectedRoute";
+import { Icons } from "../../components/Icons";
 
 function TareasPageContent() {
   const [tareas, setTareas] = useState([]);
@@ -373,16 +374,16 @@ function TareasPageContent() {
                       <span className={`px-2 py-1 rounded text-xs border ${getPrioridadColor(tarea.prioridad)}`}>
                         {tarea.prioridad}
                       </span>
-                      {tarea.estado === 'completada' && <span className="px-2 py-1 rounded text-xs bg-green-900/30 text-green-400 border border-green-700">✓ Completada</span>}
-                      {tarea.estado === 'en_progreso' && <span className="px-2 py-1 rounded text-xs bg-yellow-900/30 text-yellow-400 border border-yellow-700">🔄 En Proceso</span>}
+                      {tarea.estado === 'completada' && <span className="px-2 py-1 rounded text-xs bg-green-900/30 text-green-400 border border-green-700 flex items-center gap-1"><Icons.Check className="inline" /> Completada</span>}
+                      {tarea.estado === 'en_progreso' && <span className="px-2 py-1 rounded text-xs bg-yellow-900/30 text-yellow-400 border border-yellow-700 flex items-center gap-1"><Icons.Refresh className="inline" /> En Proceso</span>}
                     </div>
                     {tarea.descripcion && <p className="text-sm text-slate-300 mb-1">{tarea.descripcion}</p>}
                     {tarea.fechaVencimiento && (
                       <p className={`text-sm ${esVencida ? 'text-red-400 font-medium' : 'text-slate-300'}`}>
-                        📅 Vence: {formatearFecha(tarea.fechaVencimiento)}
+                        <span className="flex items-center gap-1"><Icons.Calendar className="inline" /> Vence: {formatearFecha(tarea.fechaVencimiento)}</span>
                       </p>
                     )}
-                    {tarea.cliente?.nombre && <p className="text-sm text-slate-300">👤 {tarea.cliente.nombre}</p>}
+                    {tarea.cliente?.nombre && <p className="text-sm text-slate-300 flex items-center gap-1"><Icons.User className="inline" /> {tarea.cliente.nombre}</p>}
                     {tarea.etiquetas?.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {tarea.etiquetas.map((et, i) => (
@@ -392,7 +393,7 @@ function TareasPageContent() {
                     )}
                     {tarea.asignados?.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
-                        <span className="text-xs text-slate-400 mr-1">👤 Asignados:</span>
+                        <span className="text-xs text-slate-400 mr-1 flex items-center gap-1"><Icons.User className="inline" /> Asignados:</span>
                         {tarea.asignados.map((asignado, i) => (
                           <span key={i} className="px-2 py-0.5 bg-purple-900/30 text-purple-400 text-xs rounded border border-purple-700">{asignado}</span>
                         ))}
@@ -405,7 +406,7 @@ function TareasPageContent() {
                         onClick={() => toggleCompletar(tarea)} 
                         className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded-lg text-xs font-medium transition-colors duration-200"
                       >
-                        ✓ Completar
+                        <Icons.Check className="inline mr-1" /> Completar
                       </button>
                     )}
                     {tarea.estado !== 'en_progreso' && tarea.estado !== 'completada' && (
@@ -413,7 +414,7 @@ function TareasPageContent() {
                         onClick={() => cambiarEstado(tarea, 'en_progreso')} 
                         className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 rounded-lg text-xs font-medium transition-colors duration-200"
                       >
-                        🔄 En Proceso
+                        <Icons.Refresh className="inline mr-1" /> En Proceso
                       </button>
                     )}
                     {tarea.estado === 'en_progreso' && (
@@ -421,20 +422,20 @@ function TareasPageContent() {
                         onClick={() => cambiarEstado(tarea, 'pendiente')} 
                         className="px-3 py-1 bg-slate-600 hover:bg-slate-700 rounded-lg text-xs font-medium transition-colors duration-200"
                       >
-                        ⏸️ Pendiente
+                        <Icons.Pause className="inline mr-1" /> Pendiente
                       </button>
                     )}
                     <button 
                       onClick={() => abrirEdicion(tarea)} 
                       className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs font-medium transition-colors duration-200"
                     >
-                      ✏️ Editar
+                      <Icons.Pencil className="inline mr-1" /> Editar
                     </button>
                     <button 
                       onClick={() => setMostrarConfirmacion(tarea.tareaId)} 
                       className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded-lg text-xs font-medium transition-colors duration-200"
                     >
-                      🗑️ Eliminar
+                      <Icons.Trash className="inline mr-1" /> Eliminar
                     </button>
                   </div>
                 </div>
