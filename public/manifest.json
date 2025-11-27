@@ -3,7 +3,7 @@
   "short_name": "Digital Space CRM",
   "start_url": "/",
   "scope": "/",
-  "display": "standalone",
+  "display": "browser",
   "background_color": "#1c3d82",
   "theme_color": "#1c3d82",
   "orientation": "portrait-primary",
