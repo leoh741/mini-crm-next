@@ -437,6 +437,28 @@ export async function POST(request) {
       );
     }
     
+    // PROTECCIÓN ADICIONAL: Si hay datos existentes, requerir doble confirmación
+    const hayDatosExistentes = documentosExistentes.clientes > 0 || documentosExistentes.pagos > 0 || 
+                               documentosExistentes.gastos > 0 || documentosExistentes.ingresos > 0 ||
+                               documentosExistentes.presupuestos > 0 || documentosExistentes.reuniones > 0 ||
+                               documentosExistentes.tareas > 0;
+    
+    if (hayDatosExistentes) {
+      // Requerir confirmación doble si hay datos existentes
+      if (!body.confirmDeleteAll || body.confirmDeleteAll !== true) {
+        console.error(`[BACKUP IMPORT] [${timestamp}] ERROR: Hay datos existentes (${documentosExistentes.clientes} clientes, ${documentosExistentes.pagos} pagos, etc.) y se requiere confirmación doble.`);
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: `ADVERTENCIA: Hay datos existentes en la base de datos (${documentosExistentes.clientes} clientes, ${documentosExistentes.pagos} pagos, etc.). Para borrar todos los datos existentes, debes agregar "confirmDeleteAll": true además de "confirmDelete": true. Esto es una protección adicional.`,
+            datosExistentes: documentosExistentes
+          },
+          { status: 400 }
+        );
+      }
+      console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ ADVERTENCIA: Se borrarán datos existentes. Confirmación doble recibida.`);
+    }
+    
     console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Validación final exitosa. Total de datos preparados: ${totalDatosPreparados}`);
     
     // PROTECCIÓN CRÍTICA: Crear backup automático ANTES de borrar cualquier cosa
