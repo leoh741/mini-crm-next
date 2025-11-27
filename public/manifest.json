@@ -1,6 +1,6 @@
 {
   "name": "Digital Space CRM",
-  "short_name": "DS CRM",
+  "short_name": "Digital Space CRM",
   "description": "CRM para gestionar clientes de Digital Space",
   "start_url": "/",
   "display": "standalone",
