@@ -220,7 +220,10 @@ function PagosPageContent() {
       diasHastaPago = (ultimoDiaMes - diaActual) + cliente.fechaPago;
     }
     
-    return diasHastaPago <= 3 && diasHastaPago >= -3; // 3 días antes o después
+    // Mostrar alertas para:
+    // 1. Pagos próximos (3 días antes o hasta el día de pago)
+    // 2. Pagos vencidos (cualquier día después de la fecha de pago)
+    return diasHastaPago <= 3 && diasHastaPago >= 0 || diasHastaPago < 0;
   }) : [];
 
 
@@ -416,10 +419,12 @@ function PagosPageContent() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           {/* Buscador */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label htmlFor="buscar-pagos" className="block text-sm font-medium text-slate-300 mb-2">
               Buscar:
             </label>
             <input
+              id="buscar-pagos"
+              name="busqueda"
               type="text"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
@@ -431,10 +436,12 @@ function PagosPageContent() {
 
           {/* Filtro por estado */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label htmlFor="filtro-estado-pagos" className="block text-sm font-medium text-slate-300 mb-2">
               Filtrar por estado:
             </label>
             <select
+              id="filtro-estado-pagos"
+              name="filtroEstado"
               value={filtroEstado}
               onChange={(e) => setFiltroEstado(e.target.value)}
               className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-blue-500"

@@ -5,14 +5,43 @@ import { useState, useEffect } from "react";
 import { descargarBackup, cargarBackup } from "../lib/backupUtils";
 import ProtectedRoute from "../components/ProtectedRoute";
 import { esAdmin } from "../lib/authUtils";
+import { getReuniones } from "../lib/reunionesUtils";
+import { getTareas } from "../lib/tareasUtils";
 
 function HomePageContent() {
   const [dateTime, setDateTime] = useState(new Date());
   const [isAdmin, setIsAdmin] = useState(false);
+  const [reunionesProximas, setReunionesProximas] = useState([]);
+  const [tareasPendientes, setTareasPendientes] = useState([]);
 
   useEffect(() => {
     setIsAdmin(esAdmin());
+    cargarReunionesProximas();
+    cargarTareasPendientes();
+    const interval = setInterval(() => {
+      cargarReunionesProximas();
+      cargarTareasPendientes();
+    }, 60000); // Actualizar cada minuto
+    return () => clearInterval(interval);
   }, []);
+
+  const cargarReunionesProximas = async () => {
+    try {
+      const reuniones = await getReuniones(null, false, true, false);
+      setReunionesProximas(reuniones);
+    } catch (err) {
+      console.error('Error al cargar reuniones próximas:', err);
+    }
+  };
+
+  const cargarTareasPendientes = async () => {
+    try {
+      const tareas = await getTareas(null, null, false, true);
+      setTareasPendientes(tareas);
+    } catch (err) {
+      console.error('Error al cargar tareas pendientes:', err);
+    }
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -36,8 +65,60 @@ function HomePageContent() {
     return date.toLocaleDateString('es-ES', options);
   };
 
+  const formatearHoraReunion = (fecha, hora) => {
+    const date = new Date(fecha);
+    const [h, m] = hora.split(':');
+    return `${h}:${m}`;
+  };
+
+  const formatearFechaReunion = (fecha) => {
+    const date = new Date(fecha);
+    const hoy = new Date();
+    const manana = new Date(hoy);
+    manana.setDate(manana.getDate() + 1);
+    
+    if (date.toDateString() === hoy.toDateString()) {
+      return 'Hoy';
+    } else if (date.toDateString() === manana.toDateString()) {
+      return 'Mañana';
+    } else {
+      return date.toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+    }
+  };
+
+  const formatearFechaTarea = (fecha) => {
+    if (!fecha) return null;
+    const date = new Date(fecha);
+    const hoy = new Date();
+    const manana = new Date(hoy);
+    manana.setDate(manana.getDate() + 1);
+    
+    if (date.toDateString() === hoy.toDateString()) {
+      return 'Hoy';
+    } else if (date.toDateString() === manana.toDateString()) {
+      return 'Mañana';
+    } else {
+      return date.toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+    }
+  };
+
+  const getPrioridadColor = (prioridad) => {
+    switch (prioridad) {
+      case 'urgente':
+        return 'bg-red-900/30 text-red-400 border-red-700';
+      case 'alta':
+        return 'bg-orange-900/30 text-orange-400 border-orange-700';
+      case 'media':
+        return 'bg-yellow-900/30 text-yellow-400 border-yellow-700';
+      case 'baja':
+        return 'bg-green-900/30 text-green-400 border-green-700';
+      default:
+        return 'bg-slate-900/30 text-slate-400 border-slate-700';
+    }
+  };
+
   return (
-    <div className="flex flex-col space-y-3">
+    <div className="flex flex-col space-y-3" style={{ maxWidth: '100%', overflowX: 'hidden' }}>
       <div className="flex-shrink-0">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <div>
@@ -54,7 +135,118 @@ function HomePageContent() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {/* Alertas de reuniones próximas */}
+      {reunionesProximas.length > 0 && (
+        <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-4 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🔔</span>
+              <h3 className="font-semibold text-blue-300">Reuniones Próximas</h3>
+            </div>
+            <Link 
+              href="/reuniones"
+              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs font-medium transition-colors duration-200 flex-shrink-0 text-white"
+            >
+              Ver Reuniones
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {reunionesProximas.slice(0, 3).map((reunion) => (
+              <div key={reunion.reunionId} className="bg-slate-800/50 rounded p-2 border border-blue-800">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm text-blue-200 truncate">{reunion.titulo}</p>
+                    <p className="text-xs text-blue-300/80">
+                      {formatearFechaReunion(reunion.fecha)} a las {formatearHoraReunion(reunion.fecha, reunion.hora)}
+                      {reunion.tipo === 'meet' ? ' 📹' : ' 🏢'}
+                    </p>
+                    {reunion.cliente?.nombre && (
+                      <p className="text-xs text-blue-300/70">Cliente: {reunion.cliente.nombre}</p>
+                    )}
+                    {reunion.asignados?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        <span className="text-xs text-blue-300/70 mr-1">👤 Asignados:</span>
+                        {reunion.asignados.map((asignado, i) => (
+                          <span key={i} className="px-1.5 py-0.5 bg-purple-900/30 text-purple-300 text-xs rounded border border-purple-700">{asignado}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {reunionesProximas.length > 3 && (
+              <Link href="/reuniones" className="text-xs text-blue-400 hover:text-blue-300 underline block text-center pt-1">
+                Ver todas las reuniones próximas ({reunionesProximas.length})
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Alertas de tareas pendientes */}
+      {tareasPendientes.length > 0 && (
+        <div className="bg-indigo-900/30 border border-indigo-700 rounded-lg p-4 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">✅</span>
+              <h3 className="font-semibold text-indigo-300">Tareas Pendientes</h3>
+            </div>
+            <Link 
+              href="/tareas"
+              className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-xs font-medium transition-colors duration-200 flex-shrink-0 text-white"
+            >
+              Ver Tareas
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {tareasPendientes.slice(0, 3).map((tarea) => {
+              const fechaVenc = tarea.fechaVencimiento ? new Date(tarea.fechaVencimiento) : null;
+              const esVencida = fechaVenc && fechaVenc < new Date();
+              return (
+                <div key={tarea.tareaId || tarea.id} className={`bg-slate-800/50 rounded p-2 border ${esVencida ? 'border-red-800' : 'border-indigo-800'}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <p className="font-medium text-sm text-indigo-200 truncate">{tarea.titulo}</p>
+                        <span className={`px-2 py-0.5 rounded text-xs border ${getPrioridadColor(tarea.prioridad)}`}>
+                          {tarea.prioridad}
+                        </span>
+                      </div>
+                      {tarea.descripcion && (
+                        <p className="text-xs text-indigo-300/80 mb-1 line-clamp-2">{tarea.descripcion}</p>
+                      )}
+                      {tarea.fechaVencimiento && (
+                        <p className={`text-xs ${esVencida ? 'text-red-400 font-medium' : 'text-indigo-300/80'}`}>
+                          📅 Vence: {formatearFechaTarea(tarea.fechaVencimiento)}
+                        </p>
+                      )}
+                      {tarea.cliente?.nombre && (
+                        <p className="text-xs text-indigo-300/70">Cliente: {tarea.cliente.nombre}</p>
+                      )}
+                      {tarea.asignados?.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          <span className="text-xs text-indigo-300/70 mr-1">👤 Asignados:</span>
+                          {tarea.asignados.map((asignado, i) => (
+                            <span key={i} className="px-1.5 py-0.5 bg-purple-900/30 text-purple-300 text-xs rounded border border-purple-700">{asignado}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {tareasPendientes.length > 3 && (
+              <Link href="/tareas" className="text-xs text-indigo-400 hover:text-indigo-300 underline block text-center pt-1">
+                Ver todas las tareas pendientes ({tareasPendientes.length})
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" style={{ maxWidth: '100%' }}>
         <Link href="/clientes" className="group" prefetch={true}>
           <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-blue-500/20 flex flex-col justify-between">
             <div className="flex items-start justify-between mb-2">
@@ -106,6 +298,34 @@ function HomePageContent() {
             <div>
               <h3 className="text-lg font-bold text-white mb-1">Balance</h3>
               <p className="text-xs text-orange-100/90">Gastos y utilidad</p>
+            </div>
+            <div className="absolute bottom-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mb-12 group-hover:scale-150 transition-transform duration-500"></div>
+          </div>
+        </Link>
+
+        <Link href="/reuniones" className="group" prefetch={true}>
+          <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-cyan-600 via-cyan-700 to-cyan-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-cyan-500/20 flex flex-col justify-between">
+            <div className="flex items-start justify-between mb-2">
+              <div className="text-3xl group-hover:scale-110 transition-transform duration-300">📅</div>
+              <div className="w-1.5 h-1.5 bg-cyan-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">Reuniones</h3>
+              <p className="text-xs text-cyan-100/90">Agendar y gestionar</p>
+            </div>
+            <div className="absolute bottom-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mb-12 group-hover:scale-150 transition-transform duration-500"></div>
+          </div>
+        </Link>
+
+        <Link href="/tareas" className="group" prefetch={true}>
+          <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-indigo-500/20 flex flex-col justify-between">
+            <div className="flex items-start justify-between mb-2">
+              <div className="text-3xl group-hover:scale-110 transition-transform duration-300">✅</div>
+              <div className="w-1.5 h-1.5 bg-indigo-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">Tareas</h3>
+              <p className="text-xs text-indigo-100/90">Gestionar pendientes</p>
             </div>
             <div className="absolute bottom-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mb-12 group-hover:scale-150 transition-transform duration-500"></div>
           </div>

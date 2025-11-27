@@ -71,6 +71,12 @@ function Header() {
           <Link href="/presupuestos" prefetch={true} className={pathname?.startsWith("/presupuestos") ? "text-blue-300" : ""}>
             Presupuestos
           </Link>
+          <Link href="/reuniones" prefetch={true} className={pathname?.startsWith("/reuniones") ? "text-blue-300" : ""}>
+            Reuniones
+          </Link>
+          <Link href="/tareas" prefetch={true} className={pathname?.startsWith("/tareas") ? "text-blue-300" : ""}>
+            Tareas
+          </Link>
           {esAdminUser && (
             <Link href="/admin/usuarios" prefetch={true} className={pathname?.startsWith("/admin") ? "text-blue-300" : ""}>
               Usuarios
@@ -151,6 +157,20 @@ function Header() {
               onClick={() => setMenuAbierto(false)}
             >
               Presupuestos
+            </Link>
+            <Link 
+              href="/reuniones" 
+              className={`px-4 py-3 ${pathname?.startsWith("/reuniones") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
+              onClick={() => setMenuAbierto(false)}
+            >
+              Reuniones
+            </Link>
+            <Link 
+              href="/tareas" 
+              className={`px-4 py-3 ${pathname?.startsWith("/tareas") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
+              onClick={() => setMenuAbierto(false)}
+            >
+              Tareas
             </Link>
             {esAdminUser && (
               <Link 
