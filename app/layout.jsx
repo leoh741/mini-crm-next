@@ -2,7 +2,6 @@ import './globals.css';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ServiceWorkerRegistration from '../components/ServiceWorkerRegistration';
-import SplashScreen from '../components/SplashScreen';
 
 export const metadata = {
   title: "Digital Space CRM",
@@ -64,7 +63,6 @@ export default function RootLayout({ children }) {
             bottom: 0,
             width: '100vw',
             height: '100vh',
-            backgroundColor: '#1c3d82',
             zIndex: 99999,
             margin: 0,
             padding: 0,
@@ -88,7 +86,6 @@ export default function RootLayout({ children }) {
           />
         </div>
         <ServiceWorkerRegistration />
-        <SplashScreen />
         <Header />
         <main className="pt-20 md:pt-24 pb-20 md:pb-16 px-3 md:p-4 max-w-4xl mx-auto min-h-screen">{children}</main>
         <Footer />
@@ -150,18 +147,18 @@ export default function RootLayout({ children }) {
                   }
                 }
                 
-                // Ocultar cuando el DOM esté listo
+                // Ocultar cuando el DOM esté listo (sin delay para mostrar splash inmediatamente)
                 if (document.readyState === 'loading') {
                   document.addEventListener('DOMContentLoaded', function() {
-                    setTimeout(hideInlineSplash, 800);
+                    setTimeout(hideInlineSplash, 1000);
                   });
                 } else {
-                  setTimeout(hideInlineSplash, 800);
+                  setTimeout(hideInlineSplash, 1000);
                 }
                 
                 // También ocultar cuando la página esté completamente cargada
                 window.addEventListener('load', function() {
-                  setTimeout(hideInlineSplash, 800);
+                  setTimeout(hideInlineSplash, 1000);
                 });
               })();
             `,

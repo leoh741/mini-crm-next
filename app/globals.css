@@ -12,16 +12,14 @@ html, body {
   box-sizing: border-box;
 }
 
-/* Estilos para el splash screen - se muestra inmediatamente */
+/* Estilos para el splash screen - fondo transparente para que solo se vea el splash */
 body {
-  background-color: #1c3d82;
-  overflow: hidden;
+  background-color: transparent;
 }
 
-/* Prevenir flash de contenido blanco */
+/* Prevenir flash de contenido blanco - transparente para que solo se vea el splash */
 html {
-  background-color: #1c3d82;
-  overflow: hidden;
+  background-color: transparent;
 }
 
 /* Ocultar contenido hasta que el splash se oculte */
