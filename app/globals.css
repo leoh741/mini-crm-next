@@ -14,11 +14,11 @@ html, body {
 
 /* Estilos para el splash screen - se muestra inmediatamente */
 body {
-  background-color: #0c1628;
+  background-color: #1c3d82;
 }
 
 /* Prevenir flash de contenido blanco */
 html {
-  background-color: #0c1628;
+  background-color: #1c3d82;
 }
 

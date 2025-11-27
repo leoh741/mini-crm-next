@@ -32,9 +32,10 @@ export default function RootLayout({ children }) {
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="application-name" content="Digital Space CRM" />
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#0c1628" />
-        <meta name="msapplication-TileColor" content="#0c1628" />
-        <meta name="msapplication-navbutton-color" content="#0c1628" />
+        <meta name="theme-color" content="#1c3d82" />
+        <meta name="msapplication-TileColor" content="#1c3d82" />
+        <meta name="msapplication-navbutton-color" content="#1c3d82" />
+        <meta name="mobile-web-app-status-bar-style" content="#1c3d82" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Digital Space CRM" />

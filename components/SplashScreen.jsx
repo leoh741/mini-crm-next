@@ -79,7 +79,7 @@ export default function SplashScreen() {
     <div 
       className="fixed inset-0 z-[9999]"
       style={{
-        backgroundColor: '#0c1628',
+        backgroundColor: '#1c3d82',
         position: 'fixed',
         top: 0,
         left: 0,
