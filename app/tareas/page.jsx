@@ -350,7 +350,7 @@ function TareasPageContent() {
             }}
           >
             <option value="pendientes" style={{ backgroundColor: '#1e293b', color: '#f1f5f9', padding: '8px' }}>Pendientes</option>
-            <option value="en_progreso" style={{ backgroundColor: '#1e293b', color: '#f1f5f9', padding: '8px' }}>En Progreso</option>
+            <option value="en_progreso" style={{ backgroundColor: '#1e293b', color: '#f1f5f9', padding: '8px' }}>En Proceso</option>
             <option value="completada" style={{ backgroundColor: '#1e293b', color: '#f1f5f9', padding: '8px' }}>Completadas</option>
             <option value="todos" style={{ backgroundColor: '#1e293b', color: '#f1f5f9', padding: '8px' }}>Todas</option>
           </select>
@@ -374,7 +374,7 @@ function TareasPageContent() {
                         {tarea.prioridad}
                       </span>
                       {tarea.estado === 'completada' && <span className="px-2 py-1 rounded text-xs bg-green-900/30 text-green-400 border border-green-700">✓ Completada</span>}
-                      {tarea.estado === 'en_progreso' && <span className="px-2 py-1 rounded text-xs bg-yellow-900/30 text-yellow-400 border border-yellow-700">🔄 En Progreso</span>}
+                      {tarea.estado === 'en_progreso' && <span className="px-2 py-1 rounded text-xs bg-yellow-900/30 text-yellow-400 border border-yellow-700">🔄 En Proceso</span>}
                     </div>
                     {tarea.descripcion && <p className="text-sm text-slate-300 mb-1">{tarea.descripcion}</p>}
                     {tarea.fechaVencimiento && (
@@ -413,7 +413,7 @@ function TareasPageContent() {
                         onClick={() => cambiarEstado(tarea, 'en_progreso')} 
                         className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 rounded-lg text-xs font-medium transition-colors duration-200"
                       >
-                        🔄 En Progreso
+                        🔄 En Proceso
                       </button>
                     )}
                     {tarea.estado === 'en_progreso' && (

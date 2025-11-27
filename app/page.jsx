@@ -37,7 +37,25 @@ function HomePageContent() {
   const cargarTareasPendientes = async () => {
     try {
       const tareas = await getTareas(null, null, false, true);
-      setTareasPendientes(tareas);
+      // Ordenar: primero las en proceso, luego por prioridad y fecha
+      const tareasOrdenadas = tareas.sort((a, b) => {
+        // Priorizar tareas en progreso primero
+        const estadoOrder = { en_progreso: 3, pendiente: 2, completada: 1, cancelada: 0 };
+        if (estadoOrder[a.estado] !== estadoOrder[b.estado]) {
+          return estadoOrder[b.estado] - estadoOrder[a.estado];
+        }
+        // Luego por prioridad
+        const prioridadOrder = { urgente: 4, alta: 3, media: 2, baja: 1 };
+        if (prioridadOrder[a.prioridad] !== prioridadOrder[b.prioridad]) {
+          return prioridadOrder[b.prioridad] - prioridadOrder[a.prioridad];
+        }
+        // Luego por fecha de vencimiento
+        if (a.fechaVencimiento && b.fechaVencimiento) {
+          return new Date(a.fechaVencimiento) - new Date(b.fechaVencimiento);
+        }
+        return 0;
+      });
+      setTareasPendientes(tareasOrdenadas);
     } catch (err) {
       console.error('Error al cargar tareas pendientes:', err);
     }
@@ -212,6 +230,11 @@ function HomePageContent() {
                         <span className={`px-2 py-0.5 rounded text-xs border ${getPrioridadColor(tarea.prioridad)}`}>
                           {tarea.prioridad}
                         </span>
+                        {tarea.estado === 'en_progreso' && (
+                          <span className="px-2 py-0.5 rounded text-xs bg-yellow-900/30 text-yellow-400 border border-yellow-700">
+                            🔄 En Proceso
+                          </span>
+                        )}
                       </div>
                       {tarea.descripcion && (
                         <p className="text-xs text-indigo-300/80 mb-1 line-clamp-2">{tarea.descripcion}</p>
