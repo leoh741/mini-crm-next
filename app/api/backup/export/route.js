@@ -6,19 +6,23 @@ import Expense from '../../../../models/Expense';
 import Income from '../../../../models/Income';
 import User from '../../../../models/User';
 import Budget from '../../../../models/Budget';
+import Meeting from '../../../../models/Meeting';
+import Task from '../../../../models/Task';
 
 export async function GET() {
   try {
     await connectDB();
 
     // Obtener todos los datos
-    const [clientes, pagos, gastos, ingresos, usuarios, presupuestos] = await Promise.all([
+    const [clientes, pagos, gastos, ingresos, usuarios, presupuestos, reuniones, tareas] = await Promise.all([
       Client.find({}).lean(),
       MonthlyPayment.find({}).lean(),
       Expense.find({}).lean(),
       Income.find({}).lean(),
       User.find({}).lean(),
-      Budget.find({}).lean()
+      Budget.find({}).lean(),
+      Meeting.find({}).lean(),
+      Task.find({}).lean()
     ]);
 
     // Convertir clientes al formato esperado
@@ -111,6 +115,41 @@ export async function GET() {
       notasInternas: presupuesto.notasInternas || ''
     }));
 
+    // Convertir reuniones al formato esperado
+    const reunionesFormateadas = reuniones.map(reunion => ({
+      id: reunion.reunionId || reunion._id.toString(),
+      reunionId: reunion.reunionId || reunion._id.toString(),
+      titulo: reunion.titulo,
+      fecha: reunion.fecha || null,
+      hora: reunion.hora,
+      tipo: reunion.tipo,
+      cliente: reunion.cliente || undefined,
+      linkMeet: reunion.linkMeet || undefined,
+      observaciones: reunion.observaciones || undefined,
+      asignados: reunion.asignados || [],
+      completada: reunion.completada || false,
+      createdAt: reunion.createdAt || null,
+      updatedAt: reunion.updatedAt || null
+    }));
+
+    // Convertir tareas al formato esperado
+    const tareasFormateadas = tareas.map(tarea => ({
+      id: tarea.tareaId || tarea._id.toString(),
+      tareaId: tarea.tareaId || tarea._id.toString(),
+      titulo: tarea.titulo,
+      descripcion: tarea.descripcion || undefined,
+      fechaVencimiento: tarea.fechaVencimiento || null,
+      prioridad: tarea.prioridad || 'media',
+      estado: tarea.estado || 'pendiente',
+      cliente: tarea.cliente || undefined,
+      etiquetas: tarea.etiquetas || [],
+      asignados: tarea.asignados || [],
+      completada: tarea.completada || false,
+      fechaCompletada: tarea.fechaCompletada || null,
+      createdAt: tarea.createdAt || null,
+      updatedAt: tarea.updatedAt || null
+    }));
+
     // Formato compatible: devolver como objetos/arrays directamente
     // El frontend los serializará cuando cree el archivo JSON
     const datos = {
@@ -121,8 +160,10 @@ export async function GET() {
       ingresos: ingresosFormateados, // Objeto directamente
       usuarios: usuariosFormateados, // Array directamente
       presupuestos: presupuestosFormateados, // Array directamente
+      reuniones: reunionesFormateadas, // Array directamente
+      tareas: tareasFormateadas, // Array directamente
       fechaExportacion: new Date().toISOString(),
-      version: '2.1'
+      version: '2.2'
     };
 
     return NextResponse.json({

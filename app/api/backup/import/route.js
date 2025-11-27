@@ -6,6 +6,8 @@ import Expense from '../../../../models/Expense';
 import Income from '../../../../models/Income';
 import User from '../../../../models/User';
 import Budget from '../../../../models/Budget';
+import Meeting from '../../../../models/Meeting';
+import Task from '../../../../models/Task';
 
 export async function POST(request) {
   // Variable para backup automático (disponible en todo el scope)
@@ -63,6 +65,8 @@ export async function POST(request) {
     let ingresos = {};
     let usuarios = [];
     let presupuestos = [];
+    let reuniones = [];
+    let tareas = [];
 
     // Función helper para parsear strings JSON que pueden estar doblemente serializados
     const parseJsonField = (field, fieldName) => {
@@ -110,6 +114,8 @@ export async function POST(request) {
       ingresos = parseJsonField(body.ingresos, 'ingresos');
       usuarios = parseJsonField(body.usuarios, 'usuarios');
       presupuestos = parseJsonField(body.presupuestos, 'presupuestos');
+      reuniones = parseJsonField(body.reuniones, 'reuniones');
+      tareas = parseJsonField(body.tareas, 'tareas');
       
       console.log(`[BACKUP IMPORT] [${timestamp}] Datos parseados:`);
       console.log(`[BACKUP IMPORT] [${timestamp}] - Clientes:`, Array.isArray(clientes) ? `${clientes.length} clientes` : `NO ES ARRAY (tipo: ${typeof clientes})`);
@@ -121,6 +127,8 @@ export async function POST(request) {
       console.log(`[BACKUP IMPORT] [${timestamp}] - Ingresos:`, typeof ingresos === 'object' && ingresos !== null ? `${Object.keys(ingresos).length} periodos` : `NO ES OBJETO (tipo: ${typeof ingresos})`);
       console.log(`[BACKUP IMPORT] [${timestamp}] - Usuarios:`, Array.isArray(usuarios) ? `${usuarios.length} usuarios` : `NO ES ARRAY (tipo: ${typeof usuarios})`);
       console.log(`[BACKUP IMPORT] [${timestamp}] - Presupuestos:`, Array.isArray(presupuestos) ? `${presupuestos.length} presupuestos` : `NO ES ARRAY (tipo: ${typeof presupuestos})`);
+      console.log(`[BACKUP IMPORT] [${timestamp}] - Reuniones:`, Array.isArray(reuniones) ? `${reuniones.length} reuniones` : `NO ES ARRAY (tipo: ${typeof reuniones})`);
+      console.log(`[BACKUP IMPORT] [${timestamp}] - Tareas:`, Array.isArray(tareas) ? `${tareas.length} tareas` : `NO ES ARRAY (tipo: ${typeof tareas})`);
     } catch (parseError) {
       console.error(`[BACKUP IMPORT] [${timestamp}] Error al parsear JSON:`, parseError);
       console.error(`[BACKUP IMPORT] [${timestamp}] Stack:`, parseError.stack);
@@ -136,6 +144,8 @@ export async function POST(request) {
     const tieneGastos = typeof gastos === 'object' && gastos !== null && Object.keys(gastos).length > 0;
     const tieneIngresos = typeof ingresos === 'object' && ingresos !== null && Object.keys(ingresos).length > 0;
     const tienePresupuestos = Array.isArray(presupuestos) && presupuestos.length > 0;
+    const tieneReuniones = Array.isArray(reuniones) && reuniones.length > 0;
+    const tieneTareas = Array.isArray(tareas) && tareas.length > 0;
 
     // VALIDACIÓN CRÍTICA: Verificar que los clientes tienen nombre válido ANTES de borrar
     let clientesValidos = [];
@@ -173,7 +183,7 @@ export async function POST(request) {
       console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Validación de clientes: ${clientesValidos.length} válidos de ${clientes.length} totales`);
     }
 
-    if (!tieneClientes && !tienePagos && !tieneGastos && !tieneIngresos && !tienePresupuestos) {
+    if (!tieneClientes && !tienePagos && !tieneGastos && !tieneIngresos && !tienePresupuestos && !tieneReuniones && !tieneTareas) {
       console.error(`[BACKUP IMPORT] [${timestamp}] ❌ Error: No hay datos válidos para importar`);
       console.error(`[BACKUP IMPORT] [${timestamp}] User-Agent: ${userAgent}`);
       console.error(`[BACKUP IMPORT] [${timestamp}] Referer: ${referer}`);
@@ -189,7 +199,9 @@ export async function POST(request) {
       pagos: tienePagos ? await MonthlyPayment.countDocuments() : 0,
       gastos: tieneGastos ? await Expense.countDocuments() : 0,
       ingresos: tieneIngresos ? await Income.countDocuments() : 0,
-      presupuestos: tienePresupuestos ? await Budget.countDocuments() : 0
+      presupuestos: tienePresupuestos ? await Budget.countDocuments() : 0,
+      reuniones: tieneReuniones ? await Meeting.countDocuments() : 0,
+      tareas: tieneTareas ? await Task.countDocuments() : 0
     };
     
     console.log(`[BACKUP IMPORT] [${timestamp}] Documentos existentes que se borrarán:`, documentosExistentes);
@@ -201,6 +213,8 @@ export async function POST(request) {
     let gastosPreparados = [];
     let ingresosPreparados = [];
     let presupuestosPreparados = [];
+    let reunionesPreparadas = [];
+    let tareasPreparadas = [];
     
     // Preparar clientes ANTES de borrar
     if (tieneClientes && clientesValidos.length > 0) {
@@ -346,8 +360,75 @@ export async function POST(request) {
       console.log(`[BACKUP IMPORT] [${timestamp}] ✅ ${presupuestosPreparados.length} presupuestos preparados para importar`);
     }
     
+    // Preparar reuniones ANTES de borrar
+    if (tieneReuniones && Array.isArray(reuniones) && reuniones.length > 0) {
+      reunionesPreparadas = reuniones.map(reunion => {
+        // Parsear fecha correctamente
+        let fechaDate = null;
+        if (reunion.fecha) {
+          if (typeof reunion.fecha === 'string' && reunion.fecha.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            const [año, mes, dia] = reunion.fecha.split('-').map(Number);
+            fechaDate = new Date(año, mes - 1, dia, 12, 0, 0, 0);
+          } else {
+            fechaDate = new Date(reunion.fecha);
+            if (isNaN(fechaDate.getTime())) {
+              fechaDate = null;
+            }
+          }
+        }
+        
+        return {
+          reunionId: reunion.reunionId || reunion.id || `reunion-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+          titulo: reunion.titulo?.trim() || '',
+          fecha: fechaDate || new Date(),
+          hora: reunion.hora?.trim() || '00:00',
+          tipo: reunion.tipo && ['meet', 'oficina'].includes(reunion.tipo) ? reunion.tipo : 'meet',
+          cliente: reunion.cliente || undefined,
+          linkMeet: reunion.linkMeet?.trim() || undefined,
+          observaciones: reunion.observaciones?.trim() || undefined,
+          asignados: Array.isArray(reunion.asignados) ? reunion.asignados.filter(a => a && String(a).trim()).map(a => String(a).trim()) : [],
+          completada: Boolean(reunion.completada || false)
+        };
+      }).filter(r => r.titulo && r.titulo.trim().length > 0);
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ ${reunionesPreparadas.length} reuniones preparadas para importar`);
+    }
+    
+    // Preparar tareas ANTES de borrar
+    if (tieneTareas && Array.isArray(tareas) && tareas.length > 0) {
+      tareasPreparadas = tareas.map(tarea => {
+        // Parsear fecha de vencimiento correctamente
+        let fechaVencDate = null;
+        if (tarea.fechaVencimiento) {
+          if (typeof tarea.fechaVencimiento === 'string' && tarea.fechaVencimiento.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            const [año, mes, dia] = tarea.fechaVencimiento.split('-').map(Number);
+            fechaVencDate = new Date(año, mes - 1, dia, 12, 0, 0, 0);
+          } else {
+            fechaVencDate = new Date(tarea.fechaVencimiento);
+            if (isNaN(fechaVencDate.getTime())) {
+              fechaVencDate = null;
+            }
+          }
+        }
+        
+        return {
+          tareaId: tarea.tareaId || tarea.id || `tarea-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+          titulo: tarea.titulo?.trim() || '',
+          descripcion: tarea.descripcion?.trim() || undefined,
+          fechaVencimiento: fechaVencDate || undefined,
+          prioridad: tarea.prioridad && ['baja', 'media', 'alta', 'urgente'].includes(tarea.prioridad) ? tarea.prioridad : 'media',
+          estado: tarea.estado && ['pendiente', 'en_progreso', 'completada', 'cancelada'].includes(tarea.estado) ? tarea.estado : 'pendiente',
+          cliente: tarea.cliente || undefined,
+          etiquetas: Array.isArray(tarea.etiquetas) ? tarea.etiquetas.filter(e => e && String(e).trim()).map(e => String(e).trim()) : [],
+          asignados: Array.isArray(tarea.asignados) ? tarea.asignados.filter(a => a && String(a).trim()).map(a => String(a).trim()) : [],
+          completada: Boolean(tarea.completada || false),
+          fechaCompletada: tarea.fechaCompletada ? new Date(tarea.fechaCompletada) : undefined
+        };
+      }).filter(t => t.titulo && t.titulo.trim().length > 0);
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ ${tareasPreparadas.length} tareas preparadas para importar`);
+    }
+    
     // VALIDACIÓN FINAL ANTES DE BORRAR: Verificar que tenemos al menos algunos datos válidos
-    const totalDatosPreparados = clientesPreparados.length + pagosPreparados.length + gastosPreparados.length + ingresosPreparados.length + presupuestosPreparados.length;
+    const totalDatosPreparados = clientesPreparados.length + pagosPreparados.length + gastosPreparados.length + ingresosPreparados.length + presupuestosPreparados.length + reunionesPreparadas.length + tareasPreparadas.length;
     if (totalDatosPreparados === 0) {
       console.error(`[BACKUP IMPORT] [${timestamp}] ERROR CRÍTICO: No hay datos válidos preparados. NO se borrará nada.`);
       return NextResponse.json(
@@ -361,12 +442,14 @@ export async function POST(request) {
     // PROTECCIÓN CRÍTICA: Crear backup automático ANTES de borrar cualquier cosa
     console.log(`[BACKUP IMPORT] [${timestamp}] 🔒 Creando backup automático de seguridad antes de importar...`);
     try {
-      const [clientesExistentes, pagosExistentes, gastosExistentes, ingresosExistentes, presupuestosExistentes] = await Promise.all([
+      const [clientesExistentes, pagosExistentes, gastosExistentes, ingresosExistentes, presupuestosExistentes, reunionesExistentes, tareasExistentes] = await Promise.all([
         Client.find({}).lean(),
         MonthlyPayment.find({}).lean(),
         Expense.find({}).lean(),
         Income.find({}).lean(),
-        Budget.find({}).lean()
+        Budget.find({}).lean(),
+        Meeting.find({}).lean(),
+        Task.find({}).lean()
       ]);
       
       // Formatear para backup (igual que en export)
@@ -449,20 +532,57 @@ export async function POST(request) {
         notasInternas: p.notasInternas || ''
       }));
       
+      // Formatear reuniones
+      const reunionesBackup = reunionesExistentes.map(r => ({
+        id: r.reunionId || r._id.toString(),
+        reunionId: r.reunionId || r._id.toString(),
+        titulo: r.titulo,
+        fecha: r.fecha || null,
+        hora: r.hora,
+        tipo: r.tipo,
+        cliente: r.cliente || undefined,
+        linkMeet: r.linkMeet || undefined,
+        observaciones: r.observaciones || undefined,
+        asignados: r.asignados || [],
+        completada: r.completada || false,
+        createdAt: r.createdAt || null,
+        updatedAt: r.updatedAt || null
+      }));
+      
+      // Formatear tareas
+      const tareasBackup = tareasExistentes.map(t => ({
+        id: t.tareaId || t._id.toString(),
+        tareaId: t.tareaId || t._id.toString(),
+        titulo: t.titulo,
+        descripcion: t.descripcion || undefined,
+        fechaVencimiento: t.fechaVencimiento || null,
+        prioridad: t.prioridad || 'media',
+        estado: t.estado || 'pendiente',
+        cliente: t.cliente || undefined,
+        etiquetas: t.etiquetas || [],
+        asignados: t.asignados || [],
+        completada: t.completada || false,
+        fechaCompletada: t.fechaCompletada || null,
+        createdAt: t.createdAt || null,
+        updatedAt: t.updatedAt || null
+      }));
+      
       backupAutomatico = {
         clientes: JSON.stringify(clientesBackup),
         pagosMensuales: JSON.stringify(pagosMensualesBackup),
         gastos: JSON.stringify(gastosBackup),
         ingresos: JSON.stringify(ingresosBackup),
         presupuestos: JSON.stringify(presupuestosBackup),
+        reuniones: JSON.stringify(reunionesBackup),
+        tareas: JSON.stringify(tareasBackup),
         fechaExportacion: new Date().toISOString(),
-        version: '2.1',
+        version: '2.2',
         tipo: 'backup_automatico_pre_importacion'
       };
       
       const totalItems = clientesBackup.length + Object.keys(pagosMensualesBackup).length + 
                          Object.keys(gastosBackup).length + Object.keys(ingresosBackup).length + 
-                         presupuestosBackup.length;
+                         presupuestosBackup.length + reunionesBackup.length + tareasBackup.length;
       
       console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Backup automático creado:`);
       console.log(`[BACKUP IMPORT] [${timestamp}]   - ${clientesBackup.length} clientes`);
@@ -470,6 +590,8 @@ export async function POST(request) {
       console.log(`[BACKUP IMPORT] [${timestamp}]   - ${Object.keys(gastosBackup).length} periodos de gastos`);
       console.log(`[BACKUP IMPORT] [${timestamp}]   - ${Object.keys(ingresosBackup).length} periodos de ingresos`);
       console.log(`[BACKUP IMPORT] [${timestamp}]   - ${presupuestosBackup.length} presupuestos`);
+      console.log(`[BACKUP IMPORT] [${timestamp}]   - ${reunionesBackup.length} reuniones`);
+      console.log(`[BACKUP IMPORT] [${timestamp}]   - ${tareasBackup.length} tareas`);
       console.log(`[BACKUP IMPORT] [${timestamp}]   Total: ${totalItems} items guardados`);
     } catch (backupError) {
       console.error(`[BACKUP IMPORT] [${timestamp}] ❌ ERROR CRÍTICO: No se pudo crear backup automático:`, backupError);
@@ -527,6 +649,20 @@ export async function POST(request) {
       console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Presupuestos eliminados: ${countAntes} (se importarán ${presupuestosPreparados.length})`);
       console.log(`[AUDIT] [${timestamp}] ✅ Eliminación completada: ${countAntes} presupuestos eliminados`);
     }
+    if (tieneReuniones && reunionesPreparadas.length > 0) {
+      const countAntes = documentosExistentes.reuniones;
+      console.log(`[AUDIT] [${timestamp}] ⚠️ ELIMINACIÓN DE DATOS - Reuniones: ${countAntes} documentos serán eliminados`);
+      await Meeting.deleteMany({});
+      console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Reuniones eliminadas: ${countAntes} (se importarán ${reunionesPreparadas.length})`);
+      console.log(`[AUDIT] [${timestamp}] ✅ Eliminación completada: ${countAntes} reuniones eliminadas`);
+    }
+    if (tieneTareas && tareasPreparadas.length > 0) {
+      const countAntes = documentosExistentes.tareas;
+      console.log(`[AUDIT] [${timestamp}] ⚠️ ELIMINACIÓN DE DATOS - Tareas: ${countAntes} documentos serán eliminados`);
+      await Task.deleteMany({});
+      console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Tareas eliminadas: ${countAntes} (se importarán ${tareasPreparadas.length})`);
+      console.log(`[AUDIT] [${timestamp}] ✅ Eliminación completada: ${countAntes} tareas eliminadas`);
+    }
     // NO eliminamos usuarios - se mantienen y se hace merge
 
     const resultados = {
@@ -536,7 +672,9 @@ export async function POST(request) {
       ingresos: 0,
       usuarios: 0,
       usuariosMantenidos: 0,
-      presupuestos: 0
+      presupuestos: 0,
+      reuniones: 0,
+      tareas: 0
     };
 
     // Importar clientes (usar los ya preparados y validados)
@@ -871,6 +1009,126 @@ export async function POST(request) {
         } else {
           throw error;
         }
+      }
+    }
+
+    // Importar reuniones (usar las ya preparadas)
+    if (reunionesPreparadas.length > 0) {
+      console.log(`[BACKUP IMPORT] [${timestamp}] Insertando ${reunionesPreparadas.length} reuniones usando upsert...`);
+      let insertadas = 0;
+      let actualizadas = 0;
+      let errores = 0;
+      
+      for (let i = 0; i < reunionesPreparadas.length; i++) {
+        const reunion = reunionesPreparadas[i];
+        try {
+          // Validar que tenga los campos requeridos
+          if (!reunion.reunionId || !reunion.titulo || !reunion.fecha || !reunion.hora || !reunion.tipo) {
+            console.warn(`[BACKUP IMPORT] Reunión ${i + 1} omitida: faltan campos requeridos`, reunion);
+            errores++;
+            continue;
+          }
+          
+          // Verificar si la reunión ya existe
+          const existeAntes = await Meeting.findOne({ reunionId: reunion.reunionId }).select('_id').lean();
+          const eraNueva = !existeAntes;
+          
+          // Excluir reunionId del update para evitar conflictos
+          const { reunionId, ...reunionParaActualizar } = reunion;
+          
+          const resultado = await Meeting.findOneAndUpdate(
+            { reunionId: reunion.reunionId },
+            { $set: reunionParaActualizar },
+            { upsert: true, new: true, runValidators: true }
+          );
+          
+          // Verificar que se guardó
+          if (!resultado || !resultado._id) {
+            throw new Error('La reunión no se guardó correctamente (sin _id)');
+          }
+          
+          if (eraNueva) {
+            insertadas++;
+          } else {
+            actualizadas++;
+          }
+          
+          if ((insertadas + actualizadas) % 50 === 0) {
+            console.log(`[BACKUP IMPORT] [${timestamp}] Procesadas ${insertadas + actualizadas}/${reunionesPreparadas.length} reuniones...`);
+          }
+        } catch (e) {
+          errores++;
+          if (errores <= 5) {
+            console.error(`[BACKUP IMPORT] Error al insertar reunión [${i + 1}]:`, e.message);
+          }
+        }
+      }
+      
+      resultados.reuniones = insertadas + actualizadas;
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Reuniones importadas: ${insertadas} insertadas, ${actualizadas} actualizadas, ${errores} errores`);
+      
+      if (errores > 0) {
+        console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ Hubo ${errores} errores al importar reuniones`);
+      }
+    }
+
+    // Importar tareas (usar las ya preparadas)
+    if (tareasPreparadas.length > 0) {
+      console.log(`[BACKUP IMPORT] [${timestamp}] Insertando ${tareasPreparadas.length} tareas usando upsert...`);
+      let insertadas = 0;
+      let actualizadas = 0;
+      let errores = 0;
+      
+      for (let i = 0; i < tareasPreparadas.length; i++) {
+        const tarea = tareasPreparadas[i];
+        try {
+          // Validar que tenga los campos requeridos
+          if (!tarea.tareaId || !tarea.titulo) {
+            console.warn(`[BACKUP IMPORT] Tarea ${i + 1} omitida: faltan campos requeridos`, tarea);
+            errores++;
+            continue;
+          }
+          
+          // Verificar si la tarea ya existe
+          const existeAntes = await Task.findOne({ tareaId: tarea.tareaId }).select('_id').lean();
+          const eraNueva = !existeAntes;
+          
+          // Excluir tareaId del update para evitar conflictos
+          const { tareaId, ...tareaParaActualizar } = tarea;
+          
+          const resultado = await Task.findOneAndUpdate(
+            { tareaId: tarea.tareaId },
+            { $set: tareaParaActualizar },
+            { upsert: true, new: true, runValidators: true }
+          );
+          
+          // Verificar que se guardó
+          if (!resultado || !resultado._id) {
+            throw new Error('La tarea no se guardó correctamente (sin _id)');
+          }
+          
+          if (eraNueva) {
+            insertadas++;
+          } else {
+            actualizadas++;
+          }
+          
+          if ((insertadas + actualizadas) % 50 === 0) {
+            console.log(`[BACKUP IMPORT] [${timestamp}] Procesadas ${insertadas + actualizadas}/${tareasPreparadas.length} tareas...`);
+          }
+        } catch (e) {
+          errores++;
+          if (errores <= 5) {
+            console.error(`[BACKUP IMPORT] Error al insertar tarea [${i + 1}]:`, e.message);
+          }
+        }
+      }
+      
+      resultados.tareas = insertadas + actualizadas;
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Tareas importadas: ${insertadas} insertadas, ${actualizadas} actualizadas, ${errores} errores`);
+      
+      if (errores > 0) {
+        console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ Hubo ${errores} errores al importar tareas`);
       }
     }
 
