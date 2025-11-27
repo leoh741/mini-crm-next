@@ -237,25 +237,34 @@ function ReunionesPageContent() {
           <label htmlFor="filtro-fecha-reuniones" className="block text-sm font-medium text-slate-300 mb-1">
             Filtrar por fecha
           </label>
-          <input
-            id="filtro-fecha-reuniones"
-            name="filtroFecha"
-            type="date"
-            value={fechaFiltro}
-            onChange={(e) => setFechaFiltro(e.target.value)}
-            placeholder="Seleccionar fecha"
-            className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 text-sm w-full"
-            style={{ 
-              color: '#f1f5f9 !important',
-              fontSize: '14px',
-              fontWeight: '400',
-              WebkitAppearance: 'none',
-              MozAppearance: 'textfield'
-            }}
-          />
-          {!fechaFiltro && (
-            <p className="text-xs text-slate-400 mt-1">Selecciona una fecha para filtrar</p>
-          )}
+          <div className="relative">
+            <input
+              id="filtro-fecha-reuniones"
+              name="filtroFecha"
+              type="date"
+              value={fechaFiltro}
+              onChange={(e) => setFechaFiltro(e.target.value)}
+              className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 text-sm w-full"
+              style={{ 
+                color: fechaFiltro ? '#f1f5f9' : 'transparent',
+                fontSize: '14px',
+                fontWeight: '400',
+                WebkitAppearance: 'none',
+                MozAppearance: 'textfield'
+              }}
+            />
+            {!fechaFiltro && (
+              <div 
+                className="absolute inset-0 px-3 py-2 pointer-events-none flex items-center text-slate-400 text-sm"
+                style={{ 
+                  color: '#94a3b8',
+                  fontSize: '14px'
+                }}
+              >
+                dd/mm/aaaa
+              </div>
+            )}
+          </div>
         </div>
         <div>
           <label htmlFor="filtro-tipo-reuniones" className="block text-sm font-medium text-slate-300 mb-1">
