@@ -204,7 +204,71 @@ export async function POST(request) {
       tareas: tieneTareas ? await Task.countDocuments() : 0
     };
     
+    // Contar documentos que se van a importar
+    const documentosAImportar = {
+      clientes: clientesValidos.length,
+      pagos: pagosPreparados.length,
+      gastos: gastosPreparados.length,
+      ingresos: ingresosPreparados.length,
+      presupuestos: presupuestosPreparados.length,
+      reuniones: reunionesPreparadas.length,
+      tareas: tareasPreparadas.length
+    };
+    
     console.log(`[BACKUP IMPORT] [${timestamp}] Documentos existentes que se borrarán:`, documentosExistentes);
+    console.log(`[BACKUP IMPORT] [${timestamp}] Documentos que se importarán:`, documentosAImportar);
+    
+    // PROTECCIÓN CRÍTICA: Advertir si el backup tiene MENOS datos que los existentes
+    let hayPerdidaPotencial = false;
+    let advertenciasPerdida = [];
+    
+    if (documentosExistentes.clientes > 0 && documentosAImportar.clientes < documentosExistentes.clientes) {
+      hayPerdidaPotencial = true;
+      advertenciasPerdida.push(`Clientes: Tienes ${documentosExistentes.clientes} pero el backup solo tiene ${documentosAImportar.clientes} (pérdida de ${documentosExistentes.clientes - documentosAImportar.clientes} clientes)`);
+    }
+    
+    if (documentosExistentes.pagos > 0 && documentosAImportar.pagos < documentosExistentes.pagos) {
+      hayPerdidaPotencial = true;
+      advertenciasPerdida.push(`Pagos: Tienes ${documentosExistentes.pagos} pero el backup solo tiene ${documentosAImportar.pagos} (pérdida de ${documentosExistentes.pagos - documentosAImportar.pagos} pagos)`);
+    }
+    
+    if (documentosExistentes.presupuestos > 0 && documentosAImportar.presupuestos < documentosExistentes.presupuestos) {
+      hayPerdidaPotencial = true;
+      advertenciasPerdida.push(`Presupuestos: Tienes ${documentosExistentes.presupuestos} pero el backup solo tiene ${documentosAImportar.presupuestos} (pérdida de ${documentosExistentes.presupuestos - documentosAImportar.presupuestos} presupuestos)`);
+    }
+    
+    if (documentosExistentes.reuniones > 0 && documentosAImportar.reuniones < documentosExistentes.reuniones) {
+      hayPerdidaPotencial = true;
+      advertenciasPerdida.push(`Reuniones: Tienes ${documentosExistentes.reuniones} pero el backup solo tiene ${documentosAImportar.reuniones} (pérdida de ${documentosExistentes.reuniones - documentosAImportar.reuniones} reuniones)`);
+    }
+    
+    if (documentosExistentes.tareas > 0 && documentosAImportar.tareas < documentosExistentes.tareas) {
+      hayPerdidaPotencial = true;
+      advertenciasPerdida.push(`Tareas: Tienes ${documentosExistentes.tareas} pero el backup solo tiene ${documentosAImportar.tareas} (pérdida de ${documentosExistentes.tareas - documentosAImportar.tareas} tareas)`);
+    }
+    
+    // Si hay pérdida potencial significativa, requerir confirmación adicional
+    if (hayPerdidaPotencial) {
+      console.error(`[BACKUP IMPORT] [${timestamp}] ⚠️ ADVERTENCIA CRÍTICA: El backup tiene MENOS datos que los existentes!`);
+      advertenciasPerdida.forEach(adv => console.error(`[BACKUP IMPORT] [${timestamp}]   - ${adv}`));
+      
+      // Requerir confirmación adicional específica para pérdida de datos
+      if (!body.confirmDataLoss || body.confirmDataLoss !== true) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'ADVERTENCIA: El backup contiene MENOS datos que los existentes. Esto causará pérdida de información.',
+            advertencias: advertenciasPerdida,
+            datosExistentes: documentosExistentes,
+            datosAImportar: documentosAImportar,
+            requiereConfirmacion: 'Para proceder, debes agregar "confirmDataLoss": true además de las otras confirmaciones. Esto indica que entiendes que se perderán datos.'
+          },
+          { status: 400 }
+        );
+      }
+      
+      console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Usuario confirmó pérdida de datos. Procediendo con advertencia...`);
+    }
     
     // PROTECCIÓN CRÍTICA: Preparar TODOS los datos ANTES de borrar nada
     // Esto asegura que si algo falla, no perdemos datos
@@ -460,6 +524,71 @@ export async function POST(request) {
     }
     
     console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Validación final exitosa. Total de datos preparados: ${totalDatosPreparados}`);
+    
+    // Contar documentos que se van a importar (después de prepararlos)
+    const documentosAImportar = {
+      clientes: clientesPreparados.length,
+      pagos: pagosPreparados.length,
+      gastos: gastosPreparados.length,
+      ingresos: ingresosPreparados.length,
+      presupuestos: presupuestosPreparados.length,
+      reuniones: reunionesPreparadas.length,
+      tareas: tareasPreparadas.length
+    };
+    
+    console.log(`[BACKUP IMPORT] [${timestamp}] Documentos que se importarán:`, documentosAImportar);
+    
+    // PROTECCIÓN CRÍTICA: Advertir si el backup tiene MENOS datos que los existentes
+    let hayPerdidaPotencial = false;
+    let advertenciasPerdida = [];
+    
+    if (documentosExistentes.clientes > 0 && documentosAImportar.clientes < documentosExistentes.clientes) {
+      hayPerdidaPotencial = true;
+      advertenciasPerdida.push(`Clientes: Tienes ${documentosExistentes.clientes} pero el backup solo tiene ${documentosAImportar.clientes} (pérdida de ${documentosExistentes.clientes - documentosAImportar.clientes} clientes)`);
+    }
+    
+    if (documentosExistentes.pagos > 0 && documentosAImportar.pagos < documentosExistentes.pagos) {
+      hayPerdidaPotencial = true;
+      advertenciasPerdida.push(`Pagos: Tienes ${documentosExistentes.pagos} pero el backup solo tiene ${documentosAImportar.pagos} (pérdida de ${documentosExistentes.pagos - documentosAImportar.pagos} pagos)`);
+    }
+    
+    if (documentosExistentes.presupuestos > 0 && documentosAImportar.presupuestos < documentosExistentes.presupuestos) {
+      hayPerdidaPotencial = true;
+      advertenciasPerdida.push(`Presupuestos: Tienes ${documentosExistentes.presupuestos} pero el backup solo tiene ${documentosAImportar.presupuestos} (pérdida de ${documentosExistentes.presupuestos - documentosAImportar.presupuestos} presupuestos)`);
+    }
+    
+    if (documentosExistentes.reuniones > 0 && documentosAImportar.reuniones < documentosExistentes.reuniones) {
+      hayPerdidaPotencial = true;
+      advertenciasPerdida.push(`Reuniones: Tienes ${documentosExistentes.reuniones} pero el backup solo tiene ${documentosAImportar.reuniones} (pérdida de ${documentosExistentes.reuniones - documentosAImportar.reuniones} reuniones)`);
+    }
+    
+    if (documentosExistentes.tareas > 0 && documentosAImportar.tareas < documentosExistentes.tareas) {
+      hayPerdidaPotencial = true;
+      advertenciasPerdida.push(`Tareas: Tienes ${documentosExistentes.tareas} pero el backup solo tiene ${documentosAImportar.tareas} (pérdida de ${documentosExistentes.tareas - documentosAImportar.tareas} tareas)`);
+    }
+    
+    // Si hay pérdida potencial significativa, requerir confirmación adicional
+    if (hayPerdidaPotencial) {
+      console.error(`[BACKUP IMPORT] [${timestamp}] ⚠️ ADVERTENCIA CRÍTICA: El backup tiene MENOS datos que los existentes!`);
+      advertenciasPerdida.forEach(adv => console.error(`[BACKUP IMPORT] [${timestamp}]   - ${adv}`));
+      
+      // Requerir confirmación adicional específica para pérdida de datos
+      if (!body.confirmDataLoss || body.confirmDataLoss !== true) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'ADVERTENCIA: El backup contiene MENOS datos que los existentes. Esto causará pérdida de información.',
+            advertencias: advertenciasPerdida,
+            datosExistentes: documentosExistentes,
+            datosAImportar: documentosAImportar,
+            requiereConfirmacion: 'Para proceder, debes agregar "confirmDataLoss": true además de las otras confirmaciones. Esto indica que entiendes que se perderán datos.'
+          },
+          { status: 400 }
+        );
+      }
+      
+      console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Usuario confirmó pérdida de datos. Procediendo con advertencia...`);
+    }
     
     // PROTECCIÓN CRÍTICA: Crear backup automático ANTES de borrar cualquier cosa
     console.log(`[BACKUP IMPORT] [${timestamp}] 🔒 Creando backup automático de seguridad antes de importar...`);
