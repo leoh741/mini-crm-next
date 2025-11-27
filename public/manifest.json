@@ -2,7 +2,7 @@
   "name": "Digital Space CRM",
   "short_name": "Digital Space CRM",
   "start_url": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "background_color": "#0c1628",
   "theme_color": "#0c1628",
   "orientation": "portrait-primary",
@@ -15,7 +15,16 @@
     {
       "src": "/icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/splash/splash-1284x2778.png",
+      "sizes": "1284x2778",
+      "type": "image/png",
+      "form_factor": "narrow"
     }
   ]
 }
