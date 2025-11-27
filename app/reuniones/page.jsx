@@ -234,18 +234,26 @@ function ReunionesPageContent() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
-          <label htmlFor="filtro-fecha-reuniones" className="sr-only">Filtrar por fecha</label>
+          <label htmlFor="filtro-fecha-reuniones" className="block text-sm font-medium text-slate-300 mb-1 md:sr-only">
+            Filtrar por fecha
+          </label>
           <input
             id="filtro-fecha-reuniones"
             name="filtroFecha"
             type="date"
             value={fechaFiltro}
             onChange={(e) => setFechaFiltro(e.target.value)}
+            placeholder="Seleccionar fecha"
             className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 text-sm w-full"
           />
+          {!fechaFiltro && (
+            <p className="text-xs text-slate-400 mt-1 md:hidden">Selecciona una fecha para filtrar</p>
+          )}
         </div>
         <div>
-          <label htmlFor="filtro-tipo-reuniones" className="sr-only">Filtrar por tipo</label>
+          <label htmlFor="filtro-tipo-reuniones" className="block text-sm font-medium text-slate-300 mb-1 md:sr-only">
+            Filtrar por tipo
+          </label>
           <select
             id="filtro-tipo-reuniones"
             name="filtroTipo"
