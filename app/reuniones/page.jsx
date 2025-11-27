@@ -259,12 +259,15 @@ function ReunionesPageContent() {
             name="filtroTipo"
             value={tipoFiltro}
             onChange={(e) => setTipoFiltro(e.target.value)}
-            className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 text-sm w-full"
+            className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm w-full font-medium"
           >
             <option value="todos">Todos los tipos</option>
             <option value="meet">Meet</option>
             <option value="oficina">Presencial</option>
           </select>
+          <p className="text-xs text-slate-400 mt-1 md:hidden">
+            {tipoFiltro === 'todos' ? '📋 Mostrando todos los tipos' : tipoFiltro === 'meet' ? '📹 Filtrando solo reuniones Meet' : '🏢 Filtrando solo reuniones presenciales'}
+          </p>
         </div>
       </div>
 

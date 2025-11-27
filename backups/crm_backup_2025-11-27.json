@@ -1,0 +1,3328 @@
+{
+  "clientes": [
+    {
+      "id": "5",
+      "crmId": "5",
+      "nombre": "Vaticano Joyas",
+      "rubro": "Joyería",
+      "montoPago": 240000,
+      "fechaPago": 23,
+      "pagado": false,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes + Google",
+          "precio": 240000,
+          "_id": "6924e22bcde0f972eef350b0"
+        }
+      ]
+    },
+    {
+      "id": "6",
+      "crmId": "6",
+      "nombre": "God of Burger",
+      "rubro": "Gastronomía",
+      "montoPago": 50000,
+      "pagado": true,
+      "pagoUnico": true,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes (Parte de Pago)",
+          "precio": 50000,
+          "_id": "69270251dc88333cead52daf"
+        },
+        {
+          "nombre": "Gestión de Redes (Saldo Pendiente)",
+          "precio": 110000,
+          "_id": "69270251dc88333cead52db0"
+        }
+      ]
+    },
+    {
+      "id": "7",
+      "crmId": "7",
+      "nombre": "Inner Tuning",
+      "rubro": "Bienestar Holístico",
+      "montoPago": 120000,
+      "fechaPago": 1,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 120000,
+          "_id": "6924e22bcde0f972eef350b4"
+        }
+      ]
+    },
+    {
+      "id": "8",
+      "crmId": "8",
+      "nombre": "Del Norte Store",
+      "rubro": "Calzado",
+      "montoPago": 250000,
+      "fechaPago": 1,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Hosting (Mensual)",
+          "precio": 120000,
+          "_id": "6924e22bcde0f972eef350b6"
+        },
+        {
+          "nombre": "Mantenimiento Web",
+          "precio": 130000,
+          "_id": "6924e22bcde0f972eef350b7"
+        }
+      ]
+    },
+    {
+      "id": "9",
+      "crmId": "9",
+      "nombre": "Glader",
+      "rubro": "Infusiones",
+      "montoPago": 165000,
+      "fechaPago": 1,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Soporte/Posicionamiento Web",
+          "precio": 165000,
+          "_id": "6924e22bcde0f972eef350b9"
+        }
+      ]
+    },
+    {
+      "id": "10",
+      "crmId": "10",
+      "nombre": "Fraga (MV)",
+      "rubro": "Hogar/Electrodomésticos",
+      "montoPago": 150000,
+      "fechaPago": 20,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 150000,
+          "_id": "6924e22bcde0f972eef350bb"
+        }
+      ]
+    },
+    {
+      "id": "11",
+      "crmId": "11",
+      "nombre": "Altos",
+      "rubro": "Farmacia",
+      "montoPago": 180000,
+      "fechaPago": 1,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 180000,
+          "_id": "6924e22bcde0f972eef350bd"
+        }
+      ]
+    },
+    {
+      "id": "14",
+      "crmId": "14",
+      "nombre": "Beauty La Peluquería",
+      "rubro": "Peluquería",
+      "fechaPago": 1,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 170000,
+          "_id": "6924e22bcde0f972eef350c4"
+        },
+        {
+          "nombre": "Inversión Publicitaria",
+          "precio": 100000,
+          "_id": "6924e22bcde0f972eef350c5"
+        }
+      ]
+    },
+    {
+      "id": "15",
+      "crmId": "15",
+      "nombre": "Universo Pets",
+      "rubro": "Pet Shop",
+      "fechaPago": 2,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 350000,
+          "_id": "6924e22bcde0f972eef350c7"
+        },
+        {
+          "nombre": "Ruleta Evento",
+          "precio": 280000,
+          "_id": "6924e22bcde0f972eef350c8"
+        }
+      ]
+    },
+    {
+      "id": "16",
+      "crmId": "16",
+      "nombre": "Loyal",
+      "rubro": "Fútbol 5",
+      "fechaPago": 5,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes + Google",
+          "precio": 260000,
+          "_id": "6924e22bcde0f972eef350ca"
+        }
+      ]
+    },
+    {
+      "id": "17",
+      "crmId": "17",
+      "nombre": "Antifrágil",
+      "rubro": "Gimnasio",
+      "fechaPago": 15,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 120000,
+          "_id": "6924e22bcde0f972eef350cc"
+        }
+      ]
+    },
+    {
+      "id": "18",
+      "crmId": "18",
+      "nombre": "Carlos Pack",
+      "rubro": "Papelera",
+      "fechaPago": 5,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 180000,
+          "_id": "6924e22bcde0f972eef350ce"
+        }
+      ]
+    },
+    {
+      "id": "19",
+      "crmId": "19",
+      "nombre": "Mundo Burger",
+      "rubro": "Gastronomía",
+      "fechaPago": 5,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 170000,
+          "_id": "6924e22bcde0f972eef350d0"
+        }
+      ]
+    },
+    {
+      "id": "20",
+      "crmId": "20",
+      "nombre": "Federada Salud",
+      "rubro": "Salud",
+      "fechaPago": 20,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión Meta ADS",
+          "precio": 100000,
+          "_id": "6924e22bcde0f972eef350d2"
+        },
+        {
+          "nombre": "Inversión Publicitaria",
+          "precio": 100000,
+          "_id": "6924e22bcde0f972eef350d3"
+        }
+      ]
+    },
+    {
+      "id": "21",
+      "crmId": "21",
+      "nombre": "Chicago (MV)",
+      "rubro": "Boliche",
+      "fechaPago": 5,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 270000,
+          "_id": "6924e22bcde0f972eef350d5"
+        }
+      ]
+    },
+    {
+      "id": "22",
+      "crmId": "22",
+      "nombre": "Fetra",
+      "rubro": "Sindicato",
+      "fechaPago": 1,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Mantenimiento Web",
+          "precio": 120000,
+          "_id": "6924e22bcde0f972eef350d7"
+        }
+      ]
+    },
+    {
+      "id": "23",
+      "crmId": "23",
+      "nombre": "Isitrans",
+      "rubro": "Instituto",
+      "fechaPago": 1,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": true,
+      "servicios": [
+        {
+          "nombre": "Mantenimiento Web",
+          "precio": 120000,
+          "_id": "6927b2edfd7b7574a48f8d31"
+        },
+        {
+          "nombre": "Carga Legajos",
+          "precio": 50000,
+          "_id": "6927b2edfd7b7574a48f8d32"
+        },
+        {
+          "nombre": "Diseño y Actualizaciones (Ver)",
+          "precio": 50000,
+          "_id": "6927b2edfd7b7574a48f8d33"
+        }
+      ]
+    },
+    {
+      "id": "24",
+      "crmId": "24",
+      "nombre": "Semak",
+      "rubro": "Hogar/Muebles",
+      "fechaPago": 1,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 240000,
+          "_id": "6924e22bcde0f972eef350dc"
+        }
+      ]
+    },
+    {
+      "id": "25",
+      "crmId": "25",
+      "nombre": "EMDR Rosario",
+      "rubro": "Psicología",
+      "fechaPago": 5,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 210000,
+          "_id": "6924e22bcde0f972eef350de"
+        }
+      ]
+    },
+    {
+      "id": "26",
+      "crmId": "26",
+      "nombre": "La Surfera",
+      "rubro": "Gastronomía/Eventos",
+      "fechaPago": 15,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión Meta ADS",
+          "precio": 130000,
+          "_id": "69270321dc88333cead52df7"
+        },
+        {
+          "nombre": "Inversión Publicitaria",
+          "precio": 180000,
+          "_id": "69270321dc88333cead52df8"
+        }
+      ]
+    },
+    {
+      "id": "27",
+      "crmId": "27",
+      "nombre": "Vet Fusión",
+      "rubro": "Veterinaria",
+      "fechaPago": 24,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 240000,
+          "_id": "6924e22bcde0f972eef350e3"
+        }
+      ]
+    },
+    {
+      "id": "28",
+      "crmId": "28",
+      "nombre": "Roof",
+      "rubro": "Bar",
+      "fechaPago": 1,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": true,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 160000,
+          "_id": "6927b2b2fd7b7574a48f8d09"
+        },
+        {
+          "nombre": "Dominio (Anual)",
+          "precio": 60000,
+          "_id": "6927b2b2fd7b7574a48f8d0a"
+        },
+        {
+          "nombre": "Gestión de Redes (1/11 Noviembre)",
+          "precio": 160000,
+          "_id": "6927b2b2fd7b7574a48f8d0b"
+        },
+        {
+          "nombre": "Desarrollo Web (Dominio Reservado)",
+          "precio": 520000,
+          "_id": "6927b2b2fd7b7574a48f8d0c"
+        }
+      ]
+    },
+    {
+      "id": "30",
+      "crmId": "30",
+      "nombre": "Crema",
+      "rubro": "Bar/Eventos",
+      "fechaPago": 5,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 260000,
+          "_id": "6924e22bcde0f972eef350ea"
+        }
+      ]
+    },
+    {
+      "id": "31",
+      "crmId": "31",
+      "nombre": "Más Brand",
+      "rubro": "Agencia de Marketing",
+      "fechaPago": 20,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión Meta ADS",
+          "precio": 240000,
+          "_id": "6924e22bcde0f972eef350ec"
+        }
+      ]
+    },
+    {
+      "id": "33",
+      "crmId": "33",
+      "nombre": "Te Acordas",
+      "rubro": "Evento",
+      "fechaPago": 20,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes + Web",
+          "precio": 280000,
+          "_id": "6927010cdc88333cead52cf8"
+        },
+        {
+          "nombre": "Inversión Publicitaria",
+          "precio": 100000,
+          "_id": "6927010cdc88333cead52cf9"
+        }
+      ]
+    },
+    {
+      "id": "34",
+      "crmId": "34",
+      "nombre": "Habitándote",
+      "rubro": "Yoga",
+      "fechaPago": 20,
+      "pagado": false,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 170000,
+          "_id": "6924e22bcde0f972eef350f2"
+        }
+      ]
+    },
+    {
+      "id": "35",
+      "crmId": "35",
+      "nombre": "Martín Ochoa",
+      "rubro": "Bienestar Holístico",
+      "fechaPago": 28,
+      "pagado": false,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 170000,
+          "_id": "6924e22bcde0f972eef350f4"
+        }
+      ]
+    },
+    {
+      "id": "36",
+      "crmId": "36",
+      "nombre": "Paella Burquets",
+      "rubro": "Gastronomía",
+      "fechaPago": 5,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 185000,
+          "_id": "6924e22bcde0f972eef350f6"
+        }
+      ]
+    },
+    {
+      "id": "37",
+      "crmId": "37",
+      "nombre": "Distribuidora Real",
+      "rubro": "Dietética Mayorista",
+      "fechaPago": 5,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 165000,
+          "_id": "6924e22bcde0f972eef350f8"
+        }
+      ]
+    },
+    {
+      "id": "38",
+      "crmId": "38",
+      "nombre": "Delicias Patagonia",
+      "rubro": "Mermeladas",
+      "fechaPago": 2,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 160000,
+          "_id": "6924e22bcde0f972eef350fa"
+        }
+      ]
+    },
+    {
+      "id": "39",
+      "crmId": "39",
+      "nombre": "Alucerto",
+      "rubro": "Garantías Inmobiliarias",
+      "fechaPago": 22,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "RRSS",
+          "precio": 350000,
+          "_id": "6927017cdc88333cead52d3f"
+        },
+        {
+          "nombre": "RRSS (22/11 Noviembre)",
+          "precio": 350000,
+          "_id": "6927017cdc88333cead52d40"
+        }
+      ]
+    },
+    {
+      "id": "41",
+      "crmId": "41",
+      "nombre": "Kindon",
+      "rubro": "Pet Shop",
+      "pagado": true,
+      "pagoUnico": true,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Renovación Dominio+SSL+Migración",
+          "precio": 130000,
+          "_id": "692701a8dc88333cead52d55"
+        },
+        {
+          "nombre": "Diseño de Cajas",
+          "precio": 60000,
+          "_id": "692701a8dc88333cead52d56"
+        }
+      ]
+    },
+    {
+      "id": "42",
+      "crmId": "42",
+      "nombre": "MyG Seisas",
+      "rubro": "Caños/Perfiles",
+      "fechaPago": 21,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión Google ADS",
+          "precio": 120000,
+          "_id": "6924e22bcde0f972eef35102"
+        },
+        {
+          "nombre": "Inversión Publicitaria",
+          "precio": 150000,
+          "_id": "6924e22bcde0f972eef35103"
+        }
+      ]
+    },
+    {
+      "id": "43",
+      "crmId": "43",
+      "nombre": "Empresa Ontivero",
+      "rubro": "Contratista/Pintura",
+      "fechaPago": 2,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 160000,
+          "_id": "6924e22bcde0f972eef35105"
+        },
+        {
+          "nombre": "Inversión Publicitaria",
+          "precio": 100000,
+          "_id": "6924e22bcde0f972eef35106"
+        }
+      ]
+    },
+    {
+      "id": "44",
+      "crmId": "44",
+      "nombre": "Efepe SA",
+      "rubro": "Fábrica de Tuercas/Bulones",
+      "pagado": false,
+      "pagoUnico": true,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Desarrollo Web+Sesión (Pago 2/2)",
+          "precio": 550000,
+          "_id": "69270130dc88333cead52d11"
+        },
+        {
+          "nombre": "Posicionamiento Web",
+          "precio": 120000,
+          "_id": "69270130dc88333cead52d12"
+        }
+      ]
+    },
+    {
+      "id": "46",
+      "crmId": "46",
+      "nombre": "Milbru Distribuidora",
+      "rubro": "Distribuidora",
+      "fechaPago": 20,
+      "pagado": false,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 210000,
+          "_id": "6924e22bcde0f972eef3510c"
+        },
+        {
+          "nombre": "Inversión Publicitaria",
+          "precio": 90000,
+          "_id": "6924e22bcde0f972eef3510d"
+        }
+      ]
+    },
+    {
+      "id": "47",
+      "crmId": "47",
+      "nombre": "Rostrip",
+      "rubro": "Turismo",
+      "fechaPago": 15,
+      "pagado": false,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 500000,
+          "_id": "6924e22bcde0f972eef3510f"
+        }
+      ]
+    },
+    {
+      "id": "48",
+      "crmId": "48",
+      "nombre": "Conga",
+      "rubro": "Evento",
+      "pagado": true,
+      "pagoUnico": true,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 160000,
+          "_id": "6924e22bcde0f972eef35111"
+        }
+      ]
+    },
+    {
+      "id": "49",
+      "crmId": "49",
+      "nombre": "Loyal League",
+      "rubro": "Torneo Fútbol 5",
+      "fechaPago": 5,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 170000,
+          "_id": "6924e22bcde0f972eef35113"
+        }
+      ]
+    },
+    {
+      "id": "50",
+      "crmId": "50",
+      "nombre": "Minerbón",
+      "rubro": "Productos Rurales",
+      "fechaPago": 22,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión Meta ADS",
+          "precio": 130000,
+          "_id": "6924e22bcde0f972eef35115"
+        },
+        {
+          "nombre": "Inversión Publicitaria",
+          "precio": 230000,
+          "_id": "6924e22bcde0f972eef35116"
+        }
+      ]
+    },
+    {
+      "id": "51",
+      "crmId": "51",
+      "nombre": "Indian Tonic",
+      "rubro": "Indumentaria",
+      "fechaPago": 28,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión Meta ADS",
+          "precio": 160000,
+          "_id": "692701d0dc88333cead52d6a"
+        },
+        {
+          "nombre": "Gestión Meta ADS (28/11 Noviembre)",
+          "precio": 160000,
+          "_id": "692701d0dc88333cead52d6b"
+        }
+      ]
+    },
+    {
+      "id": "53",
+      "crmId": "53",
+      "nombre": "Luma Broker",
+      "rubro": "Salud",
+      "fechaPago": 1,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión Meta ADS",
+          "precio": 120000,
+          "_id": "6924e22bcde0f972eef3511c"
+        }
+      ]
+    },
+    {
+      "id": "54",
+      "crmId": "54",
+      "nombre": "Icases Rosario",
+      "rubro": "Accesorios",
+      "fechaPago": 28,
+      "pagado": false,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión Meta ADS",
+          "precio": 130000,
+          "_id": "6924e22bcde0f972eef3511e"
+        }
+      ]
+    },
+    {
+      "id": "55",
+      "crmId": "55",
+      "nombre": "Rosario Disfraces",
+      "rubro": "Disfraces",
+      "fechaPago": 1,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 350000,
+          "_id": "6924e22bcde0f972eef35120"
+        }
+      ]
+    },
+    {
+      "id": "56",
+      "crmId": "56",
+      "nombre": "Tu Plan de Salud Online",
+      "rubro": "Salud",
+      "fechaPago": 28,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 280000,
+          "_id": "692701f7dc88333cead52d82"
+        },
+        {
+          "nombre": "PDF Mutual AMS",
+          "precio": 45000,
+          "_id": "692701f7dc88333cead52d83"
+        },
+        {
+          "nombre": "Gestión de Redes (28/11 Noviembre)",
+          "precio": 280000,
+          "_id": "692701f7dc88333cead52d84"
+        }
+      ]
+    },
+    {
+      "id": "58",
+      "crmId": "58",
+      "nombre": "James Cook/Bardo",
+      "rubro": "Gastronomía",
+      "fechaPago": 1,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 250000,
+          "_id": "6924e22bcde0f972eef35127"
+        }
+      ]
+    },
+    {
+      "id": "59",
+      "crmId": "59",
+      "nombre": "Parpar",
+      "rubro": "Indumentaria",
+      "fechaPago": 21,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión Meta ADS",
+          "precio": 180000,
+          "_id": "6924e22bcde0f972eef35129"
+        }
+      ]
+    },
+    {
+      "id": "60",
+      "crmId": "60",
+      "nombre": "Britia",
+      "rubro": "Consultoría Inmobiliaria",
+      "pagado": true,
+      "pagoUnico": true,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Desarrollo de Marca",
+          "precio": 110000,
+          "_id": "6927015adc88333cead52d2a"
+        },
+        {
+          "nombre": "Desarrollo de Marca (Pago Pendiente)",
+          "precio": 55000,
+          "_id": "6927015adc88333cead52d2b"
+        }
+      ]
+    },
+    {
+      "id": "62",
+      "crmId": "62",
+      "nombre": "Bonita Fiesta",
+      "rubro": "Evento",
+      "fechaPago": 27,
+      "pagado": false,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 180000,
+          "_id": "6924e22bcde0f972eef3512f"
+        }
+      ]
+    },
+    {
+      "id": "63",
+      "crmId": "63",
+      "nombre": "The Store MK",
+      "rubro": "Make Up",
+      "pagado": true,
+      "pagoUnico": true,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Actualización Filtros Web",
+          "precio": 280000,
+          "_id": "6924e22bcde0f972eef35131"
+        }
+      ]
+    },
+    {
+      "id": "64",
+      "crmId": "64",
+      "nombre": "Tecniplast",
+      "rubro": "Fábrica de Plásticos",
+      "fechaPago": 10,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 220000,
+          "_id": "6924e22bcde0f972eef35133"
+        },
+        {
+          "nombre": "Inversión Publicitaria",
+          "precio": 100000,
+          "_id": "6924e22bcde0f972eef35134"
+        }
+      ]
+    },
+    {
+      "id": "65",
+      "crmId": "65",
+      "nombre": "Sunset",
+      "rubro": "Evento",
+      "fechaPago": 1,
+      "pagado": false,
+      "pagoUnico": false,
+      "pagoMesSiguiente": true,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 180000,
+          "_id": "6924e22bcde0f972eef35136"
+        }
+      ]
+    },
+    {
+      "id": "67",
+      "crmId": "67",
+      "nombre": "Poética Catering",
+      "rubro": "Catering/Eventos",
+      "pagado": false,
+      "pagoUnico": true,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Desarrollo Web",
+          "precio": 510000,
+          "_id": "6924e22bcde0f972eef3513a"
+        }
+      ]
+    },
+    {
+      "id": "68",
+      "crmId": "68",
+      "nombre": "Pachanga",
+      "rubro": "Evento",
+      "fechaPago": 15,
+      "pagado": false,
+      "pagoUnico": false,
+      "pagoMesSiguiente": true,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 180000,
+          "_id": "6924e22bcde0f972eef3513c"
+        }
+      ]
+    },
+    {
+      "id": "69",
+      "crmId": "69",
+      "nombre": "Pandemia",
+      "rubro": "Evento",
+      "fechaPago": 20,
+      "pagado": false,
+      "pagoUnico": false,
+      "pagoMesSiguiente": true,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes + Google",
+          "precio": 280000,
+          "_id": "6927680edc88333cead52eb3"
+        },
+        {
+          "nombre": "Inversión Publicitaria",
+          "precio": 500000,
+          "_id": "6927680edc88333cead52eb4"
+        }
+      ]
+    },
+    {
+      "id": "70",
+      "crmId": "70",
+      "nombre": "New Pack",
+      "rubro": "Papelera",
+      "fechaPago": 25,
+      "pagado": true,
+      "pagoUnico": false,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Hosting Mensual",
+          "precio": 25000,
+          "_id": "6927028ddc88333cead52dc8"
+        },
+        {
+          "nombre": "Diseños",
+          "precio": 35000,
+          "_id": "6927028ddc88333cead52dc9"
+        },
+        {
+          "nombre": "Hosting Mensual (25/11 Noviembre)",
+          "precio": 25000,
+          "_id": "6927028ddc88333cead52dca"
+        },
+        {
+          "nombre": "Vectorización Pandy's+Américo",
+          "precio": 30000,
+          "_id": "6927028ddc88333cead52dcb"
+        }
+      ]
+    },
+    {
+      "id": "71",
+      "crmId": "71",
+      "nombre": "Desarrollo Web AMS",
+      "rubro": "Mutual",
+      "pagado": false,
+      "pagoUnico": true,
+      "pagoMesSiguiente": false,
+      "servicios": [
+        {
+          "nombre": "Desarrollo Web",
+          "precio": 650000,
+          "_id": "6924e22bcde0f972eef35143"
+        }
+      ]
+    },
+    {
+      "id": "client-1764160335998-cvmt6d5fd",
+      "crmId": "client-1764160335998-cvmt6d5fd",
+      "nombre": "Bar Costanera Norte",
+      "rubro": "Gastronomía/Eventos",
+      "fechaPago": 20,
+      "pagado": false,
+      "pagoUnico": false,
+      "pagoMesSiguiente": true,
+      "servicios": [
+        {
+          "nombre": "Gestión de Redes",
+          "precio": 180000,
+          "_id": "6927b2d0fd7b7574a48f8d1d"
+        },
+        {
+          "nombre": "Diseño Logo+Recursos Marca",
+          "precio": 60000,
+          "_id": "6927b2d0fd7b7574a48f8d1e"
+        }
+      ]
+    }
+  ],
+  "pagosMensuales": {
+    "2025-11": {
+      "5": {
+        "pagado": false,
+        "serviciosPagados": {},
+        "fechaActualizacion": "2025-11-22T02:17:52.913Z"
+      },
+      "14": {
+        "pagado": true,
+        "serviciosPagados": {},
+        "fechaActualizacion": "2025-11-22T02:18:23.869Z"
+      },
+      "42": {
+        "pagado": false,
+        "serviciosPagados": {},
+        "fechaActualizacion": "2025-11-22T02:19:14.414Z"
+      },
+      "6924e22bcde0f972eef3511b": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.736Z"
+      },
+      "6924e22bcde0f972eef3511f": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.737Z"
+      },
+      "6924e22bcde0f972eef35121": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.737Z"
+      },
+      "6924e22bcde0f972eef35126": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.737Z"
+      },
+      "6924e22bcde0f972eef35128": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.737Z"
+      },
+      "6924e22bcde0f972eef3512a": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.738Z"
+      },
+      "6924e22bcde0f972eef35130": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.738Z"
+      },
+      "6924e22bcde0f972eef35132": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.738Z"
+      },
+      "6924e22bcde0f972eef3513f": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.738Z"
+      },
+      "6924e22bcde0f972eef350df": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.739Z"
+      },
+      "6924e22bcde0f972eef350e4": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.739Z"
+      },
+      "6924e22bcde0f972eef350e9": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.739Z"
+      },
+      "6924e22bcde0f972eef350eb": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.739Z"
+      },
+      "6924e22bcde0f972eef350ed": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.740Z"
+      },
+      "6924e22bcde0f972eef350f5": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.740Z"
+      },
+      "6924e22bcde0f972eef350f7": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.740Z"
+      },
+      "6924e22bcde0f972eef350f9": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.741Z"
+      },
+      "6924e22bcde0f972eef350fb": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.741Z"
+      },
+      "6924e22bcde0f972eef350ff": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.741Z"
+      },
+      "6924e22bcde0f972eef35101": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.741Z"
+      },
+      "6924e22bcde0f972eef35104": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.742Z"
+      },
+      "6924e22bcde0f972eef35110": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.742Z"
+      },
+      "6924e22bcde0f972eef35112": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.742Z"
+      },
+      "6924e22bcde0f972eef35117": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.743Z"
+      },
+      "6924e22bcde0f972eef350c3": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.743Z"
+      },
+      "6924e22bcde0f972eef350c6": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.743Z"
+      },
+      "6924e22bcde0f972eef350c9": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.743Z"
+      },
+      "6924e22bcde0f972eef350cb": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.744Z"
+      },
+      "6924e22bcde0f972eef350cd": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.744Z"
+      },
+      "6924e22bcde0f972eef350cf": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.745Z"
+      },
+      "6924e22bcde0f972eef350d1": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.745Z"
+      },
+      "6924e22bcde0f972eef350d4": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.745Z"
+      },
+      "6924e22bcde0f972eef350d6": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.746Z"
+      },
+      "6924e22bcde0f972eef350d8": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.746Z"
+      },
+      "6924e22bcde0f972eef350db": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.746Z"
+      },
+      "6924e22bcde0f972eef350dd": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.747Z"
+      },
+      "6924e22bcde0f972eef350b1": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.747Z"
+      },
+      "6924e22bcde0f972eef350b3": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.747Z"
+      },
+      "6924e22bcde0f972eef350b5": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.748Z"
+      },
+      "6924e22bcde0f972eef350b8": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.748Z"
+      },
+      "6924e22bcde0f972eef350ba": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.748Z"
+      },
+      "6924e22bcde0f972eef350bc": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-24T22:54:48.749Z"
+      },
+      "6925ad5d49e2cacb56be0632": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.849Z"
+      },
+      "6925ad5d49e2cacb56be0637": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.850Z"
+      },
+      "6925ad5d49e2cacb56be063b": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.850Z"
+      },
+      "6925ad5d49e2cacb56be063f": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.850Z"
+      },
+      "6925ad5d49e2cacb56be0641": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.850Z"
+      },
+      "6925ad5d49e2cacb56be0646": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.851Z"
+      },
+      "6925ad5d49e2cacb56be0648": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.851Z"
+      },
+      "6925ad5d49e2cacb56be064a": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.851Z"
+      },
+      "6925ad5d49e2cacb56be0650": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.851Z"
+      },
+      "6925ad5d49e2cacb56be0652": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.851Z"
+      },
+      "6925ad5d49e2cacb56be065f": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.852Z"
+      },
+      "6925ad5d49e2cacb56be05f8": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.852Z"
+      },
+      "6925ad5d49e2cacb56be05fb": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.852Z"
+      },
+      "6925ad5d49e2cacb56be05fd": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.852Z"
+      },
+      "6925ad5d49e2cacb56be05ff": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.853Z"
+      },
+      "6925ad5d49e2cacb56be0604": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.853Z"
+      },
+      "6925ad5d49e2cacb56be0609": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.853Z"
+      },
+      "6925ad5d49e2cacb56be060b": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.854Z"
+      },
+      "6925ad5d49e2cacb56be060d": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.854Z"
+      },
+      "6925ad5d49e2cacb56be0615": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.854Z"
+      },
+      "6925ad5d49e2cacb56be0617": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.855Z"
+      },
+      "6925ad5d49e2cacb56be0619": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.855Z"
+      },
+      "6925ad5d49e2cacb56be061b": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.855Z"
+      },
+      "6925ad5d49e2cacb56be061f": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.856Z"
+      },
+      "6925ad5d49e2cacb56be0621": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.856Z"
+      },
+      "6925ad5d49e2cacb56be0624": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.856Z"
+      },
+      "6925ad5d49e2cacb56be0630": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.856Z"
+      },
+      "6925ad5d49e2cacb56be05d1": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.857Z"
+      },
+      "6925ad5d49e2cacb56be05d3": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.857Z"
+      },
+      "6925ad5d49e2cacb56be05d5": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.857Z"
+      },
+      "6925ad5d49e2cacb56be05d8": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.857Z"
+      },
+      "6925ad5d49e2cacb56be05da": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.858Z"
+      },
+      "6925ad5d49e2cacb56be05dc": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.858Z"
+      },
+      "6925ad5d49e2cacb56be05e3": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.858Z"
+      },
+      "6925ad5d49e2cacb56be05e6": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.859Z"
+      },
+      "6925ad5d49e2cacb56be05e9": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.859Z"
+      },
+      "6925ad5d49e2cacb56be05eb": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.859Z"
+      },
+      "6925ad5d49e2cacb56be05ed": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.860Z"
+      },
+      "6925ad5d49e2cacb56be05ef": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.860Z"
+      },
+      "6925ad5d49e2cacb56be05f1": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.860Z"
+      },
+      "6925ad5d49e2cacb56be05f4": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.861Z"
+      },
+      "6925ad5d49e2cacb56be05f6": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T13:21:40.861Z"
+      },
+      "6925d394cb3a4a3c235963fc": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.280Z"
+      },
+      "6925d394cb3a4a3c235963fe": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.280Z"
+      },
+      "6925d394cb3a4a3c23596403": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.280Z"
+      },
+      "6925d394cb3a4a3c23596405": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.281Z"
+      },
+      "6925d394cb3a4a3c23596407": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.281Z"
+      },
+      "6925d394cb3a4a3c2359640d": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.281Z"
+      },
+      "6925d394cb3a4a3c2359640f": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.281Z"
+      },
+      "6925d394cb3a4a3c2359641c": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.282Z"
+      },
+      "6925d394cb3a4a3c235963c6": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.282Z"
+      },
+      "6925d394cb3a4a3c235963c8": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.282Z"
+      },
+      "6925d394cb3a4a3c235963ca": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.282Z"
+      },
+      "6925d394cb3a4a3c235963d2": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.283Z"
+      },
+      "6925d394cb3a4a3c235963d4": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.283Z"
+      },
+      "6925d394cb3a4a3c235963d6": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.283Z"
+      },
+      "6925d394cb3a4a3c235963d8": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.284Z"
+      },
+      "6925d394cb3a4a3c235963dc": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.284Z"
+      },
+      "6925d394cb3a4a3c235963de": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.284Z"
+      },
+      "6925d394cb3a4a3c235963e1": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.285Z"
+      },
+      "6925d394cb3a4a3c235963ed": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.285Z"
+      },
+      "6925d394cb3a4a3c235963ef": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.285Z"
+      },
+      "6925d394cb3a4a3c235963f4": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.285Z"
+      },
+      "6925d394cb3a4a3c235963f8": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.286Z"
+      },
+      "6925d394cb3a4a3c235963a0": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.286Z"
+      },
+      "6925d394cb3a4a3c235963a3": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.286Z"
+      },
+      "6925d394cb3a4a3c235963a6": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.287Z"
+      },
+      "6925d394cb3a4a3c235963a8": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.287Z"
+      },
+      "6925d394cb3a4a3c235963aa": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.287Z"
+      },
+      "6925d394cb3a4a3c235963ac": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.288Z"
+      },
+      "6925d394cb3a4a3c235963ae": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.288Z"
+      },
+      "6925d394cb3a4a3c235963b1": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.288Z"
+      },
+      "6925d394cb3a4a3c235963b3": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.289Z"
+      },
+      "6925d394cb3a4a3c235963b5": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.289Z"
+      },
+      "6925d394cb3a4a3c235963b8": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.289Z"
+      },
+      "6925d394cb3a4a3c235963ba": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.290Z"
+      },
+      "6925d394cb3a4a3c235963bc": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.290Z"
+      },
+      "6925d394cb3a4a3c235963c1": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.290Z"
+      },
+      "6925d394cb3a4a3c23596392": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.291Z"
+      },
+      "6925d394cb3a4a3c23596395": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.291Z"
+      },
+      "6925d394cb3a4a3c23596397": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.291Z"
+      },
+      "6925d394cb3a4a3c23596399": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.292Z"
+      },
+      "6925d394cb3a4a3c23596390": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.292Z"
+      },
+      "6925d394cb3a4a3c2359638e": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T16:05:07.293Z"
+      },
+      "6926381bffea3fc2fae4871a": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.991Z"
+      },
+      "6926381bffea3fc2fae48708": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.991Z"
+      },
+      "6926381bffea3fc2fae48705": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.991Z"
+      },
+      "6926381bffea3fc2fae486fc": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.992Z"
+      },
+      "6926381bffea3fc2fae486f9": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.992Z"
+      },
+      "6926381bffea3fc2fae486f6": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.992Z"
+      },
+      "6926381bffea3fc2fae486f0": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.993Z"
+      },
+      "6926381bffea3fc2fae486ed": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.993Z"
+      },
+      "6926381bffea3fc2fae486e7": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.993Z"
+      },
+      "6926381bffea3fc2fae486e1": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.994Z"
+      },
+      "6926381bffea3fc2fae486db": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.994Z"
+      },
+      "6926381bffea3fc2fae486d8": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.994Z"
+      },
+      "6926381bffea3fc2fae486c9": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.995Z"
+      },
+      "6926381bffea3fc2fae486c6": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.995Z"
+      },
+      "6926381bffea3fc2fae486c3": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.995Z"
+      },
+      "6926381bffea3fc2fae486bd": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.995Z"
+      },
+      "6926381bffea3fc2fae486ba": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.996Z"
+      },
+      "6926381bffea3fc2fae486b7": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.996Z"
+      },
+      "6926381bffea3fc2fae486b4": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.996Z"
+      },
+      "6926381bffea3fc2fae486a8": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.997Z"
+      },
+      "6926381bffea3fc2fae486a5": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.997Z"
+      },
+      "6926381bffea3fc2fae486a2": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.997Z"
+      },
+      "6926381bffea3fc2fae4869c": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.998Z"
+      },
+      "6926381bffea3fc2fae48696": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.998Z"
+      },
+      "6926381bffea3fc2fae48693": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.998Z"
+      },
+      "6926381bffea3fc2fae48690": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.999Z"
+      },
+      "6926381bffea3fc2fae4868d": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.999Z"
+      },
+      "6926381bffea3fc2fae4868a": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.999Z"
+      },
+      "6926381bffea3fc2fae48687": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:36.999Z"
+      },
+      "6926381bffea3fc2fae48684": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:37.000Z"
+      },
+      "6926381bffea3fc2fae48681": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:37.000Z"
+      },
+      "6926381bffea3fc2fae4867e": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:37.001Z"
+      },
+      "6926381bffea3fc2fae4867b": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:37.001Z"
+      },
+      "6926381bffea3fc2fae48678": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:37.001Z"
+      },
+      "6926381bffea3fc2fae48675": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:37.002Z"
+      },
+      "6926381bffea3fc2fae48672": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:37.002Z"
+      },
+      "6926381bffea3fc2fae48669": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:37.002Z"
+      },
+      "6926381bffea3fc2fae48666": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:37.003Z"
+      },
+      "6926381bffea3fc2fae48663": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:37.003Z"
+      },
+      "6926381bffea3fc2fae48660": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:37.004Z"
+      },
+      "6926381bffea3fc2fae4865d": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:37.004Z"
+      },
+      "6926381bffea3fc2fae4865a": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-25T23:13:37.004Z"
+      },
+      "6926f255ffea3fc2fae4dd39": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-26T13:37:16.636Z"
+      },
+      "6926f255ffea3fc2fae4dd27": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.002Z"
+      },
+      "6926f255ffea3fc2fae4dd24": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.002Z"
+      },
+      "6926f255ffea3fc2fae4dd1b": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-26T13:32:09.554Z"
+      },
+      "6926f255ffea3fc2fae4dd18": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.003Z"
+      },
+      "6926f255ffea3fc2fae4dd15": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.003Z"
+      },
+      "6926f255ffea3fc2fae4dd0f": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-26T13:34:46.355Z"
+      },
+      "6926f255ffea3fc2fae4dd0c": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.004Z"
+      },
+      "6926f255ffea3fc2fae4dd06": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.004Z"
+      },
+      "6926f255ffea3fc2fae4dd00": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T13:34:07.704Z"
+      },
+      "6926f255ffea3fc2fae4dcfa": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.005Z"
+      },
+      "6926f255ffea3fc2fae4dcf7": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.005Z"
+      },
+      "6926f255ffea3fc2fae4dce8": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.005Z"
+      },
+      "6926f255ffea3fc2fae4dce5": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.006Z"
+      },
+      "6926f255ffea3fc2fae4dce2": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T13:33:27.938Z"
+      },
+      "6926f255ffea3fc2fae4dcdc": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-26T13:32:43.932Z"
+      },
+      "6926f255ffea3fc2fae4dcd9": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.007Z"
+      },
+      "6926f255ffea3fc2fae4dcd6": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.007Z"
+      },
+      "6926f255ffea3fc2fae4dcd3": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.007Z"
+      },
+      "6926f255ffea3fc2fae4dcc7": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.008Z"
+      },
+      "6926f255ffea3fc2fae4dcc4": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.008Z"
+      },
+      "6926f255ffea3fc2fae4dcc1": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.008Z"
+      },
+      "6926f255ffea3fc2fae4dcbb": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true,
+          "2": true
+        },
+        "fechaActualizacion": "2025-11-27T02:08:50.259Z"
+      },
+      "6926f255ffea3fc2fae4dcb5": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-26T13:39:44.708Z"
+      },
+      "6926f255ffea3fc2fae4dcb2": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.009Z"
+      },
+      "6926f255ffea3fc2fae4dcaf": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.009Z"
+      },
+      "6926f255ffea3fc2fae4dcac": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-27T02:09:49.300Z"
+      },
+      "6926f255ffea3fc2fae4dca9": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.010Z"
+      },
+      "6926f255ffea3fc2fae4dca6": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.011Z"
+      },
+      "6926f255ffea3fc2fae4dca3": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.011Z"
+      },
+      "6926f255ffea3fc2fae4dca0": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.011Z"
+      },
+      "6926f255ffea3fc2fae4dc9d": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.012Z"
+      },
+      "6926f255ffea3fc2fae4dc9a": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.012Z"
+      },
+      "6926f255ffea3fc2fae4dc97": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.012Z"
+      },
+      "6926f255ffea3fc2fae4dc94": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.013Z"
+      },
+      "6926f255ffea3fc2fae4dc91": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.013Z"
+      },
+      "6926f255ffea3fc2fae4dc88": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.013Z"
+      },
+      "6926f255ffea3fc2fae4dc85": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.013Z"
+      },
+      "6926f255ffea3fc2fae4dc82": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.014Z"
+      },
+      "6926f255ffea3fc2fae4dc7f": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.014Z"
+      },
+      "6926f255ffea3fc2fae4dc7c": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T12:28:10.014Z"
+      },
+      "6926f255ffea3fc2fae4dc79": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T13:36:16.967Z"
+      },
+      "6926f255ffea3fc2fae4dcca": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-26T20:49:58.872Z"
+      },
+      "6926f255ffea3fc2fae4dceb": {
+        "pagado": false,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T13:31:32.839Z"
+      },
+      "6926f255ffea3fc2fae4dcfd": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true,
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-26T13:38:17.492Z"
+      },
+      "6926f255ffea3fc2fae4dcb8": {
+        "pagado": true,
+        "serviciosPagados": {
+          "0": true
+        },
+        "fechaActualizacion": "2025-11-26T13:38:46.470Z"
+      },
+      "6926f255ffea3fc2fae4dd36": {
+        "pagado": false,
+        "serviciosPagados": {
+          "1": true
+        },
+        "fechaActualizacion": "2025-11-26T20:50:21.802Z"
+      },
+      "6926f350dc88333cead52cb5": {
+        "pagado": false,
+        "serviciosPagados": {},
+        "fechaActualizacion": "2025-11-27T02:09:20.067Z"
+      }
+    }
+  },
+  "clientesEliminados": [],
+  "gastos": {
+    "2025-11": [
+      {
+        "id": "1763779114203",
+        "descripcion": "Host./Dom./SSL",
+        "monto": 125000,
+        "fecha": "2025-11-22T00:00:00.000Z",
+        "categoria": "",
+        "fechaCreacion": "2025-11-22T02:38:34.203Z"
+      },
+      {
+        "id": "1763779131307",
+        "descripcion": "Oficina",
+        "monto": 95000,
+        "fecha": "2025-11-22T00:00:00.000Z",
+        "categoria": "",
+        "fechaCreacion": "2025-11-22T02:38:51.307Z"
+      }
+    ],
+    "2025-10": [
+      {
+        "id": "1763779769818",
+        "descripcion": "Gastos Octubre 2025",
+        "monto": 4655600,
+        "fecha": "2025-10-22T00:00:00.000Z",
+        "categoria": "",
+        "fechaCreacion": "2025-11-22T02:49:29.818Z"
+      }
+    ],
+    "2025-09": [
+      {
+        "id": "1763779822718",
+        "descripcion": "Gastos Septiembre 2025",
+        "monto": 4065100,
+        "fecha": "2025-09-17T00:00:00.000Z",
+        "categoria": "",
+        "fechaCreacion": "2025-11-22T02:50:22.718Z"
+      }
+    ],
+    "2025-08": [
+      {
+        "id": "1763779899655",
+        "descripcion": "Gastos Agosto 2025",
+        "monto": 4178850,
+        "fecha": "2025-08-22T00:00:00.000Z",
+        "categoria": "",
+        "fechaCreacion": "2025-11-22T02:51:39.655Z"
+      }
+    ],
+    "2025-07": [
+      {
+        "id": "1763779989457",
+        "descripcion": "Gastos Julio 2025",
+        "monto": 4044500,
+        "fecha": "2025-07-22T00:00:00.000Z",
+        "categoria": "",
+        "fechaCreacion": "2025-11-22T02:53:09.457Z"
+      }
+    ],
+    "2025-06": [
+      {
+        "id": "1763780038829",
+        "descripcion": "Gastos Junio 2025",
+        "monto": 3544100,
+        "fecha": "2025-06-22T00:00:00.000Z",
+        "categoria": "",
+        "fechaCreacion": "2025-11-22T02:53:58.829Z"
+      }
+    ],
+    "2025-05": [
+      {
+        "id": "1763780171410",
+        "descripcion": "Gastos Mayo 2025",
+        "monto": 3830700,
+        "fecha": "2025-05-22T00:00:00.000Z",
+        "categoria": "",
+        "fechaCreacion": "2025-11-22T02:56:11.410Z"
+      }
+    ],
+    "2025-04": [
+      {
+        "id": "1763780241579",
+        "descripcion": "Gastos Abril 2025",
+        "monto": 3950200,
+        "fecha": "2025-04-22T00:00:00.000Z",
+        "categoria": "",
+        "fechaCreacion": "2025-11-22T02:57:21.579Z"
+      }
+    ],
+    "2025-03": [
+      {
+        "id": "1763780294170",
+        "descripcion": "Gastos Marzo 2025 ",
+        "monto": 3891700,
+        "fecha": "2025-03-22T00:00:00.000Z",
+        "categoria": "",
+        "fechaCreacion": "2025-11-22T02:58:14.170Z"
+      }
+    ],
+    "2025-02": [
+      {
+        "id": "1763780418411",
+        "descripcion": "Gastos Febrero 2025",
+        "monto": 3443400,
+        "fecha": "2025-02-22T00:00:00.000Z",
+        "categoria": "",
+        "fechaCreacion": "2025-11-22T03:00:18.412Z"
+      }
+    ],
+    "2025-01": [
+      {
+        "id": "1763780454607",
+        "descripcion": "Gastos Enero 2025",
+        "monto": 2972900,
+        "fecha": "2025-01-22T00:00:00.000Z",
+        "categoria": "",
+        "fechaCreacion": "2025-11-22T03:00:54.607Z"
+      }
+    ]
+  },
+  "ingresos": {
+    "2025-10": [
+      {
+        "id": "1763779733141",
+        "descripcion": "Octubre 2025",
+        "monto": 16330000,
+        "fecha": "2025-10-31T00:00:00.000Z",
+        "categoria": "",
+        "fechaCreacion": "2025-11-22T02:48:53.141Z"
+      }
+    ],
+    "2025-09": [
+      {
+        "id": "1763779844336",
+        "descripcion": "Septiembre 2025",
+        "monto": 13370000,
+        "fecha": "2025-09-12T00:00:00.000Z",
+        "categoria": "",
+        "fechaCreacion": "2025-11-22T02:50:44.336Z"
+      }
+    ],
+    "2025-08": [
+      {
+        "id": "1763779881104",
+        "descripcion": "Agosto 2025",
+        "monto": 12927000,
+        "fecha": "2025-08-22T00:00:00.000Z",
+        "categoria": "",
+        "fechaCreacion": "2025-11-22T02:51:21.104Z"
+      }
+    ],
+    "2025-07": [
+      {
+        "id": "1763779959625",
+        "descripcion": "Julio 2025",
+        "monto": 11807700,
+        "fecha": "2025-07-22T00:00:00.000Z",
+        "categoria": "",
+        "fechaCreacion": "2025-11-22T02:52:39.625Z"
+      }
+    ],
+    "2025-06": [
+      {
+        "id": "1763780052177",
+        "descripcion": "Junio 2025",
+        "monto": 11428000,
+        "fecha": "2025-06-22T00:00:00.000Z",
+        "categoria": "",
+        "fechaCreacion": "2025-11-22T02:54:12.177Z"
+      }
+    ],
+    "2025-05": [
+      {
+        "id": "1763780187897",
+        "descripcion": "Mayo 2025",
+        "monto": 13475500,
+        "fecha": "2025-05-22T00:00:00.000Z",
+        "categoria": "",
+        "fechaCreacion": "2025-11-22T02:56:27.897Z"
+      }
+    ],
+    "2025-04": [
+      {
+        "id": "1763780259166",
+        "descripcion": "Abril 2025",
+        "monto": 13065000,
+        "fecha": "2025-04-22T00:00:00.000Z",
+        "categoria": "",
+        "fechaCreacion": "2025-11-22T02:57:39.166Z"
+      }
+    ],
+    "2025-03": [
+      {
+        "id": "1763780345907",
+        "descripcion": "Marzo 2025",
+        "monto": 10921800,
+        "fecha": "2025-03-22T00:00:00.000Z",
+        "categoria": "",
+        "fechaCreacion": "2025-11-22T02:59:05.907Z"
+      }
+    ],
+    "2025-02": [
+      {
+        "id": "1763780400955",
+        "descripcion": "Febrero 2025",
+        "monto": 10363100,
+        "fecha": "2025-02-22T00:00:00.000Z",
+        "categoria": "",
+        "fechaCreacion": "2025-11-22T03:00:00.955Z"
+      }
+    ],
+    "2025-01": [
+      {
+        "id": "1763780439123",
+        "descripcion": "Enero 2025",
+        "monto": 11764200,
+        "fecha": "2025-01-22T00:00:00.000Z",
+        "categoria": "",
+        "fechaCreacion": "2025-11-22T03:00:39.123Z"
+      }
+    ]
+  },
+  "usuarios": [
+    {
+      "id": "user-1764023919427-ic5borhl5",
+      "nombre": "Leonel Reynoso",
+      "email": "leoh741@gmail.com",
+      "password": "Leonel1234",
+      "rol": "admin",
+      "fechaCreacion": "2025-11-24T22:38:39.427Z"
+    },
+    {
+      "id": "user-1764185366063-viv442b64",
+      "nombre": "Luca Reynoso",
+      "email": "luucah9@gmail.com",
+      "password": "LiukSantains01",
+      "rol": "admin",
+      "fechaCreacion": "2025-11-26T19:29:26.063Z"
+    }
+  ],
+  "presupuestos": [
+    {
+      "id": "presup-1764086848338-fy9ehuk3c",
+      "presupuestoId": "presup-1764086848338-fy9ehuk3c",
+      "numero": 1,
+      "cliente": {
+        "nombre": "Bar Costanera Norte",
+        "rubro": "Gastronomía/Eventos",
+        "ciudad": "Rosario",
+        "telefono": "+5493415461737"
+      },
+      "fecha": "2025-11-25T00:00:00.000Z",
+      "validez": 30,
+      "items": [
+        {
+          "descripcion": "Gestión de Redes (Mensual)",
+          "cantidad": 1,
+          "precioUnitario": 180000,
+          "subtotal": 180000,
+          "_id": "6925d440cb3a4a3c235964d4"
+        },
+        {
+          "descripcion": "Desarrollo Logo+Recursos Marca",
+          "cantidad": 1,
+          "precioUnitario": 60000,
+          "subtotal": 60000,
+          "_id": "6925d440cb3a4a3c235964d5"
+        }
+      ],
+      "subtotal": 240000,
+      "descuento": 0,
+      "porcentajeDescuento": 0,
+      "total": 240000,
+      "estado": "enviado",
+      "observaciones": "",
+      "notasInternas": ""
+    },
+    {
+      "id": "presup-1764088028012-t9gqh1gkd",
+      "presupuestoId": "presup-1764088028012-t9gqh1gkd",
+      "numero": 2,
+      "cliente": {
+        "nombre": "Telecty",
+        "rubro": "Telecomunicaciones",
+        "ciudad": "Rosario",
+        "email": "ivan.sys@gmail.com",
+        "telefono": "+5493415141803"
+      },
+      "fecha": "2025-11-25T00:00:00.000Z",
+      "validez": 30,
+      "items": [
+        {
+          "descripcion": "Desarrollo de Marca",
+          "cantidad": 1,
+          "precioUnitario": 250000,
+          "subtotal": 250000,
+          "_id": "6925d8dccb3a4a3c235964ec"
+        }
+      ],
+      "subtotal": 250000,
+      "descuento": 100000,
+      "porcentajeDescuento": 40,
+      "total": 150000,
+      "estado": "enviado",
+      "observaciones": "",
+      "notasInternas": ""
+    },
+    {
+      "id": "presup-1764184226624-rbp65hrb6",
+      "presupuestoId": "presup-1764184226624-rbp65hrb6",
+      "numero": 3,
+      "cliente": {
+        "nombre": "Indra",
+        "rubro": "Dietética Natural",
+        "ciudad": "Rosario",
+        "telefono": "+54 9 3416 77-6042"
+      },
+      "fecha": "2025-11-26T00:00:00.000Z",
+      "validez": 30,
+      "items": [
+        {
+          "descripcion": "Gestión de Redes + Anuncios (Mensual)",
+          "cantidad": 1,
+          "precioUnitario": 180000,
+          "subtotal": 180000,
+          "_id": "692750bedc88333cead52e64"
+        },
+        {
+          "descripcion": "Inversión Meta Ads (Mensual)",
+          "cantidad": 1,
+          "precioUnitario": 70000,
+          "subtotal": 70000,
+          "_id": "692750bedc88333cead52e65"
+        }
+      ],
+      "subtotal": 250000,
+      "descuento": 0,
+      "porcentajeDescuento": 0,
+      "total": 250000,
+      "estado": "enviado",
+      "observaciones": "",
+      "notasInternas": ""
+    },
+    {
+      "id": "presup-1764186727407-bd1vf476p",
+      "presupuestoId": "presup-1764186727407-bd1vf476p",
+      "numero": 4,
+      "cliente": {
+        "nombre": "Rosario Disfraces",
+        "rubro": "Tienda de Disfraces",
+        "ciudad": "Rosario",
+        "telefono": "+54 9 341 660-3968"
+      },
+      "fecha": "2025-11-26T00:00:00.000Z",
+      "validez": 30,
+      "items": [
+        {
+          "descripcion": "Sesión de Fotografía + Video",
+          "cantidad": 1,
+          "precioUnitario": 150000,
+          "subtotal": 150000,
+          "_id": "69275a67dc88333cead52e97"
+        }
+      ],
+      "subtotal": 150000,
+      "descuento": 0,
+      "porcentajeDescuento": 0,
+      "total": 150000,
+      "estado": "enviado",
+      "observaciones": "1 hora aprox.",
+      "notasInternas": ""
+    }
+  ],
+  "reuniones": [
+    {
+      "id": "reunion-1764192436165-081t8mx0u",
+      "reunionId": "reunion-1764192436165-081t8mx0u",
+      "titulo": "Paola",
+      "fecha": "2025-11-27T15:00:00.000Z",
+      "hora": "15:00",
+      "tipo": "meet",
+      "cliente": {
+        "nombre": "AMS"
+      },
+      "asignados": [
+        "Leo"
+      ],
+      "completada": false,
+      "createdAt": "2025-11-26T21:27:16.173Z",
+      "updatedAt": "2025-11-27T01:49:10.870Z"
+    },
+    {
+      "id": "reunion-1764195508023-8vkj76z5w",
+      "reunionId": "reunion-1764195508023-8vkj76z5w",
+      "titulo": "Jacqueline",
+      "fecha": "2025-11-28T15:00:00.000Z",
+      "hora": "10:00",
+      "tipo": "oficina",
+      "cliente": {
+        "nombre": "Jacqueline (Tienda E-Commerce)"
+      },
+      "asignados": [
+        "Leo",
+        "Luca"
+      ],
+      "completada": false,
+      "createdAt": "2025-11-26T22:18:28.032Z",
+      "updatedAt": "2025-11-27T01:49:21.006Z"
+    },
+    {
+      "id": "reunion-1764195604842-3irkkiv7y",
+      "reunionId": "reunion-1764195604842-3irkkiv7y",
+      "titulo": "María José",
+      "fecha": "2025-11-28T15:00:00.000Z",
+      "hora": "15:30",
+      "tipo": "meet",
+      "cliente": {
+        "nombre": "María José"
+      },
+      "asignados": [
+        "Leo",
+        "Luca"
+      ],
+      "completada": false,
+      "createdAt": "2025-11-26T22:20:04.844Z",
+      "updatedAt": "2025-11-27T01:49:28.074Z"
+    },
+    {
+      "id": "reunion-1764197835870-8c3938dxa",
+      "reunionId": "reunion-1764197835870-8c3938dxa",
+      "titulo": "Denise",
+      "fecha": "2025-11-27T15:00:00.000Z",
+      "hora": "09:00",
+      "tipo": "oficina",
+      "cliente": {
+        "nombre": "Denise (Torneos Fútbol)"
+      },
+      "asignados": [
+        "Leo",
+        "Luca"
+      ],
+      "completada": false,
+      "createdAt": "2025-11-26T22:57:15.871Z",
+      "updatedAt": "2025-11-27T01:49:03.813Z"
+    }
+  ],
+  "tareas": [
+    {
+      "id": "tarea-1764198009831-n4t47mpz5",
+      "tareaId": "tarea-1764198009831-n4t47mpz5",
+      "titulo": "Pandemia ADS Google (+YouTube)",
+      "fechaVencimiento": "2025-11-27T12:00:00.000Z",
+      "prioridad": "media",
+      "estado": "pendiente",
+      "cliente": {
+        "nombre": "Pandemia"
+      },
+      "etiquetas": [],
+      "asignados": [
+        "Leo"
+      ],
+      "completada": false,
+      "fechaCompletada": null,
+      "createdAt": "2025-11-26T23:00:09.832Z",
+      "updatedAt": "2025-11-27T01:57:31.529Z"
+    },
+    {
+      "id": "tarea-1764208580403-907i8tkjj",
+      "tareaId": "tarea-1764208580403-907i8tkjj",
+      "titulo": "Presupuesto Efepe SA",
+      "descripcion": "Quieren cotización de los servicios que podemos llegar a brindarles.",
+      "fechaVencimiento": "2025-11-27T12:00:00.000Z",
+      "prioridad": "media",
+      "estado": "pendiente",
+      "cliente": {
+        "nombre": "Efepe SA"
+      },
+      "etiquetas": [],
+      "asignados": [
+        "Leo"
+      ],
+      "completada": false,
+      "fechaCompletada": null,
+      "createdAt": "2025-11-27T01:56:20.404Z",
+      "updatedAt": "2025-11-27T01:56:20.404Z"
+    },
+    {
+      "id": "tarea-1764208646780-l560ou4i9",
+      "tareaId": "tarea-1764208646780-l560ou4i9",
+      "titulo": "Presupuesto Anto +Brand",
+      "descripcion": "Presupuestar posicionamiento, mantenimiento e integración con Kite Prop.",
+      "fechaVencimiento": "2025-11-27T12:00:00.000Z",
+      "prioridad": "media",
+      "estado": "pendiente",
+      "etiquetas": [],
+      "asignados": [
+        "Leo"
+      ],
+      "completada": false,
+      "fechaCompletada": null,
+      "createdAt": "2025-11-27T01:57:26.781Z",
+      "updatedAt": "2025-11-27T01:57:41.472Z"
+    },
+    {
+      "id": "tarea-1764208687558-ob4dvwgxx",
+      "tareaId": "tarea-1764208687558-ob4dvwgxx",
+      "titulo": "Ver Pagos/Resúmenes Pendientes",
+      "fechaVencimiento": "2025-11-28T12:00:00.000Z",
+      "prioridad": "media",
+      "estado": "pendiente",
+      "etiquetas": [],
+      "asignados": [
+        "Leo"
+      ],
+      "completada": false,
+      "fechaCompletada": "2025-11-27T01:59:39.090Z",
+      "createdAt": "2025-11-27T01:58:07.559Z",
+      "updatedAt": "2025-11-27T01:59:54.624Z"
+    },
+    {
+      "id": "tarea-1764208724021-zqvx15xqo",
+      "tareaId": "tarea-1764208724021-zqvx15xqo",
+      "titulo": "Ver fondos Luma Broker (Meta ADS)",
+      "descripcion": "Ver que no se queden sin saldo.",
+      "fechaVencimiento": "2025-11-28T12:00:00.000Z",
+      "prioridad": "media",
+      "estado": "pendiente",
+      "etiquetas": [],
+      "asignados": [
+        "Leo"
+      ],
+      "completada": false,
+      "fechaCompletada": null,
+      "createdAt": "2025-11-27T01:58:44.022Z",
+      "updatedAt": "2025-11-27T01:58:49.400Z"
+    },
+    {
+      "id": "tarea-1764208775945-x58ujnpmn",
+      "tareaId": "tarea-1764208775945-x58ujnpmn",
+      "titulo": "Ver contenido Crema/Carreras (Max y DJ)",
+      "descripcion": "Ver material para las propuestas de fin de año y revisar lo que se hizo hasta ahora.",
+      "fechaVencimiento": "2025-11-27T12:00:00.000Z",
+      "prioridad": "media",
+      "estado": "pendiente",
+      "cliente": {
+        "nombre": "Crema/Carreras"
+      },
+      "etiquetas": [],
+      "asignados": [
+        "Leo"
+      ],
+      "completada": false,
+      "fechaCompletada": "2025-11-27T02:00:00.001Z",
+      "createdAt": "2025-11-27T01:59:35.947Z",
+      "updatedAt": "2025-11-27T02:00:33.116Z"
+    },
+    {
+      "id": "tarea-1764208865191-8294pg9ux",
+      "tareaId": "tarea-1764208865191-8294pg9ux",
+      "titulo": "Ver ADS Fraga",
+      "descripcion": "Chequear en Meta que la campaña que estamos siguiendo esté todo ok.",
+      "fechaVencimiento": "2025-11-28T12:00:00.000Z",
+      "prioridad": "media",
+      "estado": "pendiente",
+      "cliente": {
+        "nombre": "Fraga"
+      },
+      "etiquetas": [],
+      "asignados": [
+        "Leo"
+      ],
+      "completada": false,
+      "fechaCompletada": null,
+      "createdAt": "2025-11-27T02:01:05.192Z",
+      "updatedAt": "2025-11-27T02:01:05.192Z"
+    },
+    {
+      "id": "tarea-1764208909150-zdymf23rp",
+      "tareaId": "tarea-1764208909150-zdymf23rp",
+      "titulo": "Ver James Cook ADS",
+      "descripcion": "Controlar que esté todo ok (Proponer algun cambio de imagen publicitaria)",
+      "fechaVencimiento": "2025-11-28T12:00:00.000Z",
+      "prioridad": "media",
+      "estado": "pendiente",
+      "cliente": {
+        "nombre": "James Cook"
+      },
+      "etiquetas": [],
+      "asignados": [
+        "Leo"
+      ],
+      "completada": false,
+      "fechaCompletada": null,
+      "createdAt": "2025-11-27T02:01:49.151Z",
+      "updatedAt": "2025-11-27T02:01:56.738Z"
+    }
+  ],
+  "fechaExportacion": "2025-11-27T02:13:37.210Z",
+  "version": "2.2"
+}
