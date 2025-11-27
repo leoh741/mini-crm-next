@@ -234,7 +234,7 @@ function ReunionesPageContent() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
-          <label htmlFor="filtro-fecha-reuniones" className="block text-sm font-medium text-slate-300 mb-1 md:sr-only">
+          <label htmlFor="filtro-fecha-reuniones" className="block text-sm font-medium text-slate-300 mb-1">
             Filtrar por fecha
           </label>
           <input
@@ -245,13 +245,20 @@ function ReunionesPageContent() {
             onChange={(e) => setFechaFiltro(e.target.value)}
             placeholder="Seleccionar fecha"
             className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 text-sm w-full"
+            style={{ 
+              color: '#f1f5f9 !important',
+              fontSize: '14px',
+              fontWeight: '400',
+              WebkitAppearance: 'none',
+              MozAppearance: 'textfield'
+            }}
           />
           {!fechaFiltro && (
-            <p className="text-xs text-slate-400 mt-1 md:hidden">Selecciona una fecha para filtrar</p>
+            <p className="text-xs text-slate-400 mt-1">Selecciona una fecha para filtrar</p>
           )}
         </div>
         <div>
-          <label htmlFor="filtro-tipo-reuniones" className="block text-sm font-medium text-slate-300 mb-1 md:sr-only">
+          <label htmlFor="filtro-tipo-reuniones" className="block text-sm font-medium text-slate-300 mb-1">
             Filtrar por tipo
           </label>
           <select
@@ -259,15 +266,20 @@ function ReunionesPageContent() {
             name="filtroTipo"
             value={tipoFiltro}
             onChange={(e) => setTipoFiltro(e.target.value)}
-            className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm w-full font-medium"
+            className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 text-sm w-full"
+            style={{ 
+              color: '#f1f5f9 !important',
+              WebkitAppearance: 'menulist',
+              MozAppearance: 'menulist',
+              appearance: 'menulist',
+              fontSize: '14px',
+              fontWeight: '400'
+            }}
           >
-            <option value="todos">Todos los tipos</option>
-            <option value="meet">Meet</option>
-            <option value="oficina">Presencial</option>
+            <option value="todos" style={{ backgroundColor: '#1e293b', color: '#f1f5f9', padding: '8px' }}>Todos los tipos</option>
+            <option value="meet" style={{ backgroundColor: '#1e293b', color: '#f1f5f9', padding: '8px' }}>Meet</option>
+            <option value="oficina" style={{ backgroundColor: '#1e293b', color: '#f1f5f9', padding: '8px' }}>Presencial</option>
           </select>
-          <p className="text-xs text-slate-400 mt-1 md:hidden">
-            {tipoFiltro === 'todos' ? '📋 Mostrando todos los tipos' : tipoFiltro === 'meet' ? '📹 Filtrando solo reuniones Meet' : '🏢 Filtrando solo reuniones presenciales'}
-          </p>
         </div>
       </div>
 
