@@ -115,6 +115,23 @@ function NuevoPresupuestoPageContent() {
     }));
 
     // Preparar datos del presupuesto
+    // Parsear fecha correctamente para evitar problemas de timezone
+    let fechaPresupuesto;
+    if (formData.fecha) {
+      // Si es string en formato YYYY-MM-DD, extraer componentes directamente
+      if (typeof formData.fecha === 'string' && formData.fecha.match(/^\d{4}-\d{2}-\d{2}/)) {
+        const partes = formData.fecha.split('-');
+        const año = parseInt(partes[0], 10);
+        const mes = parseInt(partes[1], 10) - 1; // Los meses en JS son 0-indexed
+        const dia = parseInt(partes[2], 10);
+        fechaPresupuesto = new Date(año, mes, dia);
+      } else {
+        fechaPresupuesto = new Date(formData.fecha);
+      }
+    } else {
+      fechaPresupuesto = new Date();
+    }
+
     const nuevoPresupuesto = {
       cliente: {
         nombre: formData.cliente.nombre.trim(),
@@ -123,7 +140,7 @@ function NuevoPresupuestoPageContent() {
         ...(formData.cliente.email?.trim() && { email: formData.cliente.email.trim() }),
         ...(formData.cliente.telefono?.trim() && { telefono: formData.cliente.telefono.trim() })
       },
-      fecha: formData.fecha ? new Date(formData.fecha) : new Date(),
+      fecha: fechaPresupuesto,
       validez: parseInt(formData.validez) || 30,
       items: itemsFormateados,
       subtotal: subtotal,

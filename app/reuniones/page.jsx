@@ -10,6 +10,7 @@ function ReunionesPageContent() {
   const [error, setError] = useState("");
   const [fechaFiltro, setFechaFiltro] = useState("");
   const [tipoFiltro, setTipoFiltro] = useState("todos");
+  const [estadoFiltro, setEstadoFiltro] = useState("pendientes");
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [reunionEditando, setReunionEditando] = useState(null);
   const [guardando, setGuardando] = useState(false);
@@ -60,6 +61,12 @@ function ReunionesPageContent() {
       filtradas = filtradas.filter(r => r.tipo === tipoFiltro);
     }
 
+    if (estadoFiltro === "pendientes") {
+      filtradas = filtradas.filter(r => !r.completada);
+    } else if (estadoFiltro === "completadas") {
+      filtradas = filtradas.filter(r => r.completada);
+    }
+
     return filtradas.sort((a, b) => {
       const fechaA = new Date(a.fecha);
       const fechaB = new Date(b.fecha);
@@ -68,7 +75,7 @@ function ReunionesPageContent() {
       const horaB = b.hora.split(':').map(Number);
       return (horaA[0] * 60 + horaA[1]) - (horaB[0] * 60 + horaB[1]);
     });
-  }, [reuniones, fechaFiltro, tipoFiltro]);
+  }, [reuniones, fechaFiltro, tipoFiltro, estadoFiltro]);
 
   const toggleCompletada = async (reunion) => {
     try {
@@ -290,6 +297,30 @@ function ReunionesPageContent() {
             <option value="oficina" style={{ backgroundColor: '#1e293b', color: '#f1f5f9', padding: '8px' }}>Presencial</option>
           </select>
         </div>
+        <div>
+          <label htmlFor="filtro-estado-reuniones" className="block text-sm font-medium text-slate-300 mb-1">
+            Filtrar por estado
+          </label>
+          <select
+            id="filtro-estado-reuniones"
+            name="filtroEstado"
+            value={estadoFiltro}
+            onChange={(e) => setEstadoFiltro(e.target.value)}
+            className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 text-sm w-full"
+            style={{ 
+              color: '#f1f5f9 !important',
+              WebkitAppearance: 'menulist',
+              MozAppearance: 'menulist',
+              appearance: 'menulist',
+              fontSize: '14px',
+              fontWeight: '400'
+            }}
+          >
+            <option value="todos" style={{ backgroundColor: '#1e293b', color: '#f1f5f9', padding: '8px' }}>Todas</option>
+            <option value="pendientes" style={{ backgroundColor: '#1e293b', color: '#f1f5f9', padding: '8px' }}>Pendientes</option>
+            <option value="completadas" style={{ backgroundColor: '#1e293b', color: '#f1f5f9', padding: '8px' }}>Completadas</option>
+          </select>
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -355,7 +386,7 @@ function ReunionesPageContent() {
       {mostrarFormulario && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-slate-800 rounded-lg border border-slate-700 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <h3 className="text-xl font-semibold mb-4">{reunionEditando ? 'Editar Reunión' : 'Nueva Reunión'}</h3>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -404,12 +435,12 @@ function ReunionesPageContent() {
                       onChange={(e) => setNuevoAsignado(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), agregarAsignado())}
                       placeholder="Nombre de la persona"
-                      className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100" 
+                      className="flex-1 min-w-0 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100" 
                     />
                     <button 
                       type="button"
                       onClick={agregarAsignado}
-                      className="px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm"
+                      className="px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm whitespace-nowrap flex-shrink-0"
                     >
                       Agregar
                     </button>

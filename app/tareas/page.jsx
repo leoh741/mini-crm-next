@@ -9,6 +9,8 @@ function TareasPageContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("pendientes");
+  const [fechaFiltro, setFechaFiltro] = useState("");
+  const [busqueda, setBusqueda] = useState("");
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [tareaEditando, setTareaEditando] = useState(null);
   const [guardando, setGuardando] = useState(false);
@@ -46,23 +48,60 @@ function TareasPageContent() {
   const tareasFiltradas = useMemo(() => {
     let filtradas = tareas;
 
+    // Filtrar por estado
     if (filtroEstado === "pendientes") {
       filtradas = filtradas.filter(t => t.estado !== 'completada' && t.estado !== 'cancelada');
     } else if (filtroEstado !== "todos") {
       filtradas = filtradas.filter(t => t.estado === filtroEstado);
     }
 
+    // Filtrar por fecha de vencimiento
+    if (fechaFiltro) {
+      const fechaFiltroDate = new Date(fechaFiltro);
+      filtradas = filtradas.filter(t => {
+        if (!t.fechaVencimiento) return false;
+        const fechaVenc = new Date(t.fechaVencimiento);
+        return fechaVenc.toDateString() === fechaFiltroDate.toDateString();
+      });
+    }
+
+    // Filtrar por búsqueda (palabra clave)
+    if (busqueda.trim()) {
+      const busquedaLower = busqueda.toLowerCase().trim();
+      filtradas = filtradas.filter(t => {
+        // Buscar en título
+        if (t.titulo?.toLowerCase().includes(busquedaLower)) return true;
+        // Buscar en descripción
+        if (t.descripcion?.toLowerCase().includes(busquedaLower)) return true;
+        // Buscar en nombre del cliente
+        if (t.cliente?.nombre?.toLowerCase().includes(busquedaLower)) return true;
+        // Buscar en asignados
+        if (t.asignados?.some(asignado => asignado.toLowerCase().includes(busquedaLower))) return true;
+        // Buscar en etiquetas
+        if (t.etiquetas?.some(etiqueta => etiqueta.toLowerCase().includes(busquedaLower))) return true;
+        return false;
+      });
+    }
+
     return filtradas.sort((a, b) => {
+      // Priorizar tareas en progreso primero
+      const estadoOrder = { en_progreso: 3, pendiente: 2, completada: 1, cancelada: 0 };
+      if (estadoOrder[a.estado] !== estadoOrder[b.estado]) {
+        return estadoOrder[b.estado] - estadoOrder[a.estado];
+      }
+      // Luego por prioridad
       const prioridadOrder = { urgente: 4, alta: 3, media: 2, baja: 1 };
       if (prioridadOrder[a.prioridad] !== prioridadOrder[b.prioridad]) {
         return prioridadOrder[b.prioridad] - prioridadOrder[a.prioridad];
       }
+      // Luego por fecha de vencimiento
       if (a.fechaVencimiento && b.fechaVencimiento) {
         return new Date(a.fechaVencimiento) - new Date(b.fechaVencimiento);
       }
+      // Finalmente por fecha de creación
       return new Date(b.createdAt) - new Date(a.createdAt);
     });
-  }, [tareas, filtroEstado]);
+  }, [tareas, filtroEstado, fechaFiltro, busqueda]);
 
   const formatearFecha = (fecha) => {
     if (!fecha) return '';
@@ -214,14 +253,18 @@ function TareasPageContent() {
     }
   };
 
-  const toggleCompletar = async (tarea) => {
+  const cambiarEstado = async (tarea, nuevoEstado) => {
     try {
-      const nuevoEstado = tarea.estado === 'completada' ? 'pendiente' : 'completada';
       await actualizarTarea(tarea.tareaId, { estado: nuevoEstado });
       await cargarTareas();
     } catch (err) {
       setError(err.message || "Error al actualizar estado");
     }
+  };
+
+  const toggleCompletar = async (tarea) => {
+    const nuevoEstado = tarea.estado === 'completada' ? 'pendiente' : 'completada';
+    await cambiarEstado(tarea, nuevoEstado);
   };
 
   if (loading) {
@@ -239,20 +282,79 @@ function TareasPageContent() {
 
       {error && <div className="p-3 bg-red-900/50 border border-red-700 rounded-lg text-red-200 text-sm">{error}</div>}
 
-      <div>
-        <label htmlFor="filtro-estado-tareas" className="sr-only">Filtrar por estado</label>
-        <select
-          id="filtro-estado-tareas"
-          name="filtroEstado"
-          value={filtroEstado}
-          onChange={(e) => setFiltroEstado(e.target.value)}
-          className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 text-sm"
-        >
-          <option value="pendientes">Pendientes</option>
-          <option value="en_progreso">En Progreso</option>
-          <option value="completada">Completadas</option>
-          <option value="todos">Todas</option>
-        </select>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <label htmlFor="busqueda-tareas" className="block text-sm font-medium text-slate-300 mb-1">
+            Buscar
+          </label>
+          <input
+            id="busqueda-tareas"
+            name="busqueda"
+            type="text"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar por palabra clave"
+            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 text-sm"
+          />
+        </div>
+        <div>
+          <label htmlFor="filtro-fecha-tareas" className="block text-sm font-medium text-slate-300 mb-1">
+            Filtrar por fecha de vencimiento
+          </label>
+          <div className="relative">
+            <input
+              id="filtro-fecha-tareas"
+              name="filtroFecha"
+              type="date"
+              value={fechaFiltro}
+              onChange={(e) => setFechaFiltro(e.target.value)}
+              className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 text-sm w-full"
+              style={{ 
+                color: fechaFiltro ? '#f1f5f9' : 'transparent',
+                fontSize: '14px',
+                fontWeight: '400',
+                WebkitAppearance: 'none',
+                MozAppearance: 'textfield'
+              }}
+            />
+            {!fechaFiltro && (
+              <div 
+                className="absolute inset-0 px-3 py-2 pointer-events-none flex items-center text-slate-400 text-sm"
+                style={{ 
+                  color: '#94a3b8',
+                  fontSize: '14px'
+                }}
+              >
+                dd/mm/aaaa
+              </div>
+            )}
+          </div>
+        </div>
+        <div>
+          <label htmlFor="filtro-estado-tareas" className="block text-sm font-medium text-slate-300 mb-1">
+            Filtrar por estado
+          </label>
+          <select
+            id="filtro-estado-tareas"
+            name="filtroEstado"
+            value={filtroEstado}
+            onChange={(e) => setFiltroEstado(e.target.value)}
+            className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 text-sm w-full"
+            style={{ 
+              color: '#f1f5f9 !important',
+              WebkitAppearance: 'menulist',
+              MozAppearance: 'menulist',
+              appearance: 'menulist',
+              fontSize: '14px',
+              fontWeight: '400'
+            }}
+          >
+            <option value="pendientes" style={{ backgroundColor: '#1e293b', color: '#f1f5f9', padding: '8px' }}>Pendientes</option>
+            <option value="en_progreso" style={{ backgroundColor: '#1e293b', color: '#f1f5f9', padding: '8px' }}>En Progreso</option>
+            <option value="completada" style={{ backgroundColor: '#1e293b', color: '#f1f5f9', padding: '8px' }}>Completadas</option>
+            <option value="todos" style={{ backgroundColor: '#1e293b', color: '#f1f5f9', padding: '8px' }}>Todas</option>
+          </select>
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -272,6 +374,7 @@ function TareasPageContent() {
                         {tarea.prioridad}
                       </span>
                       {tarea.estado === 'completada' && <span className="px-2 py-1 rounded text-xs bg-green-900/30 text-green-400 border border-green-700">✓ Completada</span>}
+                      {tarea.estado === 'en_progreso' && <span className="px-2 py-1 rounded text-xs bg-yellow-900/30 text-yellow-400 border border-yellow-700">🔄 En Progreso</span>}
                     </div>
                     {tarea.descripcion && <p className="text-sm text-slate-300 mb-1">{tarea.descripcion}</p>}
                     {tarea.fechaVencimiento && (
@@ -305,6 +408,22 @@ function TareasPageContent() {
                         ✓ Completar
                       </button>
                     )}
+                    {tarea.estado !== 'en_progreso' && tarea.estado !== 'completada' && (
+                      <button 
+                        onClick={() => cambiarEstado(tarea, 'en_progreso')} 
+                        className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 rounded-lg text-xs font-medium transition-colors duration-200"
+                      >
+                        🔄 En Progreso
+                      </button>
+                    )}
+                    {tarea.estado === 'en_progreso' && (
+                      <button 
+                        onClick={() => cambiarEstado(tarea, 'pendiente')} 
+                        className="px-3 py-1 bg-slate-600 hover:bg-slate-700 rounded-lg text-xs font-medium transition-colors duration-200"
+                      >
+                        ⏸️ Pendiente
+                      </button>
+                    )}
                     <button 
                       onClick={() => abrirEdicion(tarea)} 
                       className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs font-medium transition-colors duration-200"
@@ -328,7 +447,7 @@ function TareasPageContent() {
       {mostrarFormulario && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-slate-800 rounded-lg border border-slate-700 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <h3 className="text-xl font-semibold mb-4">{tareaEditando ? 'Editar Tarea' : 'Nueva Tarea'}</h3>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -369,12 +488,12 @@ function TareasPageContent() {
                       onChange={(e) => setNuevoAsignado(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), agregarAsignado())}
                       placeholder="Nombre de la persona"
-                      className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100" 
+                      className="flex-1 min-w-0 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100" 
                     />
                     <button 
                       type="button"
                       onClick={agregarAsignado}
-                      className="px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm"
+                      className="px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm whitespace-nowrap flex-shrink-0"
                     >
                       Agregar
                     </button>
