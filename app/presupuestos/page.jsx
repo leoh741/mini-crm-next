@@ -47,6 +47,13 @@ function PresupuestosPageContent() {
       filtrados = filtrados.filter(p => p.estado === filtroEstado);
     }
 
+    // Ordenar por número de presupuesto: más altos primero (más recientes)
+    filtrados = [...filtrados].sort((a, b) => {
+      const numeroA = a.numero || 0;
+      const numeroB = b.numero || 0;
+      return numeroB - numeroA; // Orden descendente (presupuesto 6 antes que 5)
+    });
+
     return filtrados;
   }, [presupuestos, busqueda, filtroEstado]);
 
