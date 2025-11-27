@@ -7,6 +7,12 @@ export default function SplashScreen() {
   const [splashImage, setSplashImage] = useState(null);
 
   useEffect(() => {
+    // Ocultar el splash inline si existe
+    const inlineSplash = document.getElementById('inline-splash');
+    if (inlineSplash) {
+      inlineSplash.style.display = 'none';
+    }
+
     // Determinar qué imagen de splash usar basado en el tamaño de pantalla
     const getSplashImage = () => {
       const width = window.screen.width || window.innerWidth;

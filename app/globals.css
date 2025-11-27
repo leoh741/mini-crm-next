@@ -15,10 +15,22 @@ html, body {
 /* Estilos para el splash screen - se muestra inmediatamente */
 body {
   background-color: #1c3d82;
+  overflow: hidden;
 }
 
 /* Prevenir flash de contenido blanco */
 html {
   background-color: #1c3d82;
+  overflow: hidden;
+}
+
+/* Ocultar contenido hasta que el splash se oculte */
+body:not(.splash-hidden) > *:not(#inline-splash):not(script) {
+  opacity: 0;
+}
+
+body.splash-hidden > *:not(#inline-splash) {
+  opacity: 1;
+  transition: opacity 0.3s ease-in;
 }
 
