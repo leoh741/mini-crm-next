@@ -10,7 +10,9 @@
     "setup-env": "node scripts/setup-env.js",
     "import-backup": "node scripts/importBackup.js",
     "create-user": "node scripts/createUser.js",
-    "create-indexes": "node scripts/createIndexes.js"
+    "create-indexes": "node scripts/createIndexes.js",
+    "check-db": "node scripts/checkDatabase.js",
+    "check-processes": "node scripts/checkAutoProcesses.js"
   },
   "dependencies": {
     "dotenv": "^17.2.3",

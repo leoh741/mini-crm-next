@@ -48,11 +48,21 @@ export async function POST(request) {
       );
     }
     
-    // REQUERIR confirmación explícita para borrar datos
-    if (!body.confirmDelete || body.confirmDelete !== true) {
+    // PROTECCIÓN CRÍTICA: Requerir confirmación triple para borrar datos
+    // Esto previene borrados accidentales
+    if (!body.confirmDelete || body.confirmDelete !== true || typeof body.confirmDelete !== 'boolean') {
       console.error(`[BACKUP IMPORT] [${timestamp}] Error: Falta confirmación explícita para borrar datos`);
       return NextResponse.json(
-        { success: false, error: 'Se requiere confirmación explícita para importar. Agrega "confirmDelete": true al body de la petición.' },
+        { success: false, error: 'Se requiere confirmación explícita para importar. Agrega "confirmDelete": true (boolean) al body de la petición.' },
+        { status: 400 }
+      );
+    }
+    
+    // REQUERIR confirmación doble adicional (confirmDelete2)
+    if (!body.confirmDelete2 || body.confirmDelete2 !== true || typeof body.confirmDelete2 !== 'boolean') {
+      console.error(`[BACKUP IMPORT] [${timestamp}] Error: Falta segunda confirmación para borrar datos`);
+      return NextResponse.json(
+        { success: false, error: 'Se requiere confirmación doble para importar. Agrega "confirmDelete2": true (boolean) al body de la petición.' },
         { status: 400 }
       );
     }
@@ -435,6 +445,40 @@ export async function POST(request) {
         { success: false, error: 'Error crítico: No hay datos válidos para importar después de preparar. Los datos existentes NO fueron borrados.' },
         { status: 400 }
       );
+    }
+    
+    // PROTECCIÓN ADICIONAL: Si hay datos existentes y el backup tiene menos datos, requerir confirmación explícita
+    const totalDatosExistentes = documentosExistentes.clientes + documentosExistentes.pagos + 
+                                 documentosExistentes.gastos + documentosExistentes.ingresos +
+                                 documentosExistentes.presupuestos + documentosExistentes.reuniones +
+                                 documentosExistentes.tareas;
+    
+    if (totalDatosExistentes > 0 && totalDatosPreparados < totalDatosExistentes) {
+      console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ ADVERTENCIA: El backup tiene MENOS datos (${totalDatosPreparados}) que los existentes (${totalDatosExistentes})`);
+      if (!body.confirmDataLoss || body.confirmDataLoss !== true) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `ADVERTENCIA: El backup contiene MENOS datos (${totalDatosPreparados} items) que los existentes (${totalDatosExistentes} items). Si continúas, perderás información. Para continuar, agrega "confirmDataLoss": true además de las otras confirmaciones.`,
+            requiereConfirmacion: true,
+            advertencias: [
+              `El backup tiene ${totalDatosPreparados} items pero existen ${totalDatosExistentes} items en la base de datos`,
+              `Pérdida estimada: ${totalDatosExistentes - totalDatosPreparados} items`
+            ],
+            datosExistentes: documentosExistentes,
+            datosPreparados: {
+              clientes: clientesPreparados.length,
+              pagos: pagosPreparados.length,
+              gastos: gastosPreparados.length,
+              ingresos: ingresosPreparados.length,
+              presupuestos: presupuestosPreparados.length,
+              reuniones: reunionesPreparadas.length,
+              tareas: tareasPreparadas.length
+            }
+          },
+          { status: 400 }
+        );
+      }
     }
     
     // PROTECCIÓN ADICIONAL: Si hay datos existentes, requerir doble confirmación
