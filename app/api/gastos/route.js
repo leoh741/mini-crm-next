@@ -46,8 +46,13 @@ export async function POST(request) {
       runValidators: true, // Habilitar validadores para integridad
       maxTimeMS: 5000 // Timeout adecuado para servidor local
     });
-    return NextResponse.json({ success: true, data: gasto }, { status: 201 });
+    
+    // Convertir a objeto plano para asegurar serialización correcta
+    const gastoData = gasto.toObject ? gasto.toObject() : gasto;
+    
+    return NextResponse.json({ success: true, data: gastoData }, { status: 201 });
   } catch (error) {
+    console.error('Error al crear gasto:', error);
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 400 }

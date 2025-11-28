@@ -422,7 +422,7 @@ function HomePageContent() {
           <div className="flex gap-2 w-full sm:w-auto">
             <Link
               href="/presupuestos/nuevo"
-              className="group relative flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-cyan-500/30 overflow-hidden text-center"
+              className="group relative flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-teal-500/30 overflow-hidden text-center"
             >
               <span className="relative z-10 flex items-center justify-center gap-1.5">
                 <Icons.Clipboard className="text-sm" />
@@ -432,7 +432,7 @@ function HomePageContent() {
             </Link>
             <Link
               href="/presupuestos"
-              className="group relative flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-cyan-500/30 overflow-hidden text-center"
+              className="group relative flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-teal-500/30 overflow-hidden text-center"
             >
               <span className="relative z-10 flex items-center justify-center gap-1.5">
                 <Icons.Folder className="text-sm" />
@@ -516,7 +516,7 @@ function HomePageContent() {
             <h3 className="text-sm font-semibold text-slate-300">Usuarios</h3>
             <Link
               href="/admin/usuarios"
-              className="group relative w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-pink-500/30 overflow-hidden text-center flex items-center justify-center"
+              className="group relative w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-700 hover:to-violet-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-violet-500/30 overflow-hidden text-center flex items-center justify-center"
             >
               <span className="relative z-10 flex items-center justify-center gap-1.5">
                 <Icons.User className="text-sm" />

@@ -385,9 +385,9 @@ function ReunionesPageContent() {
       </div>
 
       {mostrarFormulario && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-800 rounded-lg border border-slate-700 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="p-4 sm:p-6">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 pb-20 md:pb-4 z-[60]">
+          <div className="bg-slate-800 rounded-lg border border-slate-700 w-full max-w-lg max-h-[calc(100vh-120px)] md:max-h-[90vh] overflow-y-auto">
+            <div className="p-4 sm:p-6 pb-6">
               <h3 className="text-xl font-semibold mb-4">{reunionEditando ? 'Editar Reunión' : 'Nueva Reunión'}</h3>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -474,7 +474,7 @@ function ReunionesPageContent() {
       )}
 
       {mostrarConfirmacion && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 pb-20 md:pb-4 z-[60]">
           <div className="bg-slate-800 rounded-lg border border-red-700 p-6 max-w-md w-full">
             <h3 className="text-xl font-semibold text-red-400 mb-2">Confirmar eliminación</h3>
             <p className="text-slate-300 mb-4">¿Estás seguro de que deseas eliminar esta reunión?</p>
