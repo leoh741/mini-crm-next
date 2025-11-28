@@ -66,3 +66,7 @@ async function checkDatabase() {
 }
 
 checkDatabase();
+<<<<<<< HEAD
+=======
+
+>>>>>>> 93db2a91f398f485ea6347608c554af6f7ebfa3d

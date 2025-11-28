@@ -7,8 +7,9 @@
 module.exports = {
   apps: [{
     name: 'crm-nextjs',
-    script: 'npm',
-    args: 'start',
+    // Verificar si existe el servidor standalone, sino usar npm start
+    script: 'sh',
+    args: '-c "if [ -f .next/standalone/server.js ]; then node .next/standalone/server.js; else npm start; fi"',
     instances: 1, // Para VPS pequeño, 1 instancia es suficiente
     exec_mode: 'fork',
     env: {

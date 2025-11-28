@@ -1,0 +1,516 @@
+2025-11-26 12:32:57 +00:00:  ⚠ For production Image Optimization with Next.js, the optional 'sharp' package is strongly recommended. Run 'npm i sharp', and Next.js will use it automatically for Image Optimization.
+2025-11-26 12:32:57 +00:00: Read more: https://nextjs.org/docs/messages/sharp-missing-in-production
+2025-11-26 13:33:09 +00:00: Cliente no encontrado con ID: 66
+2025-11-26 13:33:09 +00:00: Cliente no encontrado con ID: 66
+2025-11-26 19:10:26 +00:00: [API Presupuestos] Error al crear presupuesto: ValidationError: Budget validation failed: cliente.nombre: Path `cliente.nombre` is required., numero: Path `numero` is required., presupuestoId: Path `presupuestoId` is required.
+2025-11-26 19:10:26 +00:00:     at Document.invalidate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3365:32)
+2025-11-26 19:10:26 +00:00:     at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3140:13)
+2025-11-26 19:10:26 +00:00:     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-26 19:10:26 +00:00:     at async Promise.all (index 0)
+2025-11-26 19:10:26 +00:00:     at async model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3081:3)
+2025-11-26 19:10:26 +00:00:     at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-26 19:10:26 +00:00:     at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-26 19:10:26 +00:00:     at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-26 19:10:26 +00:00:     at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-26 19:10:26 +00:00:     at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5) {
+2025-11-26 19:10:26 +00:00:   errors: {
+2025-11-26 19:10:26 +00:00:     'cliente.nombre': ValidatorError: Path `cliente.nombre` is required.
+2025-11-26 19:10:26 +00:00:         at SchemaString.doValidate (/var/www/mini-crm-next/node_modules/mongoose/lib/schemaType.js:1425:13)
+2025-11-26 19:10:26 +00:00:         at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3132:24)
+2025-11-26 19:10:26 +00:00:         at model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3078:21)
+2025-11-26 19:10:26 +00:00:         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-26 19:10:26 +00:00:         at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-26 19:10:26 +00:00:         at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-26 19:10:26 +00:00:         at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-26 19:10:26 +00:00:         at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-26 19:10:26 +00:00:         at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5)
+2025-11-26 19:10:26 +00:00:         at async /var/www/mini-crm-next/node_modules/mongoose/lib/model.js:2722:9 {
+2025-11-26 19:10:26 +00:00:       properties: [Object],
+2025-11-26 19:10:26 +00:00:       kind: 'required',
+2025-11-26 19:10:26 +00:00:       path: 'cliente.nombre',
+2025-11-26 19:10:26 +00:00:       value: undefined,
+2025-11-26 19:10:26 +00:00:       reason: undefined,
+2025-11-26 19:10:26 +00:00:       Symbol(mongoose#validatorError): true
+2025-11-26 19:10:26 +00:00:     },
+2025-11-26 19:10:26 +00:00:     numero: ValidatorError: Path `numero` is required.
+2025-11-26 19:10:26 +00:00:         at SchemaNumber.doValidate (/var/www/mini-crm-next/node_modules/mongoose/lib/schemaType.js:1425:13)
+2025-11-26 19:10:26 +00:00:         at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3132:24)
+2025-11-26 19:10:26 +00:00:         at model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3078:21)
+2025-11-26 19:10:26 +00:00:         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-26 19:10:26 +00:00:         at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-26 19:10:26 +00:00:         at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-26 19:10:26 +00:00:         at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-26 19:10:26 +00:00:         at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-26 19:10:26 +00:00:         at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5)
+2025-11-26 19:10:26 +00:00:         at async /var/www/mini-crm-next/node_modules/mongoose/lib/model.js:2722:9 {
+2025-11-26 19:10:26 +00:00:       properties: [Object],
+2025-11-26 19:10:26 +00:00:       kind: 'required',
+2025-11-26 19:10:26 +00:00:       path: 'numero',
+2025-11-26 19:10:26 +00:00:       value: undefined,
+2025-11-26 19:10:26 +00:00:       reason: undefined,
+2025-11-26 19:10:26 +00:00:       Symbol(mongoose#validatorError): true
+2025-11-26 19:10:26 +00:00:     },
+2025-11-26 19:10:26 +00:00:     presupuestoId: ValidatorError: Path `presupuestoId` is required.
+2025-11-26 19:10:26 +00:00:         at SchemaString.doValidate (/var/www/mini-crm-next/node_modules/mongoose/lib/schemaType.js:1425:13)
+2025-11-26 19:10:26 +00:00:         at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3132:24)
+2025-11-26 19:10:26 +00:00:         at model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3078:21)
+2025-11-26 19:10:26 +00:00:         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-26 19:10:26 +00:00:         at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-26 19:10:26 +00:00:         at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-26 19:10:26 +00:00:         at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-26 19:10:26 +00:00:         at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-26 19:10:26 +00:00:         at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5)
+2025-11-26 19:10:26 +00:00:         at async /var/www/mini-crm-next/node_modules/mongoose/lib/model.js:2722:9 {
+2025-11-26 19:10:26 +00:00:       properties: [Object],
+2025-11-26 19:10:26 +00:00:       kind: 'required',
+2025-11-26 19:10:26 +00:00:       path: 'presupuestoId',
+2025-11-26 19:10:26 +00:00:       value: undefined,
+2025-11-26 19:10:26 +00:00:       reason: undefined,
+2025-11-26 19:10:26 +00:00:       Symbol(mongoose#validatorError): true
+2025-11-26 19:10:26 +00:00:     }
+2025-11-26 19:10:26 +00:00:   },
+2025-11-26 19:10:26 +00:00:   _message: 'Budget validation failed'
+2025-11-26 19:10:26 +00:00: }
+2025-11-26 19:26:55 +00:00: [API Presupuestos] Error al crear presupuesto: ValidationError: Budget validation failed: cliente.nombre: Path `cliente.nombre` is required., numero: Path `numero` is required., presupuestoId: Path `presupuestoId` is required.
+2025-11-26 19:26:55 +00:00:     at Document.invalidate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3365:32)
+2025-11-26 19:26:55 +00:00:     at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3140:13)
+2025-11-26 19:26:55 +00:00:     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-26 19:26:55 +00:00:     at async Promise.all (index 0)
+2025-11-26 19:26:55 +00:00:     at async model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3081:3)
+2025-11-26 19:26:55 +00:00:     at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-26 19:26:55 +00:00:     at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-26 19:26:55 +00:00:     at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-26 19:26:55 +00:00:     at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-26 19:26:55 +00:00:     at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5) {
+2025-11-26 19:26:55 +00:00:   errors: {
+2025-11-26 19:26:55 +00:00:     'cliente.nombre': ValidatorError: Path `cliente.nombre` is required.
+2025-11-26 19:26:55 +00:00:         at SchemaString.doValidate (/var/www/mini-crm-next/node_modules/mongoose/lib/schemaType.js:1425:13)
+2025-11-26 19:26:55 +00:00:         at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3132:24)
+2025-11-26 19:26:55 +00:00:         at model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3078:21)
+2025-11-26 19:26:55 +00:00:         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-26 19:26:55 +00:00:         at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-26 19:26:55 +00:00:         at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-26 19:26:55 +00:00:         at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-26 19:26:55 +00:00:         at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-26 19:26:55 +00:00:         at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5)
+2025-11-26 19:26:55 +00:00:         at async /var/www/mini-crm-next/node_modules/mongoose/lib/model.js:2722:9 {
+2025-11-26 19:26:55 +00:00:       properties: [Object],
+2025-11-26 19:26:55 +00:00:       kind: 'required',
+2025-11-26 19:26:55 +00:00:       path: 'cliente.nombre',
+2025-11-26 19:26:55 +00:00:       value: undefined,
+2025-11-26 19:26:55 +00:00:       reason: undefined,
+2025-11-26 19:26:55 +00:00:       Symbol(mongoose#validatorError): true
+2025-11-26 19:26:55 +00:00:     },
+2025-11-26 19:26:55 +00:00:     numero: ValidatorError: Path `numero` is required.
+2025-11-26 19:26:55 +00:00:         at SchemaNumber.doValidate (/var/www/mini-crm-next/node_modules/mongoose/lib/schemaType.js:1425:13)
+2025-11-26 19:26:55 +00:00:         at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3132:24)
+2025-11-26 19:26:55 +00:00:         at model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3078:21)
+2025-11-26 19:26:55 +00:00:         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-26 19:26:55 +00:00:         at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-26 19:26:55 +00:00:         at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-26 19:26:55 +00:00:         at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-26 19:26:55 +00:00:         at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-26 19:26:55 +00:00:         at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5)
+2025-11-26 19:26:55 +00:00:         at async /var/www/mini-crm-next/node_modules/mongoose/lib/model.js:2722:9 {
+2025-11-26 19:26:55 +00:00:       properties: [Object],
+2025-11-26 19:26:55 +00:00:       kind: 'required',
+2025-11-26 19:26:55 +00:00:       path: 'numero',
+2025-11-26 19:26:55 +00:00:       value: undefined,
+2025-11-26 19:26:55 +00:00:       reason: undefined,
+2025-11-26 19:26:55 +00:00:       Symbol(mongoose#validatorError): true
+2025-11-26 19:26:55 +00:00:     },
+2025-11-26 19:26:55 +00:00:     presupuestoId: ValidatorError: Path `presupuestoId` is required.
+2025-11-26 19:26:55 +00:00:         at SchemaString.doValidate (/var/www/mini-crm-next/node_modules/mongoose/lib/schemaType.js:1425:13)
+2025-11-26 19:26:55 +00:00:         at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3132:24)
+2025-11-26 19:26:55 +00:00:         at model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3078:21)
+2025-11-26 19:26:55 +00:00:         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-26 19:26:55 +00:00:         at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-26 19:26:55 +00:00:         at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-26 19:26:55 +00:00:         at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-26 19:26:55 +00:00:         at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-26 19:26:55 +00:00:         at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5)
+2025-11-26 19:26:55 +00:00:         at async /var/www/mini-crm-next/node_modules/mongoose/lib/model.js:2722:9 {
+2025-11-26 19:26:55 +00:00:       properties: [Object],
+2025-11-26 19:26:55 +00:00:       kind: 'required',
+2025-11-26 19:26:55 +00:00:       path: 'presupuestoId',
+2025-11-26 19:26:55 +00:00:       value: undefined,
+2025-11-26 19:26:55 +00:00:       reason: undefined,
+2025-11-26 19:26:55 +00:00:       Symbol(mongoose#validatorError): true
+2025-11-26 19:26:55 +00:00:     }
+2025-11-26 19:26:55 +00:00:   },
+2025-11-26 19:26:55 +00:00:   _message: 'Budget validation failed'
+2025-11-26 19:26:55 +00:00: }
+2025-11-26 19:52:07 +00:00: [API Presupuestos] Error al crear presupuesto: ValidationError: Budget validation failed: cliente.nombre: Path `cliente.nombre` is required., numero: Path `numero` is required., presupuestoId: Path `presupuestoId` is required.
+2025-11-26 19:52:07 +00:00:     at Document.invalidate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3365:32)
+2025-11-26 19:52:07 +00:00:     at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3140:13)
+2025-11-26 19:52:07 +00:00:     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-26 19:52:07 +00:00:     at async Promise.all (index 0)
+2025-11-26 19:52:07 +00:00:     at async model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3081:3)
+2025-11-26 19:52:07 +00:00:     at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-26 19:52:07 +00:00:     at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-26 19:52:07 +00:00:     at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-26 19:52:07 +00:00:     at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-26 19:52:07 +00:00:     at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5) {
+2025-11-26 19:52:07 +00:00:   errors: {
+2025-11-26 19:52:07 +00:00:     'cliente.nombre': ValidatorError: Path `cliente.nombre` is required.
+2025-11-26 19:52:07 +00:00:         at SchemaString.doValidate (/var/www/mini-crm-next/node_modules/mongoose/lib/schemaType.js:1425:13)
+2025-11-26 19:52:07 +00:00:         at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3132:24)
+2025-11-26 19:52:07 +00:00:         at model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3078:21)
+2025-11-26 19:52:07 +00:00:         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-26 19:52:07 +00:00:         at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-26 19:52:07 +00:00:         at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-26 19:52:07 +00:00:         at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-26 19:52:07 +00:00:         at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-26 19:52:07 +00:00:         at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5)
+2025-11-26 19:52:07 +00:00:         at async /var/www/mini-crm-next/node_modules/mongoose/lib/model.js:2722:9 {
+2025-11-26 19:52:07 +00:00:       properties: [Object],
+2025-11-26 19:52:07 +00:00:       kind: 'required',
+2025-11-26 19:52:07 +00:00:       path: 'cliente.nombre',
+2025-11-26 19:52:07 +00:00:       value: undefined,
+2025-11-26 19:52:07 +00:00:       reason: undefined,
+2025-11-26 19:52:07 +00:00:       Symbol(mongoose#validatorError): true
+2025-11-26 19:52:07 +00:00:     },
+2025-11-26 19:52:07 +00:00:     numero: ValidatorError: Path `numero` is required.
+2025-11-26 19:52:07 +00:00:         at SchemaNumber.doValidate (/var/www/mini-crm-next/node_modules/mongoose/lib/schemaType.js:1425:13)
+2025-11-26 19:52:07 +00:00:         at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3132:24)
+2025-11-26 19:52:07 +00:00:         at model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3078:21)
+2025-11-26 19:52:07 +00:00:         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-26 19:52:07 +00:00:         at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-26 19:52:07 +00:00:         at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-26 19:52:07 +00:00:         at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-26 19:52:07 +00:00:         at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-26 19:52:07 +00:00:         at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5)
+2025-11-26 19:52:07 +00:00:         at async /var/www/mini-crm-next/node_modules/mongoose/lib/model.js:2722:9 {
+2025-11-26 19:52:07 +00:00:       properties: [Object],
+2025-11-26 19:52:07 +00:00:       kind: 'required',
+2025-11-26 19:52:07 +00:00:       path: 'numero',
+2025-11-26 19:52:07 +00:00:       value: undefined,
+2025-11-26 19:52:07 +00:00:       reason: undefined,
+2025-11-26 19:52:07 +00:00:       Symbol(mongoose#validatorError): true
+2025-11-26 19:52:07 +00:00:     },
+2025-11-26 19:52:07 +00:00:     presupuestoId: ValidatorError: Path `presupuestoId` is required.
+2025-11-26 19:52:07 +00:00:         at SchemaString.doValidate (/var/www/mini-crm-next/node_modules/mongoose/lib/schemaType.js:1425:13)
+2025-11-26 19:52:07 +00:00:         at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3132:24)
+2025-11-26 19:52:07 +00:00:         at model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3078:21)
+2025-11-26 19:52:07 +00:00:         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-26 19:52:07 +00:00:         at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-26 19:52:07 +00:00:         at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-26 19:52:07 +00:00:         at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-26 19:52:07 +00:00:         at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-26 19:52:07 +00:00:         at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5)
+2025-11-26 19:52:07 +00:00:         at async /var/www/mini-crm-next/node_modules/mongoose/lib/model.js:2722:9 {
+2025-11-26 19:52:07 +00:00:       properties: [Object],
+2025-11-26 19:52:07 +00:00:       kind: 'required',
+2025-11-26 19:52:07 +00:00:       path: 'presupuestoId',
+2025-11-26 19:52:07 +00:00:       value: undefined,
+2025-11-26 19:52:07 +00:00:       reason: undefined,
+2025-11-26 19:52:07 +00:00:       Symbol(mongoose#validatorError): true
+2025-11-26 19:52:07 +00:00:     }
+2025-11-26 19:52:07 +00:00:   },
+2025-11-26 19:52:07 +00:00:   _message: 'Budget validation failed'
+2025-11-26 19:52:07 +00:00: }
+2025-11-27 02:18:11 +00:00:  ⚠ For production Image Optimization with Next.js, the optional 'sharp' package is strongly recommended. Run 'npm i sharp', and Next.js will use it automatically for Image Optimization.
+2025-11-27 02:18:11 +00:00: Read more: https://nextjs.org/docs/messages/sharp-missing-in-production
+2025-11-27 09:53:20 +00:00: [API Presupuestos] Error al crear presupuesto: ValidationError: Budget validation failed: cliente.nombre: Path `cliente.nombre` is required., numero: Path `numero` is required., presupuestoId: Path `presupuestoId` is required.
+2025-11-27 09:53:20 +00:00:     at Document.invalidate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3365:32)
+2025-11-27 09:53:20 +00:00:     at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3140:13)
+2025-11-27 09:53:20 +00:00:     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-27 09:53:20 +00:00:     at async Promise.all (index 0)
+2025-11-27 09:53:20 +00:00:     at async model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3081:3)
+2025-11-27 09:53:20 +00:00:     at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-27 09:53:20 +00:00:     at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-27 09:53:20 +00:00:     at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-27 09:53:20 +00:00:     at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-27 09:53:20 +00:00:     at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5) {
+2025-11-27 09:53:20 +00:00:   errors: {
+2025-11-27 09:53:20 +00:00:     'cliente.nombre': ValidatorError: Path `cliente.nombre` is required.
+2025-11-27 09:53:20 +00:00:         at SchemaString.doValidate (/var/www/mini-crm-next/node_modules/mongoose/lib/schemaType.js:1425:13)
+2025-11-27 09:53:20 +00:00:         at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3132:24)
+2025-11-27 09:53:20 +00:00:         at model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3078:21)
+2025-11-27 09:53:20 +00:00:         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-27 09:53:20 +00:00:         at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-27 09:53:20 +00:00:         at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-27 09:53:20 +00:00:         at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-27 09:53:20 +00:00:         at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-27 09:53:20 +00:00:         at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5)
+2025-11-27 09:53:20 +00:00:         at async /var/www/mini-crm-next/node_modules/mongoose/lib/model.js:2722:9 {
+2025-11-27 09:53:20 +00:00:       properties: [Object],
+2025-11-27 09:53:20 +00:00:       kind: 'required',
+2025-11-27 09:53:20 +00:00:       path: 'cliente.nombre',
+2025-11-27 09:53:20 +00:00:       value: undefined,
+2025-11-27 09:53:20 +00:00:       reason: undefined,
+2025-11-27 09:53:20 +00:00:       Symbol(mongoose#validatorError): true
+2025-11-27 09:53:20 +00:00:     },
+2025-11-27 09:53:20 +00:00:     numero: ValidatorError: Path `numero` is required.
+2025-11-27 09:53:20 +00:00:         at SchemaNumber.doValidate (/var/www/mini-crm-next/node_modules/mongoose/lib/schemaType.js:1425:13)
+2025-11-27 09:53:20 +00:00:         at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3132:24)
+2025-11-27 09:53:20 +00:00:         at model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3078:21)
+2025-11-27 09:53:20 +00:00:         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-27 09:53:20 +00:00:         at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-27 09:53:20 +00:00:         at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-27 09:53:20 +00:00:         at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-27 09:53:20 +00:00:         at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-27 09:53:20 +00:00:         at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5)
+2025-11-27 09:53:20 +00:00:         at async /var/www/mini-crm-next/node_modules/mongoose/lib/model.js:2722:9 {
+2025-11-27 09:53:20 +00:00:       properties: [Object],
+2025-11-27 09:53:20 +00:00:       kind: 'required',
+2025-11-27 09:53:20 +00:00:       path: 'numero',
+2025-11-27 09:53:20 +00:00:       value: undefined,
+2025-11-27 09:53:20 +00:00:       reason: undefined,
+2025-11-27 09:53:20 +00:00:       Symbol(mongoose#validatorError): true
+2025-11-27 09:53:20 +00:00:     },
+2025-11-27 09:53:20 +00:00:     presupuestoId: ValidatorError: Path `presupuestoId` is required.
+2025-11-27 09:53:20 +00:00:         at SchemaString.doValidate (/var/www/mini-crm-next/node_modules/mongoose/lib/schemaType.js:1425:13)
+2025-11-27 09:53:20 +00:00:         at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3132:24)
+2025-11-27 09:53:20 +00:00:         at model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3078:21)
+2025-11-27 09:53:20 +00:00:         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-27 09:53:20 +00:00:         at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-27 09:53:20 +00:00:         at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-27 09:53:20 +00:00:         at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-27 09:53:20 +00:00:         at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-27 09:53:20 +00:00:         at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5)
+2025-11-27 09:53:20 +00:00:         at async /var/www/mini-crm-next/node_modules/mongoose/lib/model.js:2722:9 {
+2025-11-27 09:53:20 +00:00:       properties: [Object],
+2025-11-27 09:53:20 +00:00:       kind: 'required',
+2025-11-27 09:53:20 +00:00:       path: 'presupuestoId',
+2025-11-27 09:53:20 +00:00:       value: undefined,
+2025-11-27 09:53:20 +00:00:       reason: undefined,
+2025-11-27 09:53:20 +00:00:       Symbol(mongoose#validatorError): true
+2025-11-27 09:53:20 +00:00:     }
+2025-11-27 09:53:20 +00:00:   },
+2025-11-27 09:53:20 +00:00:   _message: 'Budget validation failed'
+2025-11-27 09:53:20 +00:00: }
+2025-11-27 10:07:16 +00:00: [API Presupuestos] Error al crear presupuesto: ValidationError: Budget validation failed: cliente.nombre: Path `cliente.nombre` is required., numero: Path `numero` is required., presupuestoId: Path `presupuestoId` is required.
+2025-11-27 10:07:16 +00:00:     at Document.invalidate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3365:32)
+2025-11-27 10:07:16 +00:00:     at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3140:13)
+2025-11-27 10:07:16 +00:00:     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-27 10:07:16 +00:00:     at async Promise.all (index 0)
+2025-11-27 10:07:16 +00:00:     at async model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3081:3)
+2025-11-27 10:07:16 +00:00:     at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-27 10:07:16 +00:00:     at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-27 10:07:16 +00:00:     at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-27 10:07:16 +00:00:     at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-27 10:07:16 +00:00:     at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5) {
+2025-11-27 10:07:16 +00:00:   errors: {
+2025-11-27 10:07:16 +00:00:     'cliente.nombre': ValidatorError: Path `cliente.nombre` is required.
+2025-11-27 10:07:16 +00:00:         at SchemaString.doValidate (/var/www/mini-crm-next/node_modules/mongoose/lib/schemaType.js:1425:13)
+2025-11-27 10:07:16 +00:00:         at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3132:24)
+2025-11-27 10:07:16 +00:00:         at model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3078:21)
+2025-11-27 10:07:16 +00:00:         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-27 10:07:16 +00:00:         at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-27 10:07:16 +00:00:         at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-27 10:07:16 +00:00:         at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-27 10:07:16 +00:00:         at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-27 10:07:16 +00:00:         at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5)
+2025-11-27 10:07:16 +00:00:         at async /var/www/mini-crm-next/node_modules/mongoose/lib/model.js:2722:9 {
+2025-11-27 10:07:16 +00:00:       properties: [Object],
+2025-11-27 10:07:16 +00:00:       kind: 'required',
+2025-11-27 10:07:16 +00:00:       path: 'cliente.nombre',
+2025-11-27 10:07:16 +00:00:       value: undefined,
+2025-11-27 10:07:16 +00:00:       reason: undefined,
+2025-11-27 10:07:16 +00:00:       Symbol(mongoose#validatorError): true
+2025-11-27 10:07:16 +00:00:     },
+2025-11-27 10:07:16 +00:00:     numero: ValidatorError: Path `numero` is required.
+2025-11-27 10:07:16 +00:00:         at SchemaNumber.doValidate (/var/www/mini-crm-next/node_modules/mongoose/lib/schemaType.js:1425:13)
+2025-11-27 10:07:16 +00:00:         at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3132:24)
+2025-11-27 10:07:16 +00:00:         at model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3078:21)
+2025-11-27 10:07:16 +00:00:         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-27 10:07:16 +00:00:         at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-27 10:07:16 +00:00:         at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-27 10:07:16 +00:00:         at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-27 10:07:16 +00:00:         at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-27 10:07:16 +00:00:         at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5)
+2025-11-27 10:07:16 +00:00:         at async /var/www/mini-crm-next/node_modules/mongoose/lib/model.js:2722:9 {
+2025-11-27 10:07:16 +00:00:       properties: [Object],
+2025-11-27 10:07:16 +00:00:       kind: 'required',
+2025-11-27 10:07:16 +00:00:       path: 'numero',
+2025-11-27 10:07:16 +00:00:       value: undefined,
+2025-11-27 10:07:16 +00:00:       reason: undefined,
+2025-11-27 10:07:16 +00:00:       Symbol(mongoose#validatorError): true
+2025-11-27 10:07:16 +00:00:     },
+2025-11-27 10:07:16 +00:00:     presupuestoId: ValidatorError: Path `presupuestoId` is required.
+2025-11-27 10:07:16 +00:00:         at SchemaString.doValidate (/var/www/mini-crm-next/node_modules/mongoose/lib/schemaType.js:1425:13)
+2025-11-27 10:07:16 +00:00:         at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3132:24)
+2025-11-27 10:07:16 +00:00:         at model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3078:21)
+2025-11-27 10:07:16 +00:00:         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-27 10:07:16 +00:00:         at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-27 10:07:16 +00:00:         at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-27 10:07:16 +00:00:         at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-27 10:07:16 +00:00:         at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-27 10:07:16 +00:00:         at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5)
+2025-11-27 10:07:16 +00:00:         at async /var/www/mini-crm-next/node_modules/mongoose/lib/model.js:2722:9 {
+2025-11-27 10:07:16 +00:00:       properties: [Object],
+2025-11-27 10:07:16 +00:00:       kind: 'required',
+2025-11-27 10:07:16 +00:00:       path: 'presupuestoId',
+2025-11-27 10:07:16 +00:00:       value: undefined,
+2025-11-27 10:07:16 +00:00:       reason: undefined,
+2025-11-27 10:07:16 +00:00:       Symbol(mongoose#validatorError): true
+2025-11-27 10:07:16 +00:00:     }
+2025-11-27 10:07:16 +00:00:   },
+2025-11-27 10:07:16 +00:00:   _message: 'Budget validation failed'
+2025-11-27 10:07:16 +00:00: }
+2025-11-27 13:48:55 +00:00: [API Presupuestos] Error al crear presupuesto: ValidationError: Budget validation failed: cliente.nombre: Path `cliente.nombre` is required., numero: Path `numero` is required., presupuestoId: Path `presupuestoId` is required.
+2025-11-27 13:48:55 +00:00:     at Document.invalidate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3365:32)
+2025-11-27 13:48:55 +00:00:     at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3140:13)
+2025-11-27 13:48:55 +00:00:     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-27 13:48:55 +00:00:     at async Promise.all (index 0)
+2025-11-27 13:48:55 +00:00:     at async model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3081:3)
+2025-11-27 13:48:55 +00:00:     at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-27 13:48:55 +00:00:     at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-27 13:48:55 +00:00:     at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-27 13:48:55 +00:00:     at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-27 13:48:55 +00:00:     at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5) {
+2025-11-27 13:48:55 +00:00:   errors: {
+2025-11-27 13:48:55 +00:00:     'cliente.nombre': ValidatorError: Path `cliente.nombre` is required.
+2025-11-27 13:48:55 +00:00:         at SchemaString.doValidate (/var/www/mini-crm-next/node_modules/mongoose/lib/schemaType.js:1425:13)
+2025-11-27 13:48:55 +00:00:         at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3132:24)
+2025-11-27 13:48:55 +00:00:         at model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3078:21)
+2025-11-27 13:48:55 +00:00:         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-27 13:48:55 +00:00:         at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-27 13:48:55 +00:00:         at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-27 13:48:55 +00:00:         at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-27 13:48:55 +00:00:         at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-27 13:48:55 +00:00:         at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5)
+2025-11-27 13:48:55 +00:00:         at async /var/www/mini-crm-next/node_modules/mongoose/lib/model.js:2722:9 {
+2025-11-27 13:48:55 +00:00:       properties: [Object],
+2025-11-27 13:48:55 +00:00:       kind: 'required',
+2025-11-27 13:48:55 +00:00:       path: 'cliente.nombre',
+2025-11-27 13:48:55 +00:00:       value: undefined,
+2025-11-27 13:48:55 +00:00:       reason: undefined,
+2025-11-27 13:48:55 +00:00:       Symbol(mongoose#validatorError): true
+2025-11-27 13:48:55 +00:00:     },
+2025-11-27 13:48:55 +00:00:     numero: ValidatorError: Path `numero` is required.
+2025-11-27 13:48:55 +00:00:         at SchemaNumber.doValidate (/var/www/mini-crm-next/node_modules/mongoose/lib/schemaType.js:1425:13)
+2025-11-27 13:48:55 +00:00:         at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3132:24)
+2025-11-27 13:48:55 +00:00:         at model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3078:21)
+2025-11-27 13:48:55 +00:00:         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-27 13:48:55 +00:00:         at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-27 13:48:55 +00:00:         at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-27 13:48:55 +00:00:         at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-27 13:48:55 +00:00:         at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-27 13:48:55 +00:00:         at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5)
+2025-11-27 13:48:55 +00:00:         at async /var/www/mini-crm-next/node_modules/mongoose/lib/model.js:2722:9 {
+2025-11-27 13:48:55 +00:00:       properties: [Object],
+2025-11-27 13:48:55 +00:00:       kind: 'required',
+2025-11-27 13:48:55 +00:00:       path: 'numero',
+2025-11-27 13:48:55 +00:00:       value: undefined,
+2025-11-27 13:48:55 +00:00:       reason: undefined,
+2025-11-27 13:48:55 +00:00:       Symbol(mongoose#validatorError): true
+2025-11-27 13:48:55 +00:00:     },
+2025-11-27 13:48:55 +00:00:     presupuestoId: ValidatorError: Path `presupuestoId` is required.
+2025-11-27 13:48:55 +00:00:         at SchemaString.doValidate (/var/www/mini-crm-next/node_modules/mongoose/lib/schemaType.js:1425:13)
+2025-11-27 13:48:55 +00:00:         at validatePath (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3132:24)
+2025-11-27 13:48:55 +00:00:         at model.$__validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:3078:21)
+2025-11-27 13:48:55 +00:00:         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2025-11-27 13:48:55 +00:00:         at async model.validate (/var/www/mini-crm-next/node_modules/mongoose/lib/document.js:2663:5)
+2025-11-27 13:48:55 +00:00:         at async model.validateBeforeSave (/var/www/mini-crm-next/node_modules/mongoose/lib/plugins/validateBeforeSave.js:34:7)
+2025-11-27 13:48:55 +00:00:         at async Kareem.execPre (/var/www/mini-crm-next/node_modules/kareem/index.js:65:24)
+2025-11-27 13:48:55 +00:00:         at async model.$__save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:369:5)
+2025-11-27 13:48:55 +00:00:         at async model.save (/var/www/mini-crm-next/node_modules/mongoose/lib/model.js:609:5)
+2025-11-27 13:48:55 +00:00:         at async /var/www/mini-crm-next/node_modules/mongoose/lib/model.js:2722:9 {
+2025-11-27 13:48:55 +00:00:       properties: [Object],
+2025-11-27 13:48:55 +00:00:       kind: 'required',
+2025-11-27 13:48:55 +00:00:       path: 'presupuestoId',
+2025-11-27 13:48:55 +00:00:       value: undefined,
+2025-11-27 13:48:55 +00:00:       reason: undefined,
+2025-11-27 13:48:55 +00:00:       Symbol(mongoose#validatorError): true
+2025-11-27 13:48:55 +00:00:     }
+2025-11-27 13:48:55 +00:00:   },
+2025-11-27 13:48:55 +00:00:   _message: 'Budget validation failed'
+2025-11-27 13:48:55 +00:00: }
+2025-11-27 15:36:15 +00:00: Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+2025-11-27 15:36:15 +00:00:     at setupFsCheck (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-utils/filesystem.js:151:19)
+2025-11-27 15:36:15 +00:00:     at async initialize (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-server.js:64:23)
+2025-11-27 15:36:15 +00:00:     at async Server.<anonymous> (/var/www/mini-crm-next/node_modules/next/dist/server/lib/start-server.js:249:36)
+2025-11-27 15:36:19 +00:00: Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+2025-11-27 15:36:19 +00:00:     at setupFsCheck (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-utils/filesystem.js:151:19)
+2025-11-27 15:36:19 +00:00:     at async initialize (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-server.js:64:23)
+2025-11-27 15:36:19 +00:00:     at async Server.<anonymous> (/var/www/mini-crm-next/node_modules/next/dist/server/lib/start-server.js:249:36)
+2025-11-27 15:36:24 +00:00: Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+2025-11-27 15:36:24 +00:00:     at setupFsCheck (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-utils/filesystem.js:151:19)
+2025-11-27 15:36:24 +00:00:     at async initialize (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-server.js:64:23)
+2025-11-27 15:36:24 +00:00:     at async Server.<anonymous> (/var/www/mini-crm-next/node_modules/next/dist/server/lib/start-server.js:249:36)
+2025-11-27 15:36:29 +00:00: Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+2025-11-27 15:36:29 +00:00:     at setupFsCheck (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-utils/filesystem.js:151:19)
+2025-11-27 15:36:29 +00:00:     at async initialize (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-server.js:64:23)
+2025-11-27 15:36:29 +00:00:     at async Server.<anonymous> (/var/www/mini-crm-next/node_modules/next/dist/server/lib/start-server.js:249:36)
+2025-11-27 15:36:33 +00:00: Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+2025-11-27 15:36:33 +00:00:     at setupFsCheck (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-utils/filesystem.js:151:19)
+2025-11-27 15:36:33 +00:00:     at async initialize (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-server.js:64:23)
+2025-11-27 15:36:33 +00:00:     at async Server.<anonymous> (/var/www/mini-crm-next/node_modules/next/dist/server/lib/start-server.js:249:36)
+2025-11-27 15:36:38 +00:00: Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+2025-11-27 15:36:38 +00:00:     at setupFsCheck (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-utils/filesystem.js:151:19)
+2025-11-27 15:36:38 +00:00:     at async initialize (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-server.js:64:23)
+2025-11-27 15:36:38 +00:00:     at async Server.<anonymous> (/var/www/mini-crm-next/node_modules/next/dist/server/lib/start-server.js:249:36)
+2025-11-27 15:36:43 +00:00: Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+2025-11-27 15:36:43 +00:00:     at setupFsCheck (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-utils/filesystem.js:151:19)
+2025-11-27 15:36:43 +00:00:     at async initialize (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-server.js:64:23)
+2025-11-27 15:36:43 +00:00:     at async Server.<anonymous> (/var/www/mini-crm-next/node_modules/next/dist/server/lib/start-server.js:249:36)
+2025-11-27 15:36:47 +00:00: Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+2025-11-27 15:36:47 +00:00:     at setupFsCheck (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-utils/filesystem.js:151:19)
+2025-11-27 15:36:47 +00:00:     at async initialize (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-server.js:64:23)
+2025-11-27 15:36:47 +00:00:     at async Server.<anonymous> (/var/www/mini-crm-next/node_modules/next/dist/server/lib/start-server.js:249:36)
+2025-11-27 15:36:52 +00:00: Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+2025-11-27 15:36:52 +00:00:     at setupFsCheck (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-utils/filesystem.js:151:19)
+2025-11-27 15:36:52 +00:00:     at async initialize (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-server.js:64:23)
+2025-11-27 15:36:52 +00:00:     at async Server.<anonymous> (/var/www/mini-crm-next/node_modules/next/dist/server/lib/start-server.js:249:36)
+2025-11-27 15:36:57 +00:00: Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+2025-11-27 15:36:57 +00:00:     at setupFsCheck (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-utils/filesystem.js:151:19)
+2025-11-27 15:36:57 +00:00:     at async initialize (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-server.js:64:23)
+2025-11-27 15:36:57 +00:00:     at async Server.<anonymous> (/var/www/mini-crm-next/node_modules/next/dist/server/lib/start-server.js:249:36)
+2025-11-27 15:41:10 +00:00: Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+2025-11-27 15:41:10 +00:00:     at setupFsCheck (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-utils/filesystem.js:151:19)
+2025-11-27 15:41:10 +00:00:     at async initialize (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-server.js:64:23)
+2025-11-27 15:41:10 +00:00:     at async Server.<anonymous> (/var/www/mini-crm-next/node_modules/next/dist/server/lib/start-server.js:249:36)
+2025-11-27 15:41:15 +00:00: Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+2025-11-27 15:41:15 +00:00:     at setupFsCheck (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-utils/filesystem.js:151:19)
+2025-11-27 15:41:15 +00:00:     at async initialize (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-server.js:64:23)
+2025-11-27 15:41:15 +00:00:     at async Server.<anonymous> (/var/www/mini-crm-next/node_modules/next/dist/server/lib/start-server.js:249:36)
+2025-11-27 15:41:19 +00:00: Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+2025-11-27 15:41:19 +00:00:     at setupFsCheck (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-utils/filesystem.js:151:19)
+2025-11-27 15:41:19 +00:00:     at async initialize (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-server.js:64:23)
+2025-11-27 15:41:19 +00:00:     at async Server.<anonymous> (/var/www/mini-crm-next/node_modules/next/dist/server/lib/start-server.js:249:36)
+2025-11-27 15:41:24 +00:00: Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+2025-11-27 15:41:24 +00:00:     at setupFsCheck (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-utils/filesystem.js:151:19)
+2025-11-27 15:41:24 +00:00:     at async initialize (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-server.js:64:23)
+2025-11-27 15:41:24 +00:00:     at async Server.<anonymous> (/var/www/mini-crm-next/node_modules/next/dist/server/lib/start-server.js:249:36)
+2025-11-27 15:41:29 +00:00: Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+2025-11-27 15:41:29 +00:00:     at setupFsCheck (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-utils/filesystem.js:151:19)
+2025-11-27 15:41:29 +00:00:     at async initialize (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-server.js:64:23)
+2025-11-27 15:41:29 +00:00:     at async Server.<anonymous> (/var/www/mini-crm-next/node_modules/next/dist/server/lib/start-server.js:249:36)
+2025-11-27 15:41:33 +00:00: Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+2025-11-27 15:41:33 +00:00:     at setupFsCheck (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-utils/filesystem.js:151:19)
+2025-11-27 15:41:33 +00:00:     at async initialize (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-server.js:64:23)
+2025-11-27 15:41:33 +00:00:     at async Server.<anonymous> (/var/www/mini-crm-next/node_modules/next/dist/server/lib/start-server.js:249:36)
+2025-11-27 15:41:38 +00:00: Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+2025-11-27 15:41:38 +00:00:     at setupFsCheck (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-utils/filesystem.js:151:19)
+2025-11-27 15:41:38 +00:00:     at async initialize (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-server.js:64:23)
+2025-11-27 15:41:38 +00:00:     at async Server.<anonymous> (/var/www/mini-crm-next/node_modules/next/dist/server/lib/start-server.js:249:36)
+2025-11-27 15:41:42 +00:00: Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+2025-11-27 15:41:42 +00:00:     at setupFsCheck (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-utils/filesystem.js:151:19)
+2025-11-27 15:41:42 +00:00:     at async initialize (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-server.js:64:23)
+2025-11-27 15:41:42 +00:00:     at async Server.<anonymous> (/var/www/mini-crm-next/node_modules/next/dist/server/lib/start-server.js:249:36)
+2025-11-27 15:41:47 +00:00: Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+2025-11-27 15:41:47 +00:00:     at setupFsCheck (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-utils/filesystem.js:151:19)
+2025-11-27 15:41:47 +00:00:     at async initialize (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-server.js:64:23)
+2025-11-27 15:41:47 +00:00:     at async Server.<anonymous> (/var/www/mini-crm-next/node_modules/next/dist/server/lib/start-server.js:249:36)
+2025-11-27 15:41:52 +00:00: Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+2025-11-27 15:41:52 +00:00:     at setupFsCheck (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-utils/filesystem.js:151:19)
+2025-11-27 15:41:52 +00:00:     at async initialize (/var/www/mini-crm-next/node_modules/next/dist/server/lib/router-server.js:64:23)
+2025-11-27 15:41:52 +00:00:     at async Server.<anonymous> (/var/www/mini-crm-next/node_modules/next/dist/server/lib/start-server.js:249:36)
+2025-11-27 18:32:11 +00:00:  ⚠ For production Image Optimization with Next.js, the optional 'sharp' package is strongly recommended. Run 'npm i sharp', and Next.js will use it automatically for Image Optimization.
+2025-11-27 18:32:11 +00:00: Read more: https://nextjs.org/docs/messages/sharp-missing-in-production
+2025-11-27 20:10:11 +00:00:  ⚠ For production Image Optimization with Next.js, the optional 'sharp' package is strongly recommended. Run 'npm i sharp', and Next.js will use it automatically for Image Optimization.
+2025-11-27 20:10:11 +00:00: Read more: https://nextjs.org/docs/messages/sharp-missing-in-production
+2025-11-28 08:37:06 +00:00: Cliente no encontrado con ID: test-1764265944304-fe1vv8475
+2025-11-28 08:37:07 +00:00: Cliente no encontrado con ID: test-1764265944304-fe1vv8475
+2025-11-28 12:26:19 +00:00:  ⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.
+2025-11-28 12:49:21 +00:00:  ⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.
+2025-11-28 12:55:10 +00:00:  ⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.
+2025-11-28 12:56:25 +00:00:  ⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.
+2025-11-28 12:59:36 +00:00: Cliente no encontrado con ID: test-1764334129014-9jxh3bqxx
+2025-11-28 12:59:36 +00:00: Cliente no encontrado con ID: test-1764334129014-9jxh3bqxx
+2025-11-28 12:59:36 +00:00: Cliente no encontrado con ID: test-1764334528287-wpox622c4
+2025-11-28 12:59:36 +00:00: Cliente no encontrado con ID: test-1764334528287-wpox622c4
+2025-11-28 13:57:07 +00:00:  ⨯ Error: 'sharp' is required to be installed in standalone mode for the image optimization to function correctly. Read more at: https://nextjs.org/docs/messages/sharp-missing-in-production
+2025-11-28 14:08:17 +00:00:  ⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.
