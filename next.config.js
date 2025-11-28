@@ -23,7 +23,7 @@ const nextConfig = {
     // Optimizar para servidor tradicional (no serverless)
     serverComponentsExternalPackages: ['mongoose'],
     // Optimizaciones de rendimiento
-    optimizeCss: true,
+    // optimizeCss: true, // Deshabilitado: requiere 'critters' que no está instalado
     optimizePackageImports: ['react-icons'],
   },
 
