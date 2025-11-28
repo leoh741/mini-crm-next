@@ -7,11 +7,12 @@
 module.exports = {
   apps: [{
     name: 'crm-nextjs',
-    // Verificar si existe el servidor standalone, sino usar npm start
-    script: 'sh',
-    args: '-c "if [ -f .next/standalone/server.js ]; then node .next/standalone/server.js; else npm start; fi"',
+    // Usar directamente el servidor standalone de Next.js
+    script: 'node',
+    args: '.next/standalone/server.js',
     instances: 1, // Para VPS pequeño, 1 instancia es suficiente
     exec_mode: 'fork',
+    cwd: '/var/www/mini-crm-next', // Directorio de trabajo absoluto
     env: {
       NODE_ENV: 'production',
       PORT: 3000
