@@ -224,21 +224,13 @@ function BalancePageContent() {
       return;
     }
 
-    const resultado = await agregarGasto(formGasto);
-    if (resultado) {
-      const [año, mes] = mesSeleccionado.split('-').map(Number);
-      const mesIndex = mes - 1;
-      const gastosData = await getGastosMes(mesIndex, año);
-      setGastos(gastosData);
-      setFormGasto({
-        descripcion: '',
-        monto: '',
-        fecha: new Date().toISOString().split('T')[0],
-        categoria: ''
-      });
-      setMostrarFormularioGasto(false);
-    }
-    // Error silencioso - no mostrar alert
+    // Guardar el gasto
+    await agregarGasto(formGasto);
+    
+    // Recargar la página completa después de un breve delay
+    setTimeout(() => {
+      window.location.reload();
+    }, 100);
   };
 
   const handleSubmitIngreso = async (e) => {
@@ -248,21 +240,13 @@ function BalancePageContent() {
       return;
     }
 
-    const resultado = await agregarIngreso(formIngreso);
-    if (resultado) {
-      const [año, mes] = mesSeleccionado.split('-').map(Number);
-      const mesIndex = mes - 1;
-      const ingresosData = await getIngresosMes(mesIndex, año);
-      setIngresos(ingresosData);
-      setFormIngreso({
-        descripcion: '',
-        monto: '',
-        fecha: new Date().toISOString().split('T')[0],
-        categoria: ''
-      });
-      setMostrarFormularioIngreso(false);
-    }
-    // Error silencioso - no mostrar alert
+    // Guardar el ingreso
+    await agregarIngreso(formIngreso);
+    
+    // Recargar la página completa después de un breve delay
+    setTimeout(() => {
+      window.location.reload();
+    }, 100);
   };
 
   const handleEliminarGasto = async (gastoId) => {

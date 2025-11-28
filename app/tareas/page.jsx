@@ -130,6 +130,11 @@ function TareasPageContent() {
     return colores[prioridad] || colores.media;
   };
 
+  const capitalizarPrioridad = (prioridad) => {
+    if (!prioridad) return '';
+    return prioridad.charAt(0).toUpperCase() + prioridad.slice(1);
+  };
+
   const abrirFormulario = () => {
     setFormData({
       titulo: "",
@@ -378,7 +383,7 @@ function TareasPageContent() {
                     <div className="flex items-center gap-2 flex-wrap mb-2">
                       <h3 className={`font-semibold ${tarea.estado === 'completada' ? 'line-through text-slate-400' : ''}`}>{tarea.titulo}</h3>
                       <span className={`px-2 py-1 rounded text-xs border ${getPrioridadColor(tarea.prioridad)}`}>
-                        {tarea.prioridad}
+                        {capitalizarPrioridad(tarea.prioridad)}
                       </span>
                       {tarea.estado === 'completada' && <span className="px-2 py-1 rounded text-xs bg-green-900/30 text-green-400 border border-green-700 flex items-center gap-1"><Icons.Check className="inline" /> Completada</span>}
                       {tarea.estado === 'en_progreso' && <span className="px-2 py-1 rounded text-xs bg-yellow-900/30 text-yellow-400 border border-yellow-700 flex items-center gap-1"><Icons.Refresh className="inline" /> En Proceso</span>}

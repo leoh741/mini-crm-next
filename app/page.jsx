@@ -194,6 +194,11 @@ function HomePageContent() {
     }
   };
 
+  const capitalizarPrioridad = (prioridad) => {
+    if (!prioridad) return '';
+    return prioridad.charAt(0).toUpperCase() + prioridad.slice(1);
+  };
+
   return (
     <div className="flex flex-col space-y-3" style={{ maxWidth: '100%', overflowX: 'hidden' }}>
       <div className="flex-shrink-0">
@@ -289,7 +294,7 @@ function HomePageContent() {
                       <div className="flex items-center gap-2 flex-wrap mb-1">
                         <p className="font-medium text-sm text-indigo-200 truncate">{tarea.titulo}</p>
                         <span className={`px-2 py-0.5 rounded text-xs border ${getPrioridadColor(tarea.prioridad)}`}>
-                          {tarea.prioridad}
+                          {capitalizarPrioridad(tarea.prioridad)}
                         </span>
                         {tarea.estado === 'en_progreso' && (
                           <span className="px-2 py-0.5 rounded text-xs bg-yellow-900/30 text-yellow-400 border border-yellow-700">
