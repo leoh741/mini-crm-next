@@ -15,6 +15,12 @@ console.log('🔧 Modificando servidor standalone para escuchar en 0.0.0.0...');
 let serverContent = fs.readFileSync(serverPath, 'utf8');
 const originalContent = serverContent;
 
+// Forzar hostname a '0.0.0.0' siempre (sobrescribir cualquier valor)
+serverContent = serverContent.replace(
+  /const hostname = process\.env\.HOSTNAME \|\| ['"][^'"]*['"]/g,
+  "const hostname = '0.0.0.0'"
+);
+
 // Reemplazar [::1] por 0.0.0.0 (IPv6 localhost)
 serverContent = serverContent.replace(/\[::1\]/g, '0.0.0.0');
 
