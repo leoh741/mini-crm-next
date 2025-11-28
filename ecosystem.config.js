@@ -15,7 +15,8 @@ module.exports = {
     cwd: '/var/www/mini-crm-next', // Directorio de trabajo absoluto
     env: {
       NODE_ENV: 'production',
-      PORT: 3000
+      PORT: 3000,
+      HOSTNAME: '0.0.0.0' // Escuchar en todas las interfaces para que Nginx pueda conectarse
     },
     error_file: './logs/err.log',
     out_file: './logs/out.log',
