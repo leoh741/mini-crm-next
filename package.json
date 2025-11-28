@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:log": "next dev 2>&1 | Tee-Object -FilePath server.log",
     "build": "next build && node scripts/fix-server-hostname.js && node scripts/setup-standalone.js",
     "start": "next start",
     "lint": "next lint",

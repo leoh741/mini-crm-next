@@ -237,9 +237,8 @@ function BalancePageContent() {
         categoria: ''
       });
       setMostrarFormularioGasto(false);
-    } else {
-      alert('Error al agregar el gasto');
     }
+    // Error silencioso - no mostrar alert
   };
 
   const handleSubmitIngreso = async (e) => {
@@ -262,9 +261,8 @@ function BalancePageContent() {
         categoria: ''
       });
       setMostrarFormularioIngreso(false);
-    } else {
-      alert('Error al agregar el ingreso');
     }
+    // Error silencioso - no mostrar alert
   };
 
   const handleEliminarGasto = async (gastoId) => {
@@ -341,8 +339,10 @@ function BalancePageContent() {
           <form onSubmit={handleSubmitIngreso} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Descripción *</label>
+                <label htmlFor="ingreso-descripcion" className="block text-sm font-medium mb-2">Descripción *</label>
                 <input
+                  id="ingreso-descripcion"
+                  name="ingreso-descripcion"
                   type="text"
                   value={formIngreso.descripcion}
                   onChange={(e) => setFormIngreso({ ...formIngreso, descripcion: e.target.value })}
@@ -351,8 +351,10 @@ function BalancePageContent() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Monto *</label>
+                <label htmlFor="ingreso-monto" className="block text-sm font-medium mb-2">Monto *</label>
                 <input
+                  id="ingreso-monto"
+                  name="ingreso-monto"
                   type="number"
                   step="0.01"
                   min="0"
@@ -363,8 +365,10 @@ function BalancePageContent() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Fecha</label>
+                <label htmlFor="ingreso-fecha" className="block text-sm font-medium mb-2">Fecha</label>
                 <input
+                  id="ingreso-fecha"
+                  name="ingreso-fecha"
                   type="date"
                   value={formIngreso.fecha}
                   onChange={(e) => setFormIngreso({ ...formIngreso, fecha: e.target.value })}
@@ -372,8 +376,10 @@ function BalancePageContent() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Categoría (opcional)</label>
+                <label htmlFor="ingreso-categoria" className="block text-sm font-medium mb-2">Categoría (opcional)</label>
                 <input
+                  id="ingreso-categoria"
+                  name="ingreso-categoria"
                   type="text"
                   value={formIngreso.categoria}
                   onChange={(e) => setFormIngreso({ ...formIngreso, categoria: e.target.value })}
@@ -408,8 +414,10 @@ function BalancePageContent() {
           <form onSubmit={handleSubmitGasto} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Descripción *</label>
+                <label htmlFor="gasto-descripcion" className="block text-sm font-medium mb-2">Descripción *</label>
                 <input
+                  id="gasto-descripcion"
+                  name="gasto-descripcion"
                   type="text"
                   value={formGasto.descripcion}
                   onChange={(e) => setFormGasto({ ...formGasto, descripcion: e.target.value })}
@@ -418,8 +426,10 @@ function BalancePageContent() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Monto *</label>
+                <label htmlFor="gasto-monto" className="block text-sm font-medium mb-2">Monto *</label>
                 <input
+                  id="gasto-monto"
+                  name="gasto-monto"
                   type="number"
                   step="0.01"
                   min="0"
@@ -430,8 +440,10 @@ function BalancePageContent() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Fecha</label>
+                <label htmlFor="gasto-fecha" className="block text-sm font-medium mb-2">Fecha</label>
                 <input
+                  id="gasto-fecha"
+                  name="gasto-fecha"
                   type="date"
                   value={formGasto.fecha}
                   onChange={(e) => setFormGasto({ ...formGasto, fecha: e.target.value })}
@@ -439,8 +451,10 @@ function BalancePageContent() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Categoría (opcional)</label>
+                <label htmlFor="gasto-categoria" className="block text-sm font-medium mb-2">Categoría (opcional)</label>
                 <input
+                  id="gasto-categoria"
+                  name="gasto-categoria"
                   type="text"
                   value={formGasto.categoria}
                   onChange={(e) => setFormGasto({ ...formGasto, categoria: e.target.value })}
@@ -458,7 +472,7 @@ function BalancePageContent() {
               </button>
               <button
                 type="button"
-                onClick={() => setMostrarFormulario(false)}
+                onClick={() => setMostrarFormularioGasto(false)}
                 className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded text-sm font-medium"
               >
                 Cancelar

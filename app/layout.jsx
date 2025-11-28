@@ -23,7 +23,7 @@ export default function RootLayout({ children }) {
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
         <meta name="theme-color" content="#1c3d82" />
       </head>
-      <body className="bg-slate-900 text-slate-100">
+      <body className="bg-slate-900 text-slate-100" suppressHydrationWarning>
         <Header />
         <main className="pt-20 md:pt-24 pb-20 md:pb-16 px-3 md:p-4 max-w-4xl mx-auto min-h-screen">{children}</main>
         <Footer />
