@@ -7,9 +7,9 @@
 module.exports = {
   apps: [{
     name: 'crm-nextjs',
-    // Usar directamente el servidor standalone (modificado por fix-server-hostname.js)
+    // Usar script wrapper para interceptar y forzar hostname 0.0.0.0
     script: 'node',
-    args: '.next/standalone/server.js',
+    args: 'scripts/start-server.js',
     instances: 1, // Para VPS pequeño, 1 instancia es suficiente
     exec_mode: 'fork',
     cwd: '/var/www/mini-crm-next', // Directorio de trabajo absoluto
