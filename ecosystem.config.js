@@ -20,12 +20,17 @@ module.exports = {
     log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
     merge_logs: true,
     autorestart: true,
-    max_memory_restart: '500M', // Reiniciar si usa más de 500MB
-    min_uptime: '10s', // Tiempo mínimo de ejecución antes de considerar estable
-    max_restarts: 10, // Máximo de reinicios en el período
-    restart_delay: 4000, // Esperar 4 segundos entre reinicios
+    max_memory_restart: '800M', // Aumentar a 800MB para evitar reinicios innecesarios
+    min_uptime: '30s', // Aumentar a 30 segundos para considerar estable
+    max_restarts: 5, // Reducir a 5 reinicios máximo para evitar loops
+    restart_delay: 10000, // Aumentar delay a 10 segundos entre reinicios
+    exp_backoff_restart_delay: 100, // Delay exponencial para reinicios
     watch: false, // Desactivar watch en producción
-    ignore_watch: ['node_modules', '.next', 'logs']
+    ignore_watch: ['node_modules', '.next', 'logs'],
+    // Configuraciones adicionales para estabilidad
+    kill_timeout: 5000, // Tiempo para cerrar limpiamente antes de forzar kill
+    wait_ready: true, // Esperar señal de "ready" antes de considerar iniciado
+    listen_timeout: 10000 // Tiempo máximo para escuchar en el puerto
   }]
 };
 
