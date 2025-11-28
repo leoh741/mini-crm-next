@@ -15,14 +15,15 @@ export async function GET() {
       console.log('[API Clientes] Estado de conexión:', mongoose.connection.readyState);
     }
     
-    // Optimización para servidor VPS local: queries más rápidas con índices
+    // Optimización para servidor VPS: queries más rápidas con índices y límites
     // El índice en createdAt hace el sort más rápido
     // IMPORTANTE: Incluir _id explícitamente para que esté disponible
     const clientes = await Client.find({})
       .select('_id crmId nombre rubro ciudad email montoPago fechaPago pagado pagoUnico pagoMesSiguiente servicios observaciones createdAt updatedAt')
       .sort({ createdAt: -1 })
       .lean() // Usar lean() para obtener objetos planos (más rápido, sin overhead de Mongoose)
-      .maxTimeMS(30000); // Timeout aumentado a 30 segundos para servidor VPS
+      .maxTimeMS(15000); // Timeout optimizado para VPS (15 segundos)
+      // Nota: No agregamos límite aquí porque necesitamos todos los clientes
     
     if (isDevelopment && clientes.length > 0) {
       console.log('[API Clientes] Documentos encontrados:', clientes.length);

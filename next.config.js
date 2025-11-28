@@ -8,6 +8,9 @@ const nextConfig = {
         pathname: '/**',
       },
     ],
+    // Optimizaciones de imágenes
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 60,
   },
 
   // 👇 AGREGAMOS ESTO PARA QUE VERCEL NO BLOQUEE EL BUILD
@@ -19,20 +22,30 @@ const nextConfig = {
   experimental: {
     // Optimizar para servidor tradicional (no serverless)
     serverComponentsExternalPackages: ['mongoose'],
+    // Optimizaciones de rendimiento
+    optimizeCss: true,
+    optimizePackageImports: ['react-icons'],
   },
 
   // Optimizaciones de compilación
   swcMinify: true, // Usar SWC minifier (más rápido que Terser)
+  productionBrowserSourceMaps: false, // Desactivar source maps en producción para mejor rendimiento
   
   // Optimizaciones de compresión
   compress: true, // Habilitar compresión gzip/brotli
   
   // Optimizaciones de caché
   onDemandEntries: {
-    // Mantener páginas en memoria más tiempo
-    maxInactiveAge: 25 * 1000, // 25 segundos
-    pagesBufferLength: 5, // Mantener 5 páginas en buffer
+    // Mantener páginas en memoria más tiempo para VPS
+    maxInactiveAge: 60 * 1000, // 60 segundos (aumentado para VPS)
+    pagesBufferLength: 10, // Mantener más páginas en buffer
   },
+  
+  // Optimizaciones de output
+  output: 'standalone', // Generar build standalone para mejor rendimiento en VPS
+  
+  // Optimizaciones de poweredByHeader
+  poweredByHeader: false, // Ocultar header X-Powered-By por seguridad
 
   // Headers de rendimiento
   async headers() {
@@ -60,6 +73,28 @@ const nextConfig = {
       },
       {
         source: '/api/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, s-maxage=30, stale-while-revalidate=60'
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          },
+        ],
+      },
+      {
+        source: '/api/clientes',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, s-maxage=120, stale-while-revalidate=240'
+          },
+        ],
+      },
+      {
+        source: '/api/pagos',
         headers: [
           {
             key: 'Cache-Control',

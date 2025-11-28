@@ -9,7 +9,7 @@ export async function GET() {
       .select('presupuestoId numero cliente fecha validez subtotal descuento total estado observaciones createdAt updatedAt')
       .sort({ createdAt: -1 })
       .lean()
-      .maxTimeMS(5000);
+      .maxTimeMS(15000); // Timeout optimizado para VPS (15 segundos)
     
     return NextResponse.json({ success: true, data: presupuestos }, {
       headers: {

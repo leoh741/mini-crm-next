@@ -15,30 +15,62 @@ export async function GET(request) {
     let query = {};
     
     if (fecha) {
-      const fechaInicio = new Date(fecha);
-      fechaInicio.setHours(0, 0, 0, 0);
-      const fechaFin = new Date(fecha);
-      fechaFin.setHours(23, 59, 59, 999);
+      // Parsear fecha en formato YYYY-MM-DD y crear rango del día completo
+      // Usar hora local (no UTC) para que coincida con cómo se guardan las fechas
+      const [año, mes, dia] = fecha.split('-').map(Number);
+      
+      // Crear rango amplio para evitar problemas de zona horaria
+      // Las fechas se guardan a las 12:00 (mediodía) en hora local
+      // Inicio: día anterior a las 00:00 (para capturar fechas guardadas a las 12:00 del día anterior en UTC)
+      const fechaInicio = new Date(año, mes - 1, dia - 1, 0, 0, 0, 0);
+      // Fin: día siguiente a las 23:59 (para capturar todas las fechas del día)
+      const fechaFin = new Date(año, mes - 1, dia + 1, 23, 59, 59, 999);
+      
       query.fecha = { $gte: fechaInicio, $lte: fechaFin };
+      
+      // Log temporal para debug
+      console.log('[API Reuniones] Filtro por fecha:', {
+        fechaBuscada: fecha,
+        fechaInicio: fechaInicio.toISOString(),
+        fechaFin: fechaFin.toISOString(),
+        fechaInicioLocal: fechaInicio.toLocaleString('es-AR'),
+        fechaFinLocal: fechaFin.toLocaleString('es-AR'),
+        fechaInicioUTC: fechaInicio.toUTCString(),
+        fechaFinUTC: fechaFin.toUTCString()
+      });
     }
     
     if (completada !== null && completada !== undefined) {
       query.completada = completada === 'true';
     }
     
-    // Para reuniones próximas: no completadas y en las próximas 24 horas
+    // Para reuniones próximas: no completadas, del día actual y próximas 24 horas
     if (proximas === 'true') {
       query.completada = false;
       const ahora = new Date();
+      const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 0, 0, 0, 0); // Inicio del día actual
       const en24Horas = new Date(ahora.getTime() + 24 * 60 * 60 * 1000);
-      query.fecha = { $gte: ahora, $lte: en24Horas };
+      // Incluir desde el inicio del día actual hasta 24 horas desde ahora
+      query.fecha = { $gte: hoy, $lte: en24Horas };
     }
     
     const reuniones = await Meeting.find(query)
       .select('reunionId titulo fecha hora tipo cliente linkMeet observaciones asignados completada createdAt updatedAt')
       .sort({ fecha: 1, hora: 1 })
       .lean()
-      .maxTimeMS(30000);
+      .maxTimeMS(15000); // Timeout optimizado para VPS (15 segundos)
+      // Nota: No agregamos límite aquí porque el filtro ya limita los resultados
+    
+    // Log temporal para debug
+    if (fecha) {
+      console.log('[API Reuniones] Reuniones encontradas:', reuniones.length, reuniones.map(r => ({
+        titulo: r.titulo,
+        fecha: r.fecha,
+        fechaISO: r.fecha?.toISOString?.(),
+        fechaLocal: r.fecha?.toLocaleString?.('es-AR'),
+        completada: r.completada
+      })));
+    }
     
     return NextResponse.json({ success: true, data: reuniones }, {
       headers: {

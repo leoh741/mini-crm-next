@@ -4,6 +4,7 @@
   "start_url": "/",
   "scope": "/",
   "display": "browser",
+  "prefer_related_applications": true,
   "background_color": "#1c3d82",
   "theme_color": "#1c3d82",
   "orientation": "portrait-primary",
@@ -19,14 +20,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/splash/splash-1284x2778.png",
-      "sizes": "1284x2778",
-      "type": "image/png",
-      "form_factor": "narrow"
     }
   ]
 }

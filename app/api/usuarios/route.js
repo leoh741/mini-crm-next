@@ -23,7 +23,7 @@ export async function GET(request) {
       })
       .select('crmId nombre email password rol fechaCreacion')
       .lean()
-      .maxTimeMS(5000); // Timeout adecuado para servidor local
+      .maxTimeMS(10000); // Timeout optimizado para VPS (10 segundos)
       
       // Si no se encuentra con regex, intentar búsqueda exacta (case-insensitive)
       if (!usuario) {
@@ -31,7 +31,7 @@ export async function GET(request) {
         const todosUsuarios = await User.find({})
           .select('crmId nombre email password rol fechaCreacion')
           .lean()
-          .maxTimeMS(5000); // Timeout adecuado para servidor local
+          .maxTimeMS(10000); // Timeout optimizado para VPS (10 segundos)
         usuario = todosUsuarios.find(u => 
           u.email && u.email.trim().toLowerCase() === emailLimpio
         );
@@ -53,7 +53,7 @@ export async function GET(request) {
       .select('crmId nombre email password rol fechaCreacion createdAt')
       .sort({ createdAt: -1 })
       .lean()
-      .maxTimeMS(5000); // Timeout adecuado para servidor local
+      .maxTimeMS(10000); // Timeout optimizado para VPS (10 segundos)
     return NextResponse.json({ success: true, data: usuarios });
   } catch (error) {
     console.error('[API /usuarios] Error completo:', {

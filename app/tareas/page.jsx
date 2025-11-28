@@ -56,13 +56,19 @@ function TareasPageContent() {
       filtradas = filtradas.filter(t => t.estado === filtroEstado);
     }
 
-    // Filtrar por fecha de vencimiento
+    // Filtrar por fecha de vencimiento (comparación exacta de fecha sin hora)
     if (fechaFiltro) {
-      const fechaFiltroDate = new Date(fechaFiltro);
+      // Normalizar la fecha del filtro: crear fecha a mediodía para evitar problemas de zona horaria
+      const [año, mes, dia] = fechaFiltro.split('-').map(Number);
+      const fechaFiltroNormalizada = new Date(año, mes - 1, dia);
+      const fechaFiltroString = fechaFiltroNormalizada.toDateString();
+      
       filtradas = filtradas.filter(t => {
         if (!t.fechaVencimiento) return false;
+        // Normalizar la fecha de vencimiento: crear fecha a mediodía para evitar problemas de zona horaria
         const fechaVenc = new Date(t.fechaVencimiento);
-        return fechaVenc.toDateString() === fechaFiltroDate.toDateString();
+        const fechaVencNormalizada = new Date(fechaVenc.getFullYear(), fechaVenc.getMonth(), fechaVenc.getDate());
+        return fechaVencNormalizada.toDateString() === fechaFiltroString;
       });
     }
 

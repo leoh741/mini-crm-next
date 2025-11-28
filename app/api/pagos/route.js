@@ -19,13 +19,13 @@ export async function GET(request) {
       query.crmClientId = { $in: idsArray };
     }
     
-    // Optimización para servidor local: usar lean() y seleccionar solo campos necesarios
+    // Optimización para VPS: usar lean() y seleccionar solo campos necesarios
     // El índice compuesto { mes: 1, crmClientId: 1 } hace esta query muy rápida
     const pagos = await MonthlyPayment.find(query)
       .select('mes crmClientId pagado serviciosPagados fechaActualizacion createdAt updatedAt')
       .sort({ mes: -1, createdAt: -1 })
       .lean()
-      .maxTimeMS(5000); // Timeout adecuado para servidor local
+      .maxTimeMS(10000); // Timeout optimizado para VPS (10 segundos)
     
     // Convertir Map de serviciosPagados a objeto plano para JSON
     pagos.forEach(pago => {

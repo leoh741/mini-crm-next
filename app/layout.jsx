@@ -5,7 +5,6 @@ import Footer from '../components/Footer';
 export const metadata = {
   title: "Digital Space CRM",
   description: "CRM para gestionar clientes de Digital Space",
-  manifest: "/manifest.json",
   icons: {
     icon: [
       { url: "/icon-192x192.png", sizes: "192x192", type: "image/png" },
@@ -22,7 +21,6 @@ export default function RootLayout({ children }) {
     <html lang="es">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-        <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#1c3d82" />
       </head>
       <body className="bg-slate-900 text-slate-100">

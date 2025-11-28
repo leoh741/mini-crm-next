@@ -15,7 +15,7 @@ export async function GET(request) {
       .select('crmId descripcion monto fecha categoria fechaCreacion createdAt updatedAt')
       .sort({ periodo: -1, fecha: -1 }) // Usar índice compuesto (periodo, fecha)
       .lean()
-      .maxTimeMS(5000); // Timeout adecuado para servidor local
+      .maxTimeMS(10000); // Timeout optimizado para VPS (10 segundos)
     
     return NextResponse.json({ success: true, data: ingresos }, {
       headers: {

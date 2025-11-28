@@ -36,7 +36,8 @@ export async function GET(request) {
       .select('tareaId titulo descripcion fechaVencimiento prioridad estado cliente etiquetas asignados completada fechaCompletada createdAt updatedAt')
       .sort({ prioridad: -1, fechaVencimiento: 1, createdAt: -1 })
       .lean()
-      .maxTimeMS(30000);
+      .maxTimeMS(15000); // Timeout optimizado para VPS (15 segundos)
+      // Nota: No agregamos límite aquí porque los filtros ya limitan los resultados
     
     return NextResponse.json({ success: true, data: tareas }, {
       headers: {

@@ -17,21 +17,79 @@ function HomePageContent() {
 
   useEffect(() => {
     setIsAdmin(esAdmin());
+    // Cargar datos iniciales
     cargarReunionesProximas();
     cargarTareasPendientes();
+    
+    // Optimización: Actualizar cada 2 minutos en lugar de cada minuto para reducir carga
     const interval = setInterval(() => {
       cargarReunionesProximas();
       cargarTareasPendientes();
-    }, 60000); // Actualizar cada minuto
+    }, 120000); // Actualizar cada 2 minutos (reducido de 1 minuto)
+    
     return () => clearInterval(interval);
   }, []);
 
   const cargarReunionesProximas = async () => {
     try {
-      const reuniones = await getReuniones(null, false, true, false);
-      setReunionesProximas(reuniones);
+      // Obtener reuniones del día actual
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      const fechaHoy = hoy.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+      
+      console.log('[Home] Cargando reuniones para:', fechaHoy, 'Fecha local:', hoy.toLocaleDateString('es-AR'));
+      
+      // Obtener reuniones del día actual (sin filtrar por completada en el API)
+      const reunionesHoy = await getReuniones(fechaHoy, null, false, false);
+      console.log('[Home] Reuniones del día obtenidas:', reunionesHoy.length, reunionesHoy);
+      
+      // Obtener reuniones próximas (próximas 24 horas desde ahora, no completadas)
+      const reunionesProximas = await getReuniones(null, false, true, false);
+      console.log('[Home] Reuniones próximas obtenidas:', reunionesProximas.length, reunionesProximas);
+      
+      // Combinar y eliminar duplicados de forma eficiente
+      const todasReuniones = [...reunionesHoy, ...reunionesProximas];
+      const reunionesMap = new Map();
+      
+      todasReuniones.forEach(reunion => {
+        if (reunion.reunionId && !reunionesMap.has(reunion.reunionId)) {
+          // Solo incluir reuniones no completadas
+          if (!reunion.completada) {
+            reunionesMap.set(reunion.reunionId, reunion);
+          } else {
+            console.log('[Home] Reunión completada excluida:', reunion.titulo, reunion.fecha);
+          }
+        }
+      });
+      
+      console.log('[Home] Total reuniones después de filtrar completadas:', reunionesMap.size);
+      
+      // Ordenar por fecha y hora
+      const reunionesOrdenadas = Array.from(reunionesMap.values()).sort((a, b) => {
+        const fechaA = new Date(a.fecha);
+        const fechaB = new Date(b.fecha);
+        if (fechaA.getTime() !== fechaB.getTime()) {
+          return fechaA - fechaB;
+        }
+        // Si es el mismo día, ordenar por hora
+        const horaA = a.hora ? a.hora.split(':').map(Number) : [0, 0];
+        const horaB = b.hora ? b.hora.split(':').map(Number) : [0, 0];
+        const minutosA = horaA[0] * 60 + horaA[1];
+        const minutosB = horaB[0] * 60 + horaB[1];
+        return minutosA - minutosB;
+      });
+      
+      console.log('[Home] Reuniones finales ordenadas:', reunionesOrdenadas.length, reunionesOrdenadas.map(r => ({
+        titulo: r.titulo,
+        fecha: r.fecha,
+        hora: r.hora,
+        completada: r.completada
+      })));
+      
+      setReunionesProximas(reunionesOrdenadas);
     } catch (err) {
       console.error('Error al cargar reuniones próximas:', err);
+      setReunionesProximas([]); // Asegurar que siempre haya un array
     }
   };
 
