@@ -471,17 +471,35 @@ function HomePageContent() {
                 onChange={async (e) => {
                   const archivo = e.target.files[0];
                   if (archivo) {
-                    if (confirm('¿Estás seguro? Esto reemplazará todos los datos actuales.')) {
-                      try {
-                        const resultado = await cargarBackup(archivo);
-                        const mensaje = resultado?.resultados 
-                          ? `Datos importados correctamente:\n- Clientes: ${resultado.resultados.clientes}\n- Pagos: ${resultado.resultados.pagosMensuales}\n- Gastos: ${resultado.resultados.gastos}\n- Ingresos: ${resultado.resultados.ingresos}\n- Presupuestos: ${resultado.resultados.presupuestos || 0}\n- Reuniones: ${resultado.resultados.reuniones || 0}\n- Tareas: ${resultado.resultados.tareas || 0}\n- Usuarios: ${resultado.resultados.usuarios} (${resultado.resultados.usuariosMantenidos || 0} mantenidos)\n\nRecarga la página para ver los cambios.`
-                          : 'Datos importados correctamente. Recarga la página para ver los cambios.';
-                        alert(mensaje);
-                        window.location.reload();
-                      } catch (error) {
-                        alert('Error al importar: ' + error.message);
-                      }
+                    // PROTECCIÓN ADICIONAL: Requerir escribir "CONFIRMAR" para importar
+                    const confirmacionTexto = window.prompt(
+                      '⚠️ ADVERTENCIA CRÍTICA ⚠️\n\n' +
+                      'Esta operación BORRARÁ TODOS los datos existentes y los reemplazará con los datos del backup.\n\n' +
+                      'Para confirmar, escribe exactamente: CONFIRMAR\n\n' +
+                      'Esta acción NO se puede deshacer.'
+                    );
+                    
+                    if (confirmacionTexto !== 'CONFIRMAR') {
+                      alert('Importación cancelada. Debes escribir "CONFIRMAR" exactamente para continuar.');
+                      e.target.value = ''; // Reset input
+                      return;
+                    }
+                    
+                    // Segunda confirmación
+                    if (!confirm('⚠️ ÚLTIMA CONFIRMACIÓN ⚠️\n\nEstás a punto de BORRAR TODOS los datos existentes.\n\n¿Confirmas que quieres proceder?')) {
+                      e.target.value = ''; // Reset input
+                      return;
+                    }
+                    
+                    try {
+                      const resultado = await cargarBackup(archivo);
+                      const mensaje = resultado?.resultados 
+                        ? `Datos importados correctamente:\n- Clientes: ${resultado.resultados.clientes}\n- Pagos: ${resultado.resultados.pagosMensuales}\n- Gastos: ${resultado.resultados.gastos}\n- Ingresos: ${resultado.resultados.ingresos}\n- Presupuestos: ${resultado.resultados.presupuestos || 0}\n- Reuniones: ${resultado.resultados.reuniones || 0}\n- Tareas: ${resultado.resultados.tareas || 0}\n- Usuarios: ${resultado.resultados.usuarios} (${resultado.resultados.usuariosMantenidos || 0} mantenidos)\n\nRecarga la página para ver los cambios.`
+                        : 'Datos importados correctamente. Recarga la página para ver los cambios.';
+                      alert(mensaje);
+                      window.location.reload();
+                    } catch (error) {
+                      alert('Error al importar: ' + error.message);
                     }
                   }
                   e.target.value = ''; // Reset input
