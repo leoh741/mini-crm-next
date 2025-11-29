@@ -1537,11 +1537,62 @@ export async function POST(request) {
     console.log(`[BACKUP IMPORT] [${timestamp}] ${exitoCompleto ? '✅' : '⚠️'} Importación ${exitoCompleto ? 'completada exitosamente' : 'completada con advertencias'}`);
     console.log(`[BACKUP IMPORT] [${timestamp}] Resumen final:`, resultados);
     
+    // PROTECCIÓN CRÍTICA: Verificación final después de un delay adicional
+    // Esperar más tiempo para asegurar que MongoDB persista todos los cambios
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Verificar una última vez que los datos siguen ahí
+    const verificacionFinal = await getDatabaseCounts(connectDB, {
+      Client,
+      MonthlyPayment,
+      Expense,
+      Income,
+      User,
+      Budget,
+      Meeting,
+      Task
+    });
+    
+    // Comparar con countsAfter
+    const perdidaDespues = Object.keys(countsAfter).some(key => {
+      if (typeof countsAfter[key] === 'number' && typeof verificacionFinal[key] === 'number') {
+        return verificacionFinal[key] < countsAfter[key];
+      }
+      return false;
+    });
+    
+    if (perdidaDespues) {
+      const errorMsg = 'ERROR CRÍTICO: Se detectó pérdida de datos DESPUÉS de la importación exitosa';
+      console.error(`[BACKUP IMPORT] [${timestamp}] ❌ ${errorMsg}`);
+      console.error(`[BACKUP IMPORT] [${timestamp}] Estado después de importar:`, countsAfter);
+      console.error(`[BACKUP IMPORT] [${timestamp}] Estado en verificación final:`, verificacionFinal);
+      logOperation('IMPORT_DATA_LOSS_AFTER_SUCCESS', {
+        timestamp,
+        countsAfter,
+        verificacionFinal,
+        database: dbName,
+        backupAutomatico: backupAutomatico ? 'disponible' : 'no disponible'
+      });
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: errorMsg,
+          details: {
+            afterImport: countsAfter,
+            finalCheck: verificacionFinal
+          },
+          backupAutomatico: backupAutomatico
+        },
+        { status: 500 }
+      );
+    }
+    
     // Registrar éxito en auditoría
     logOperation('IMPORT_SUCCESS', {
       timestamp,
       countsBefore,
       countsAfter,
+      verificacionFinal,
       resultados: resultados,
       database: dbName,
       exitoCompleto
