@@ -992,13 +992,21 @@ export async function POST(request) {
               upsert: true, 
               new: true,
               runValidators: true,
-              setDefaultsOnInsert: true
+              setDefaultsOnInsert: true,
+              // PROTECCIÓN: Asegurar que se escriba correctamente
+              writeConcern: { w: 'majority', wtimeout: 5000 }
             }
           );
           
           // Verificar que realmente se guardó
           if (!resultado || !resultado._id) {
             throw new Error('El documento no se guardó correctamente (sin _id)');
+          }
+          
+          // PROTECCIÓN ADICIONAL: Verificar inmediatamente que el documento existe en la BD
+          const verificado = await Client.findById(resultado._id).lean();
+          if (!verificado) {
+            throw new Error(`Cliente insertado pero no encontrado en BD inmediatamente después (crmId: ${cliente.crmId})`);
           }
           
           // Contar como insertado o actualizado según si existía antes
@@ -1038,12 +1046,47 @@ export async function POST(request) {
         }
       }
       
-      // Verificar cuántos clientes hay después de insertar
-      const countDespues = await Client.countDocuments({});
+      // PROTECCIÓN CRÍTICA: Verificar cuántos clientes hay después de insertar
+      // Esperar un momento para que MongoDB persista los cambios
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Verificar múltiples veces para asegurar persistencia
+      let countDespues = await Client.countDocuments({});
+      let intentos = 0;
+      while (countDespues < countAntes + insertados && intentos < 3) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        countDespues = await Client.countDocuments({});
+        intentos++;
+      }
+      
       console.log(`[BACKUP IMPORT] [${timestamp}] Clientes en BD: ${countAntes} antes → ${countDespues} después (esperados: ${countAntes + insertados})`);
+      
+      // PROTECCIÓN: Verificar que la base de datos sea la correcta
+      const dbNameVerificacion = mongoose.connection.db?.databaseName || 'N/A';
+      if (dbNameVerificacion !== dbName) {
+        console.error(`[BACKUP IMPORT] [${timestamp}] ⚠️ ADVERTENCIA: Base de datos cambió durante la inserción: ${dbName} → ${dbNameVerificacion}`);
+        logOperation('IMPORT_DB_CHANGED', {
+          timestamp,
+          dbNameBefore: dbName,
+          dbNameAfter: dbNameVerificacion
+        });
+      }
       
       resultados.clientes = insertados + actualizados;
       clientesInsertadosExitosamente = resultados.clientes > 0;
+      
+      // PROTECCIÓN: Si no se insertaron los clientes esperados, registrar advertencia
+      if (countDespues < countAntes + insertados) {
+        console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ ADVERTENCIA: Se insertaron ${insertados} clientes pero solo ${countDespues - countAntes} están en la BD`);
+        logOperation('IMPORT_CLIENT_COUNT_MISMATCH', {
+          timestamp,
+          insertados,
+          countAntes,
+          countDespues,
+          esperados: countAntes + insertados,
+          database: dbNameVerificacion
+        });
+      }
       
       console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Resumen de importación de clientes:`);
       console.log(`[BACKUP IMPORT] [${timestamp}]   - Insertados: ${insertados}`);
@@ -1390,11 +1433,45 @@ export async function POST(request) {
       }
     }
 
-    // Verificar que los datos se insertaron correctamente
-    const clientesVerificados = await Client.countDocuments();
-    const pagosVerificados = await MonthlyPayment.countDocuments();
+    // PROTECCIÓN CRÍTICA: Esperar un momento para que MongoDB persista todos los cambios
+    await new Promise(resolve => setTimeout(resolve, 500));
     
-    console.log(`[BACKUP IMPORT] [${timestamp}] Verificación final:`);
+    // Verificar que la base de datos sea la correcta ANTES de verificar los datos
+    const dbNameFinal = mongoose.connection.db?.databaseName || 'N/A';
+    if (dbNameFinal !== dbName) {
+      const errorMsg = `ERROR CRÍTICO: La base de datos cambió durante la importación. Inicial: ${dbName}, Final: ${dbNameFinal}`;
+      console.error(`[BACKUP IMPORT] [${timestamp}] ❌ ${errorMsg}`);
+      logOperation('IMPORT_DB_CHANGED_CRITICAL', {
+        timestamp,
+        dbNameBefore: dbName,
+        dbNameAfter: dbNameFinal,
+        countsBefore,
+        backupAutomatico: backupAutomatico ? 'disponible' : 'no disponible'
+      });
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: errorMsg,
+          backupAutomatico: backupAutomatico
+        },
+        { status: 500 }
+      );
+    }
+    
+    // Verificar que los datos se insertaron correctamente
+    // Verificar múltiples veces para asegurar persistencia
+    let clientesVerificados = await Client.countDocuments();
+    let pagosVerificados = await MonthlyPayment.countDocuments();
+    
+    // Si los conteos no coinciden, esperar y verificar de nuevo
+    if (clientesVerificados < resultados.clientes || pagosVerificados < resultados.pagosMensuales) {
+      console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ Conteos iniciales bajos, esperando persistencia...`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      clientesVerificados = await Client.countDocuments();
+      pagosVerificados = await MonthlyPayment.countDocuments();
+    }
+    
+    console.log(`[BACKUP IMPORT] [${timestamp}] Verificación final (Base de datos: ${dbNameFinal}):`);
     console.log(`[BACKUP IMPORT] [${timestamp}] - Clientes en BD: ${clientesVerificados} (esperados: ${resultados.clientes}, preparados: ${clientesPreparados.length})`);
     console.log(`[BACKUP IMPORT] [${timestamp}] - Pagos en BD: ${pagosVerificados} (esperados: ${resultados.pagosMensuales}, preparados: ${pagosPreparados.length})`);
     

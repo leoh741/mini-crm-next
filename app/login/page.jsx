@@ -15,7 +15,7 @@ export default function LoginPage() {
   useEffect(() => {
     // Prevenir scroll en el body
     document.body.style.overflow = 'hidden';
-    document.documentElement.style.overflow = 'hidden';
+    document.documentElement.style.oYverflow = 'hidden';
     
     // Si ya está autenticado, redirigir al inicio
     if (estaAutenticado()) {
