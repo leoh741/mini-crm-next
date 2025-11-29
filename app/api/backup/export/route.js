@@ -8,10 +8,43 @@ import User from '../../../../models/User';
 import Budget from '../../../../models/Budget';
 import Meeting from '../../../../models/Meeting';
 import Task from '../../../../models/Task';
+import { logOperation, logDatabaseState, getDatabaseCounts } from '../../../../lib/auditLogger';
+import mongoose from 'mongoose';
 
 export async function GET() {
+  const timestamp = new Date().toISOString();
+  
   try {
+    // PROTECCIÓN CRÍTICA: Registrar el estado de la base de datos ANTES de exportar
+    logOperation('EXPORT_START', { timestamp });
+    
     await connectDB();
+    
+    // Verificar y registrar el estado de la base de datos antes de exportar
+    const dbName = mongoose.connection.db?.databaseName || 'N/A';
+    logOperation('EXPORT_DB_CONNECTION', { 
+      database: dbName,
+      readyState: mongoose.connection.readyState,
+      timestamp 
+    });
+    
+    // Contar documentos ANTES de exportar (para auditoría)
+    const countsBefore = await getDatabaseCounts(connectDB, {
+      Client,
+      MonthlyPayment,
+      Expense,
+      Income,
+      User,
+      Budget,
+      Meeting,
+      Task
+    });
+    
+    logDatabaseState('BEFORE_EXPORT', countsBefore);
+    
+    // PROTECCIÓN: Verificar que no se esté borrando nada
+    // Este endpoint SOLO debe leer datos, nunca borrarlos
+    console.log('[EXPORT] Estado de la BD antes de exportar:', countsBefore);
 
     // Obtener todos los datos
     const [clientes, pagos, gastos, ingresos, usuarios, presupuestos, reuniones, tareas] = await Promise.all([
@@ -166,12 +199,76 @@ export async function GET() {
       version: '2.2'
     };
 
+    // PROTECCIÓN: Verificar que no se haya borrado nada durante la exportación
+    const countsAfter = await getDatabaseCounts(connectDB, {
+      Client,
+      MonthlyPayment,
+      Expense,
+      Income,
+      User,
+      Budget,
+      Meeting,
+      Task
+    });
+    
+    logDatabaseState('AFTER_EXPORT', countsAfter);
+    
+    // Verificar que los conteos no hayan cambiado (no se debe borrar nada)
+    const hasDataLoss = Object.keys(countsBefore).some(key => {
+      if (typeof countsBefore[key] === 'number' && typeof countsAfter[key] === 'number') {
+        return countsAfter[key] < countsBefore[key];
+      }
+      return false;
+    });
+    
+    if (hasDataLoss) {
+      const errorMsg = 'ERROR CRÍTICO: Se detectó pérdida de datos durante la exportación';
+      console.error('[EXPORT]', errorMsg);
+      console.error('[EXPORT] Antes:', countsBefore);
+      console.error('[EXPORT] Después:', countsAfter);
+      logOperation('EXPORT_DATA_LOSS_DETECTED', {
+        before: countsBefore,
+        after: countsAfter,
+        timestamp
+      });
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: errorMsg,
+          details: { before: countsBefore, after: countsAfter }
+        },
+        { status: 500 }
+      );
+    }
+    
+    logOperation('EXPORT_SUCCESS', {
+      timestamp,
+      counts: countsAfter,
+      dataSize: {
+        clientes: datos.clientes.length,
+        usuarios: datos.usuarios.length,
+        presupuestos: datos.presupuestos.length,
+        reuniones: datos.reuniones.length,
+        tareas: datos.tareas.length
+      }
+    });
+    
     return NextResponse.json({
       success: true,
-      data: datos
+      data: datos,
+      audit: {
+        timestamp,
+        countsBefore,
+        countsAfter
+      }
     });
   } catch (error) {
-    console.error('Error al exportar backup:', error);
+    console.error('[EXPORT] Error al exportar backup:', error);
+    logOperation('EXPORT_ERROR', {
+      error: error.message,
+      stack: error.stack,
+      timestamp
+    });
     return NextResponse.json(
       { success: false, error: error.message || 'Error al exportar los datos' },
       { status: 500 }

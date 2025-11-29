@@ -13,7 +13,8 @@
     "create-user": "node scripts/createUser.js",
     "create-indexes": "node scripts/createIndexes.js",
     "check-db": "node scripts/checkDatabase.js",
-    "check-processes": "node scripts/checkAutoProcesses.js"
+    "check-processes": "node scripts/checkAutoProcesses.js",
+    "check-errors": "node scripts/checkErrors.js"
   },
   "dependencies": {
     "dotenv": "^17.2.3",

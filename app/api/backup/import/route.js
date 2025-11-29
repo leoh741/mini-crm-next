@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectDB from '../../../../lib/mongo';
+import { logDeleteOperation, logOperation, logDatabaseState, getDatabaseCounts } from '../../../../lib/auditLogger';
+import mongoose from 'mongoose';
 import Client from '../../../../models/Client';
 import MonthlyPayment from '../../../../models/MonthlyPayment';
 import Expense from '../../../../models/Expense';
@@ -34,7 +36,28 @@ export async function POST(request) {
     console.log(`[BACKUP IMPORT] [${timestamp}] ==========================================`);
     
     await connectDB();
-    console.log(`[BACKUP IMPORT] [${timestamp}] Conectado a MongoDB`);
+    const dbName = mongoose.connection.db?.databaseName || 'N/A';
+    console.log(`[BACKUP IMPORT] [${timestamp}] Conectado a MongoDB - Base de datos: ${dbName}`);
+    
+    // PROTECCIÓN CRÍTICA: Registrar estado inicial de la base de datos
+    const countsBefore = await getDatabaseCounts(connectDB, {
+      Client,
+      MonthlyPayment,
+      Expense,
+      Income,
+      User,
+      Budget,
+      Meeting,
+      Task
+    });
+    logDatabaseState('BEFORE_IMPORT', countsBefore);
+    logOperation('IMPORT_START', {
+      timestamp,
+      database: dbName,
+      countsBefore,
+      userAgent,
+      referer
+    });
     
     const body = await request.json();
     console.log(`[BACKUP IMPORT] [${timestamp}] Body recibido, keys:`, Object.keys(body));
@@ -754,56 +777,72 @@ export async function POST(request) {
     if (tieneClientes && clientesPreparados.length > 0) {
       const countAntes = documentosExistentes.clientes;
       // LOG DE AUDITORÍA: Registrar antes de borrar
-      console.log(`[AUDIT] [${timestamp}] ⚠️ ELIMINACIÓN DE DATOS - Clientes: ${countAntes} documentos serán eliminados`);
-      console.log(`[AUDIT] [${timestamp}] Razón: Importación de backup con ${clientesPreparados.length} clientes válidos preparados`);
-      console.log(`[AUDIT] [${timestamp}] Usuario/IP: ${userAgent} | Referer: ${referer}`);
-      console.log(`[AUDIT] [${timestamp}] Backup automático disponible antes de borrar`);
+      const dbName = mongoose.connection.db?.databaseName || 'N/A';
+      logDeleteOperation('Client', countAntes, 'Importación de backup', {
+        clientesPreparados: clientesPreparados.length,
+        database: dbName,
+        userAgent,
+        referer,
+        timestamp,
+        backupAutomatico: backupAutomatico ? 'disponible' : 'no disponible'
+      });
       
       await Client.deleteMany({});
       console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Clientes eliminados: ${countAntes} (se importarán ${clientesPreparados.length})`);
-      console.log(`[AUDIT] [${timestamp}] ✅ Eliminación completada: ${countAntes} clientes eliminados`);
     }
     if (tienePagos && pagosPreparados.length > 0) {
       const countAntes = documentosExistentes.pagos;
-      console.log(`[AUDIT] [${timestamp}] ⚠️ ELIMINACIÓN DE DATOS - Pagos: ${countAntes} documentos serán eliminados`);
+      logDeleteOperation('MonthlyPayment', countAntes, 'Importación de backup', {
+        pagosPreparados: pagosPreparados.length,
+        timestamp
+      });
       await MonthlyPayment.deleteMany({});
       console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Pagos eliminados: ${countAntes} (se importarán ${pagosPreparados.length})`);
-      console.log(`[AUDIT] [${timestamp}] ✅ Eliminación completada: ${countAntes} pagos eliminados`);
     }
     if (tieneGastos && gastosPreparados.length > 0) {
       const countAntes = documentosExistentes.gastos;
-      console.log(`[AUDIT] [${timestamp}] ⚠️ ELIMINACIÓN DE DATOS - Gastos: ${countAntes} documentos serán eliminados`);
+      logDeleteOperation('Expense', countAntes, 'Importación de backup', {
+        gastosPreparados: gastosPreparados.length,
+        timestamp
+      });
       await Expense.deleteMany({});
       console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Gastos eliminados: ${countAntes} (se importarán ${gastosPreparados.length})`);
-      console.log(`[AUDIT] [${timestamp}] ✅ Eliminación completada: ${countAntes} gastos eliminados`);
     }
     if (tieneIngresos && ingresosPreparados.length > 0) {
       const countAntes = documentosExistentes.ingresos;
-      console.log(`[AUDIT] [${timestamp}] ⚠️ ELIMINACIÓN DE DATOS - Ingresos: ${countAntes} documentos serán eliminados`);
+      logDeleteOperation('Income', countAntes, 'Importación de backup', {
+        ingresosPreparados: ingresosPreparados.length,
+        timestamp
+      });
       await Income.deleteMany({});
       console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Ingresos eliminados: ${countAntes} (se importarán ${ingresosPreparados.length})`);
-      console.log(`[AUDIT] [${timestamp}] ✅ Eliminación completada: ${countAntes} ingresos eliminados`);
     }
     if (tienePresupuestos && presupuestosPreparados.length > 0) {
       const countAntes = documentosExistentes.presupuestos;
-      console.log(`[AUDIT] [${timestamp}] ⚠️ ELIMINACIÓN DE DATOS - Presupuestos: ${countAntes} documentos serán eliminados`);
+      logDeleteOperation('Budget', countAntes, 'Importación de backup', {
+        presupuestosPreparados: presupuestosPreparados.length,
+        timestamp
+      });
       await Budget.deleteMany({});
       console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Presupuestos eliminados: ${countAntes} (se importarán ${presupuestosPreparados.length})`);
-      console.log(`[AUDIT] [${timestamp}] ✅ Eliminación completada: ${countAntes} presupuestos eliminados`);
     }
     if (tieneReuniones && reunionesPreparadas.length > 0) {
       const countAntes = documentosExistentes.reuniones;
-      console.log(`[AUDIT] [${timestamp}] ⚠️ ELIMINACIÓN DE DATOS - Reuniones: ${countAntes} documentos serán eliminados`);
+      logDeleteOperation('Meeting', countAntes, 'Importación de backup', {
+        reunionesPreparadas: reunionesPreparadas.length,
+        timestamp
+      });
       await Meeting.deleteMany({});
       console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Reuniones eliminadas: ${countAntes} (se importarán ${reunionesPreparadas.length})`);
-      console.log(`[AUDIT] [${timestamp}] ✅ Eliminación completada: ${countAntes} reuniones eliminadas`);
     }
     if (tieneTareas && tareasPreparadas.length > 0) {
       const countAntes = documentosExistentes.tareas;
-      console.log(`[AUDIT] [${timestamp}] ⚠️ ELIMINACIÓN DE DATOS - Tareas: ${countAntes} documentos serán eliminados`);
+      logDeleteOperation('Task', countAntes, 'Importación de backup', {
+        tareasPreparadas: tareasPreparadas.length,
+        timestamp
+      });
       await Task.deleteMany({});
       console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Tareas eliminadas: ${countAntes} (se importarán ${tareasPreparadas.length})`);
-      console.log(`[AUDIT] [${timestamp}] ✅ Eliminación completada: ${countAntes} tareas eliminadas`);
     }
     // NO eliminamos usuarios - se mantienen y se hace merge
 
@@ -1290,6 +1329,19 @@ export async function POST(request) {
       console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ ADVERTENCIA: No hay clientes en la BD después de la importación`);
     }
     
+    // PROTECCIÓN CRÍTICA: Registrar estado final de la base de datos
+    const countsAfter = await getDatabaseCounts(connectDB, {
+      Client,
+      MonthlyPayment,
+      Expense,
+      Income,
+      User,
+      Budget,
+      Meeting,
+      Task
+    });
+    logDatabaseState('AFTER_IMPORT', countsAfter);
+    
     // Verificar si hubo problemas críticos con clientes
     let hayErrorCritico = false;
     let mensajeError = '';
@@ -1331,6 +1383,16 @@ export async function POST(request) {
     console.log(`[BACKUP IMPORT] [${timestamp}] ${exitoCompleto ? '✅' : '⚠️'} Importación ${exitoCompleto ? 'completada exitosamente' : 'completada con advertencias'}`);
     console.log(`[BACKUP IMPORT] [${timestamp}] Resumen final:`, resultados);
     
+    // Registrar éxito en auditoría
+    logOperation('IMPORT_SUCCESS', {
+      timestamp,
+      countsBefore,
+      countsAfter,
+      resultados: resultados,
+      database: dbName,
+      exitoCompleto
+    });
+    
     // Incluir información del backup automático en la respuesta (por si acaso)
     return NextResponse.json({
       success: exitoCompleto,
@@ -1348,6 +1410,15 @@ export async function POST(request) {
     const errorTimestamp = new Date().toISOString();
     console.error(`[BACKUP IMPORT] [${errorTimestamp}] ❌ Error al importar backup:`, error);
     console.error(`[BACKUP IMPORT] [${errorTimestamp}] Stack:`, error.stack);
+    
+    // Registrar error en auditoría
+    logOperation('IMPORT_ERROR', {
+      timestamp: errorTimestamp,
+      error: error.message,
+      stack: error.stack,
+      database: mongoose.connection.db?.databaseName || 'N/A',
+      backupAutomatico: backupAutomatico ? 'disponible' : 'no disponible'
+    });
     
     // Si hay un backup automático, mencionarlo en el error
     let errorMessage = error.message || 'Error al importar los datos';
