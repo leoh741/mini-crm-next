@@ -14,7 +14,8 @@
     "create-indexes": "node scripts/createIndexes.js",
     "check-db": "node scripts/checkDatabase.js",
     "check-processes": "node scripts/checkAutoProcesses.js",
-    "check-errors": "node scripts/checkErrors.js"
+    "check-errors": "node scripts/checkErrors.js",
+    "check-all-dbs": "node scripts/checkDatabaseStatus.js"
   },
   "dependencies": {
     "dotenv": "^17.2.3",

@@ -49,15 +49,42 @@ if (fs.existsSync(auditLogPath)) {
 console.log('\n💾 3. ESTADO DE LA BASE DE DATOS:');
 console.log('-'.repeat(60));
 const mongoose = require('mongoose');
-require('dotenv').config({ path: '.env.local' });
+
+// Intentar cargar .env.local, si no existe, intentar .env
+let envPath = path.join(process.cwd(), '.env.local');
+if (!fs.existsSync(envPath)) {
+  envPath = path.join(process.cwd(), '.env');
+  if (!fs.existsSync(envPath)) {
+    console.log('   ⚠️  No se encontró .env.local ni .env');
+    console.log('   Usando configuración por defecto');
+  }
+}
+
+if (fs.existsSync(envPath)) {
+  require('dotenv').config({ path: envPath });
+} else {
+  require('dotenv').config();
+}
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/mini-crm';
+console.log('   URI de conexión:', MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
 
 async function checkDatabase() {
   try {
     await mongoose.connect(MONGODB_URI);
     console.log('   ✅ Conectado a MongoDB');
-    console.log('   Base de datos:', mongoose.connection.db?.databaseName || 'N/A');
+    const dbName = mongoose.connection.db?.databaseName || 'N/A';
+    console.log('   Base de datos:', dbName);
+    
+    // Verificar si hay otras bases de datos
+    const adminDb = mongoose.connection.db.admin();
+    const dbs = await adminDb.listDatabases();
+    console.log('\n   Bases de datos disponibles:');
+    dbs.databases.forEach(db => {
+      const size = (db.sizeOnDisk / 1024 / 1024).toFixed(2);
+      const marker = db.name === dbName ? ' ← ACTUAL' : '';
+      console.log(`      - ${db.name} (${size} MB)${marker}`);
+    });
     
     const collections = {
       'Client': mongoose.connection.db.collection('clients'),
@@ -71,9 +98,11 @@ async function checkDatabase() {
     };
     
     console.log('\n   Conteo de documentos:');
+    let totalDocs = 0;
     for (const [name, collection] of Object.entries(collections)) {
       try {
         const count = await collection.countDocuments({});
+        totalDocs += count;
         const status = count > 0 ? '✅' : '⚠️';
         console.log(`   ${status} ${name.padEnd(20)}: ${count} documentos`);
         
@@ -90,6 +119,18 @@ async function checkDatabase() {
       } catch (err) {
         console.log(`   ❌ ${name.padEnd(20)}: ERROR - ${err.message}`);
       }
+    }
+    
+    if (totalDocs === 0) {
+      console.log('\n   ⚠️  ADVERTENCIA: La base de datos está completamente vacía');
+      console.log('   Esto puede indicar:');
+      console.log('      1. Los datos se borraron');
+      console.log('      2. Estás conectado a la base de datos incorrecta');
+      console.log('      3. Los datos están en otra base de datos');
+      console.log('\n   Verifica:');
+      console.log('      - La URI de conexión en .env.local');
+      console.log('      - Si hay backups disponibles');
+      console.log('      - Los logs de auditoría para ver qué pasó');
     }
     
     await mongoose.disconnect();
@@ -129,7 +170,13 @@ checkDatabase().then(() => {
   // 5. Verificar variables de entorno
   console.log('\n⚙️  5. CONFIGURACIÓN:');
   console.log('-'.repeat(60));
-  const envPath = path.join(process.cwd(), '.env.local');
+  
+  // Buscar .env.local primero, luego .env
+  let envPath = path.join(process.cwd(), '.env.local');
+  if (!fs.existsSync(envPath)) {
+    envPath = path.join(process.cwd(), '.env');
+  }
+  
   if (fs.existsSync(envPath)) {
     const envContent = fs.readFileSync(envPath, 'utf8');
     const mongoUri = envContent.split('\n').find(line => line.startsWith('MONGODB_URI='));
@@ -147,7 +194,15 @@ checkDatabase().then(() => {
       console.log('   ⚠️  MONGODB_URI no encontrada en .env.local');
     }
   } else {
-    console.log('   ⚠️  Archivo .env.local no encontrado');
+    console.log('   ⚠️  Archivo .env.local o .env no encontrado');
+    console.log('   Buscando en:', process.cwd());
+    console.log('   Archivos .env encontrados:');
+    const files = fs.readdirSync(process.cwd()).filter(f => f.includes('.env'));
+    if (files.length > 0) {
+      files.forEach(f => console.log(`      - ${f}`));
+    } else {
+      console.log('      (ninguno)');
+    }
   }
   
   // 6. Resumen

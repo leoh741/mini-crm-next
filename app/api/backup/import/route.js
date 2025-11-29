@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import connectDB from '../../../../lib/mongo';
 import { logDeleteOperation, logOperation, logDatabaseState, getDatabaseCounts } from '../../../../lib/auditLogger';
 import mongoose from 'mongoose';
+import fs from 'fs';
+import path from 'path';
 import Client from '../../../../models/Client';
 import MonthlyPayment from '../../../../models/MonthlyPayment';
 import Expense from '../../../../models/Expense';
@@ -12,9 +14,30 @@ import Meeting from '../../../../models/Meeting';
 import Task from '../../../../models/Task';
 
 export async function POST(request) {
+  // PROTECCIÓN CRÍTICA: Verificar si existe archivo de bloqueo
+  try {
+    const lockFile = path.join(process.cwd(), 'app', 'api', 'backup', 'import', 'route.js.lock');
+    
+    if (fs.existsSync(lockFile)) {
+      const timestamp = new Date().toISOString();
+      console.error(`[BACKUP IMPORT] [${timestamp}] 🚫 BLOQUEO ACTIVO: El endpoint de importación está deshabilitado por archivo de bloqueo`);
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'El endpoint de importación está temporalmente deshabilitado por seguridad. Contacta al administrador.',
+          bloqueado: true
+        },
+        { status: 503 }
+      );
+    }
+  } catch (lockError) {
+    // Si hay error al verificar el bloqueo, continuar (no es crítico)
+    console.warn('[BACKUP IMPORT] No se pudo verificar archivo de bloqueo:', lockError.message);
+  }
+
   // Variable para backup automático (disponible en todo el scope)
   let backupAutomatico = null;
-  
+
   try {
     // Logging detallado con timestamp
     const timestamp = new Date().toISOString();
@@ -95,8 +118,30 @@ export async function POST(request) {
     const tokenSeguridad = body.tokenSeguridad;
     if (!tokenSeguridad || typeof tokenSeguridad !== 'string' || tokenSeguridad.length < 20) {
       console.error(`[BACKUP IMPORT] [${timestamp}] Error: Falta token de seguridad válido`);
+      logOperation('IMPORT_BLOCKED_NO_TOKEN', {
+        timestamp,
+        userAgent,
+        referer,
+        ip
+      });
       return NextResponse.json(
         { success: false, error: 'Se requiere un token de seguridad válido para importar. Este token se genera automáticamente en el frontend.' },
+        { status: 400 }
+      );
+    }
+    
+    // PROTECCIÓN ADICIONAL: Verificar que el token tenga el formato correcto
+    if (!tokenSeguridad.startsWith('import-') && !tokenSeguridad.startsWith('import-retry-')) {
+      console.error(`[BACKUP IMPORT] [${timestamp}] Error: Token de seguridad con formato inválido`);
+      logOperation('IMPORT_BLOCKED_INVALID_TOKEN', {
+        timestamp,
+        tokenPrefix: tokenSeguridad.substring(0, 20),
+        userAgent,
+        referer,
+        ip
+      });
+      return NextResponse.json(
+        { success: false, error: 'Token de seguridad inválido. El token debe generarse desde el frontend.' },
         { status: 400 }
       );
     }
@@ -771,6 +816,38 @@ export async function POST(request) {
     }
     
     console.log(`[BACKUP IMPORT] [${timestamp}] Procediendo a limpiar colecciones y importar datos...`);
+    
+    // PROTECCIÓN FINAL: Verificar una última vez que tenemos datos válidos antes de borrar
+    const totalDatosValidos = 
+      (tieneClientes ? clientesPreparados.length : 0) +
+      (tienePagos ? pagosPreparados.length : 0) +
+      (tieneGastos ? gastosPreparados.length : 0) +
+      (tieneIngresos ? ingresosPreparados.length : 0) +
+      (tienePresupuestos ? presupuestosPreparados.length : 0) +
+      (tieneReuniones ? reunionesPreparadas.length : 0) +
+      (tieneTareas ? tareasPreparadas.length : 0);
+    
+    if (totalDatosValidos === 0) {
+      const errorMsg = 'ERROR CRÍTICO: No hay datos válidos para importar. Se canceló la operación para prevenir borrado sin datos.';
+      console.error(`[BACKUP IMPORT] [${timestamp}] ❌ ${errorMsg}`);
+      logOperation('IMPORT_BLOCKED_NO_DATA', {
+        timestamp,
+        totalDatosValidos,
+        userAgent,
+        referer,
+        ip,
+        countsBefore
+      });
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: errorMsg,
+          countsBefore,
+          backupAutomatico: backupAutomatico
+        },
+        { status: 400 }
+      );
+    }
     
     // SOLO AHORA borrar colecciones existentes (después de crear backup y validar todo)
     // IMPORTANTE: Solo borramos si tenemos datos válidos preparados para insertar

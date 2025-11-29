@@ -1,0 +1,3 @@
+// ARCHIVO DE BLOQUEO - Este archivo previene ejecuciones accidentales
+// Si este archivo existe, el endpoint de importación estará deshabilitado
+// Para habilitar: eliminar este archivo
