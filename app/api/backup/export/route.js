@@ -45,18 +45,75 @@ export async function GET() {
     // PROTECCIÓN: Verificar que no se esté borrando nada
     // Este endpoint SOLO debe leer datos, nunca borrarlos
     console.log('[EXPORT] Estado de la BD antes de exportar:', countsBefore);
+    
+    // PROTECCIÓN CRÍTICA: Verificar que hay datos antes de exportar
+    const totalDocumentos = Object.values(countsBefore).reduce((sum, count) => {
+      return sum + (typeof count === 'number' ? count : 0);
+    }, 0);
+    
+    if (totalDocumentos === 0) {
+      const warningMsg = 'ADVERTENCIA: La base de datos está vacía antes de exportar';
+      console.warn('[EXPORT]', warningMsg);
+      logOperation('EXPORT_WARNING_EMPTY_DB', {
+        timestamp,
+        countsBefore,
+        database: dbName
+      });
+      // Continuar de todas formas para que el usuario pueda exportar un backup vacío si es necesario
+    }
 
-    // Obtener todos los datos
+    // Obtener todos los datos - SOLO LECTURA, NUNCA ESCRITURA O BORRADO
+    // IMPORTANTE: Estas operaciones SOLO leen datos, no los modifican
     const [clientes, pagos, gastos, ingresos, usuarios, presupuestos, reuniones, tareas] = await Promise.all([
-      Client.find({}).lean(),
-      MonthlyPayment.find({}).lean(),
-      Expense.find({}).lean(),
-      Income.find({}).lean(),
-      User.find({}).lean(),
-      Budget.find({}).lean(),
-      Meeting.find({}).lean(),
-      Task.find({}).lean()
+      Client.find({}).lean().maxTimeMS(30000), // Timeout de 30 segundos
+      MonthlyPayment.find({}).lean().maxTimeMS(30000),
+      Expense.find({}).lean().maxTimeMS(30000),
+      Income.find({}).lean().maxTimeMS(30000),
+      User.find({}).lean().maxTimeMS(30000),
+      Budget.find({}).lean().maxTimeMS(30000),
+      Meeting.find({}).lean().maxTimeMS(30000),
+      Task.find({}).lean().maxTimeMS(30000)
     ]);
+    
+    // PROTECCIÓN: Verificar inmediatamente después de leer que no se haya borrado nada
+    const countsAfterRead = await getDatabaseCounts(connectDB, {
+      Client,
+      MonthlyPayment,
+      Expense,
+      Income,
+      User,
+      Budget,
+      Meeting,
+      Task
+    });
+    
+    const dataLossAfterRead = Object.keys(countsBefore).some(key => {
+      if (typeof countsBefore[key] === 'number' && typeof countsAfterRead[key] === 'number') {
+        return countsAfterRead[key] < countsBefore[key];
+      }
+      return false;
+    });
+    
+    if (dataLossAfterRead) {
+      const errorMsg = 'ERROR CRÍTICO: Se detectó pérdida de datos DESPUÉS de leer (durante la exportación)';
+      console.error('[EXPORT]', errorMsg);
+      console.error('[EXPORT] Antes de leer:', countsBefore);
+      console.error('[EXPORT] Después de leer:', countsAfterRead);
+      logOperation('EXPORT_DATA_LOSS_AFTER_READ', {
+        before: countsBefore,
+        after: countsAfterRead,
+        timestamp,
+        database: dbName
+      });
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: errorMsg,
+          details: { before: countsBefore, after: countsAfterRead }
+        },
+        { status: 500 }
+      );
+    }
 
     // Convertir clientes al formato esperado
     const clientesFormateados = clientes.map(cliente => ({
@@ -200,6 +257,48 @@ export async function GET() {
     };
 
     // PROTECCIÓN: Verificar que no se haya borrado nada durante la exportación
+    // Verificar ANTES de formatear los datos
+    const countsAfterFormat = await getDatabaseCounts(connectDB, {
+      Client,
+      MonthlyPayment,
+      Expense,
+      Income,
+      User,
+      Budget,
+      Meeting,
+      Task
+    });
+    
+    // Verificar que los conteos no hayan cambiado después de formatear
+    const hasDataLossAfterFormat = Object.keys(countsBefore).some(key => {
+      if (typeof countsBefore[key] === 'number' && typeof countsAfterFormat[key] === 'number') {
+        return countsAfterFormat[key] < countsBefore[key];
+      }
+      return false;
+    });
+    
+    if (hasDataLossAfterFormat) {
+      const errorMsg = 'ERROR CRÍTICO: Se detectó pérdida de datos después de formatear datos';
+      console.error('[EXPORT]', errorMsg);
+      console.error('[EXPORT] Antes:', countsBefore);
+      console.error('[EXPORT] Después de formatear:', countsAfterFormat);
+      logOperation('EXPORT_DATA_LOSS_AFTER_FORMAT', {
+        before: countsBefore,
+        after: countsAfterFormat,
+        timestamp,
+        database: dbName
+      });
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: errorMsg,
+          details: { before: countsBefore, after: countsAfterFormat }
+        },
+        { status: 500 }
+      );
+    }
+    
+    // Verificación final ANTES de devolver la respuesta
     const countsAfter = await getDatabaseCounts(connectDB, {
       Client,
       MonthlyPayment,
@@ -222,20 +321,28 @@ export async function GET() {
     });
     
     if (hasDataLoss) {
-      const errorMsg = 'ERROR CRÍTICO: Se detectó pérdida de datos durante la exportación';
+      const errorMsg = 'ERROR CRÍTICO: Se detectó pérdida de datos durante la exportación (verificación final)';
       console.error('[EXPORT]', errorMsg);
       console.error('[EXPORT] Antes:', countsBefore);
       console.error('[EXPORT] Después:', countsAfter);
       logOperation('EXPORT_DATA_LOSS_DETECTED', {
         before: countsBefore,
         after: countsAfter,
-        timestamp
+        timestamp,
+        database: dbName,
+        countsAfterRead,
+        countsAfterFormat
       });
       return NextResponse.json(
         { 
           success: false, 
           error: errorMsg,
-          details: { before: countsBefore, after: countsAfter }
+          details: { 
+            before: countsBefore, 
+            after: countsAfter,
+            afterRead: countsAfterRead,
+            afterFormat: countsAfterFormat
+          }
         },
         { status: 500 }
       );
