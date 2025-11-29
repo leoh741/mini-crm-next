@@ -14,6 +14,7 @@ function HomePageContent() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [reunionesProximas, setReunionesProximas] = useState([]);
   const [tareasPendientes, setTareasPendientes] = useState([]);
+  const [mostrarInputImportar, setMostrarInputImportar] = useState(false);
 
   useEffect(() => {
     setIsAdmin(esAdmin());
@@ -463,86 +464,85 @@ function HomePageContent() {
               </span>
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                // PROTECCIÓN MÁXIMA: Requerir triple confirmación antes de mostrar el input
-                const confirmacion1 = window.prompt(
-                  '⚠️⚠️⚠️ ADVERTENCIA MÁXIMA ⚠️⚠️⚠️\n\n' +
-                  'Esta operación BORRARÁ PERMANENTEMENTE TODOS los datos existentes.\n\n' +
-                  'Esto incluye:\n' +
-                  '- Todos los clientes\n' +
-                  '- Todos los pagos\n' +
-                  '- Todos los gastos e ingresos\n' +
-                  '- Todos los presupuestos\n' +
-                  '- Todas las reuniones\n' +
-                  '- Todas las tareas\n\n' +
-                  'Para continuar, escribe exactamente: BORRAR TODO\n\n' +
-                  'Esta acción NO se puede deshacer.'
-                );
-                
-                if (confirmacion1 !== 'BORRAR TODO') {
-                  alert('Operación cancelada. Debes escribir exactamente "BORRAR TODO" para continuar.');
-                  return;
-                }
-                
-                const confirmacion2 = window.prompt(
-                  '⚠️ SEGUNDA CONFIRMACIÓN ⚠️\n\n' +
-                  'Estás a punto de ELIMINAR PERMANENTEMENTE todos los datos.\n\n' +
-                  'Escribe exactamente: CONFIRMO BORRAR'
-                );
-                
-                if (confirmacion2 !== 'CONFIRMO BORRAR') {
-                  alert('Operación cancelada. Debes escribir exactamente "CONFIRMO BORRAR" para continuar.');
-                  return;
-                }
-                
-                const confirmacion3 = window.confirm(
-                  '⚠️ ÚLTIMA CONFIRMACIÓN ⚠️\n\n' +
-                  'Esta es tu última oportunidad para cancelar.\n\n' +
-                  '¿Estás ABSOLUTAMENTE SEGURO de que quieres BORRAR TODOS los datos?\n\n' +
-                  'Esta acción es IRREVERSIBLE.'
-                );
-                
-                if (!confirmacion3) {
-                  alert('Operación cancelada.');
-                  return;
-                }
-                
-                // Solo después de las 3 confirmaciones, crear y activar el input
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = '.json';
-                input.style.display = 'none';
-                
-                input.onchange = async (e) => {
-                  const archivo = e.target.files[0];
-                  if (archivo) {
-                    try {
-                      const resultado = await cargarBackup(archivo);
-                      const mensaje = resultado?.resultados 
-                        ? `Datos importados correctamente:\n- Clientes: ${resultado.resultados.clientes}\n- Pagos: ${resultado.resultados.pagosMensuales}\n- Gastos: ${resultado.resultados.gastos}\n- Ingresos: ${resultado.resultados.ingresos}\n- Presupuestos: ${resultado.resultados.presupuestos || 0}\n- Reuniones: ${resultado.resultados.reuniones || 0}\n- Tareas: ${resultado.resultados.tareas || 0}\n- Usuarios: ${resultado.resultados.usuarios} (${resultado.resultados.usuariosMantenidos || 0} mantenidos)\n\nRecarga la página para ver los cambios.`
-                        : 'Datos importados correctamente. Recarga la página para ver los cambios.';
-                      alert(mensaje);
-                      window.location.reload();
-                    } catch (error) {
-                      alert('Error al importar: ' + error.message);
-                    }
-                  }
-                };
-                
-                document.body.appendChild(input);
-                input.click();
-                document.body.removeChild(input);
-              }}
-              className="group relative flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-indigo-500/30 overflow-hidden"
-            >
+            <label className="group relative flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-indigo-500/30 cursor-pointer overflow-hidden">
               <span className="relative z-10 flex items-center justify-center gap-1.5">
                 <Icons.Upload className="text-sm" />
                 <span>Importar</span>
               </span>
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-            </button>
+              <input
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={async (e) => {
+                  const archivo = e.target.files[0];
+                  if (!archivo) {
+                    e.target.value = '';
+                    return;
+                  }
+                  
+                  // PROTECCIÓN MÁXIMA: Requerir triple confirmación antes de importar
+                  const confirmacion1 = window.prompt(
+                    '⚠️⚠️⚠️ ADVERTENCIA MÁXIMA ⚠️⚠️⚠️\n\n' +
+                    'Esta operación BORRARÁ PERMANENTEMENTE TODOS los datos existentes.\n\n' +
+                    'Esto incluye:\n' +
+                    '- Todos los clientes\n' +
+                    '- Todos los pagos\n' +
+                    '- Todos los gastos e ingresos\n' +
+                    '- Todos los presupuestos\n' +
+                    '- Todas las reuniones\n' +
+                    '- Todas las tareas\n\n' +
+                    'Para continuar, escribe exactamente: BORRAR TODO\n\n' +
+                    'Esta acción NO se puede deshacer.'
+                  );
+                  
+                  if (confirmacion1 !== 'BORRAR TODO') {
+                    alert('Operación cancelada. Debes escribir exactamente "BORRAR TODO" para continuar.');
+                    e.target.value = '';
+                    return;
+                  }
+                  
+                  const confirmacion2 = window.prompt(
+                    '⚠️ SEGUNDA CONFIRMACIÓN ⚠️\n\n' +
+                    'Estás a punto de ELIMINAR PERMANENTEMENTE todos los datos.\n\n' +
+                    'Escribe exactamente: CONFIRMO BORRAR'
+                  );
+                  
+                  if (confirmacion2 !== 'CONFIRMO BORRAR') {
+                    alert('Operación cancelada. Debes escribir exactamente "CONFIRMO BORRAR" para continuar.');
+                    e.target.value = '';
+                    return;
+                  }
+                  
+                  const confirmacion3 = window.confirm(
+                    '⚠️ ÚLTIMA CONFIRMACIÓN ⚠️\n\n' +
+                    'Esta es tu última oportunidad para cancelar.\n\n' +
+                    '¿Estás ABSOLUTAMENTE SEGURO de que quieres BORRAR TODOS los datos?\n\n' +
+                    'Esta acción es IRREVERSIBLE.'
+                  );
+                  
+                  if (!confirmacion3) {
+                    alert('Operación cancelada.');
+                    e.target.value = '';
+                    return;
+                  }
+                  
+                  // Solo después de las 3 confirmaciones, proceder con la importación
+                  try {
+                    const resultado = await cargarBackup(archivo);
+                    const mensaje = resultado?.resultados 
+                      ? `Datos importados correctamente:\n- Clientes: ${resultado.resultados.clientes}\n- Pagos: ${resultado.resultados.pagosMensuales}\n- Gastos: ${resultado.resultados.gastos}\n- Ingresos: ${resultado.resultados.ingresos}\n- Presupuestos: ${resultado.resultados.presupuestos || 0}\n- Reuniones: ${resultado.resultados.reuniones || 0}\n- Tareas: ${resultado.resultados.tareas || 0}\n- Usuarios: ${resultado.resultados.usuarios} (${resultado.resultados.usuariosMantenidos || 0} mantenidos)\n\nRecarga la página para ver los cambios.`
+                      : 'Datos importados correctamente. Recarga la página para ver los cambios.';
+                    alert(mensaje);
+                    window.location.reload();
+                  } catch (error) {
+                    alert('Error al importar: ' + error.message);
+                  } finally {
+                    e.target.value = '';
+                  }
+                }}
+              />
+            </label>
           </div>
         </div>
       </div>
