@@ -66,6 +66,17 @@ export async function POST(request) {
         { status: 400 }
       );
     }
+    
+    // PROTECCIÓN ADICIONAL: Requerir token de seguridad único por sesión
+    // Esto previene ejecuciones accidentales o maliciosas
+    const tokenSeguridad = body.tokenSeguridad;
+    if (!tokenSeguridad || typeof tokenSeguridad !== 'string' || tokenSeguridad.length < 20) {
+      console.error(`[BACKUP IMPORT] [${timestamp}] Error: Falta token de seguridad válido`);
+      return NextResponse.json(
+        { success: false, error: 'Se requiere un token de seguridad válido para importar. Este token se genera automáticamente en el frontend.' },
+        { status: 400 }
+      );
+    }
 
     // Parsear los datos (pueden venir como strings JSON o como objetos)
     // IMPORTANTE: Manejar doble serialización (cuando JSON.stringify escapa strings JSON)

@@ -463,39 +463,61 @@ function HomePageContent() {
               </span>
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
             </button>
-            <label className="group relative flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-indigo-500/30 cursor-pointer overflow-hidden">
-              <span className="relative z-10 flex items-center justify-center gap-1.5">
-                <Icons.Upload className="text-sm" />
-                <span>Importar</span>
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-              <input
-                type="file"
-                accept=".json"
-                className="hidden"
-                onChange={async (e) => {
+            <button
+              type="button"
+              onClick={() => {
+                // PROTECCIÓN MÁXIMA: Requerir triple confirmación antes de mostrar el input
+                const confirmacion1 = window.prompt(
+                  '⚠️⚠️⚠️ ADVERTENCIA MÁXIMA ⚠️⚠️⚠️\n\n' +
+                  'Esta operación BORRARÁ PERMANENTEMENTE TODOS los datos existentes.\n\n' +
+                  'Esto incluye:\n' +
+                  '- Todos los clientes\n' +
+                  '- Todos los pagos\n' +
+                  '- Todos los gastos e ingresos\n' +
+                  '- Todos los presupuestos\n' +
+                  '- Todas las reuniones\n' +
+                  '- Todas las tareas\n\n' +
+                  'Para continuar, escribe exactamente: BORRAR TODO\n\n' +
+                  'Esta acción NO se puede deshacer.'
+                );
+                
+                if (confirmacion1 !== 'BORRAR TODO') {
+                  alert('Operación cancelada. Debes escribir exactamente "BORRAR TODO" para continuar.');
+                  return;
+                }
+                
+                const confirmacion2 = window.prompt(
+                  '⚠️ SEGUNDA CONFIRMACIÓN ⚠️\n\n' +
+                  'Estás a punto de ELIMINAR PERMANENTEMENTE todos los datos.\n\n' +
+                  'Escribe exactamente: CONFIRMO BORRAR'
+                );
+                
+                if (confirmacion2 !== 'CONFIRMO BORRAR') {
+                  alert('Operación cancelada. Debes escribir exactamente "CONFIRMO BORRAR" para continuar.');
+                  return;
+                }
+                
+                const confirmacion3 = window.confirm(
+                  '⚠️ ÚLTIMA CONFIRMACIÓN ⚠️\n\n' +
+                  'Esta es tu última oportunidad para cancelar.\n\n' +
+                  '¿Estás ABSOLUTAMENTE SEGURO de que quieres BORRAR TODOS los datos?\n\n' +
+                  'Esta acción es IRREVERSIBLE.'
+                );
+                
+                if (!confirmacion3) {
+                  alert('Operación cancelada.');
+                  return;
+                }
+                
+                // Solo después de las 3 confirmaciones, crear y activar el input
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.style.display = 'none';
+                
+                input.onchange = async (e) => {
                   const archivo = e.target.files[0];
                   if (archivo) {
-                    // PROTECCIÓN ADICIONAL: Requerir escribir "CONFIRMAR" para importar
-                    const confirmacionTexto = window.prompt(
-                      '⚠️ ADVERTENCIA CRÍTICA ⚠️\n\n' +
-                      'Esta operación BORRARÁ TODOS los datos existentes y los reemplazará con los datos del backup.\n\n' +
-                      'Para confirmar, escribe exactamente: CONFIRMAR\n\n' +
-                      'Esta acción NO se puede deshacer.'
-                    );
-                    
-                    if (confirmacionTexto !== 'CONFIRMAR') {
-                      alert('Importación cancelada. Debes escribir "CONFIRMAR" exactamente para continuar.');
-                      e.target.value = ''; // Reset input
-                      return;
-                    }
-                    
-                    // Segunda confirmación
-                    if (!confirm('⚠️ ÚLTIMA CONFIRMACIÓN ⚠️\n\nEstás a punto de BORRAR TODOS los datos existentes.\n\n¿Confirmas que quieres proceder?')) {
-                      e.target.value = ''; // Reset input
-                      return;
-                    }
-                    
                     try {
                       const resultado = await cargarBackup(archivo);
                       const mensaje = resultado?.resultados 
@@ -507,10 +529,20 @@ function HomePageContent() {
                       alert('Error al importar: ' + error.message);
                     }
                   }
-                  e.target.value = ''; // Reset input
-                }}
-              />
-            </label>
+                };
+                
+                document.body.appendChild(input);
+                input.click();
+                document.body.removeChild(input);
+              }}
+              className="group relative flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-indigo-500/30 overflow-hidden"
+            >
+              <span className="relative z-10 flex items-center justify-center gap-1.5">
+                <Icons.Upload className="text-sm" />
+                <span>Importar</span>
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+            </button>
           </div>
         </div>
       </div>
