@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import connectDB from '../../../../lib/mongo';
+import connectDB, { isLocalDevConnectingToRemote } from '../../../../lib/mongo';
 import { logDeleteOperation, logOperation, logDatabaseState, getDatabaseCounts } from '../../../../lib/auditLogger';
 import mongoose from 'mongoose';
 import fs from 'fs';
@@ -14,6 +14,28 @@ import Meeting from '../../../../models/Meeting';
 import Task from '../../../../models/Task';
 
 export async function POST(request) {
+  // PROTECCIÓN CRÍTICA: Bloquear importaciones desde desarrollo local si se conecta a base remota
+  if (isLocalDevConnectingToRemote()) {
+    const timestamp = new Date().toISOString();
+    console.error(`[BACKUP IMPORT] [${timestamp}] 🚫 BLOQUEO DE SEGURIDAD: Intento de importación desde desarrollo local a base de datos remota`);
+    console.error(`[BACKUP IMPORT] [${timestamp}] Esta operación está BLOQUEADA para prevenir borrado accidental de datos del VPS`);
+    
+    logOperation('IMPORT_BLOCKED_LOCAL_DEV', {
+      timestamp,
+      reason: 'Desarrollo local conectando a base de datos remota',
+      blocked: true
+    });
+    
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'BLOQUEO DE SEGURIDAD: No se pueden importar backups desde desarrollo local cuando se conecta a una base de datos remota (VPS). Esto previene borrados accidentales de datos de producción. Para importar, ejecuta la aplicación en el VPS o configura una base de datos local para desarrollo.',
+        bloqueado: true,
+        razon: 'desarrollo_local_a_remoto'
+      },
+      { status: 403 }
+    );
+  }
   // PROTECCIÓN CRÍTICA: Verificar si existe archivo de bloqueo
   try {
     const lockFile = path.join(process.cwd(), 'app', 'api', 'backup', 'import', 'route.js.lock');
