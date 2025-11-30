@@ -44,14 +44,15 @@ export async function GET(request) {
       query.completada = completada === 'true';
     }
     
-    // Para reuniones próximas: no completadas, del día actual y próximas 24 horas
+    // Para reuniones próximas: no completadas, desde hoy hasta 30 días en el futuro
     if (proximas === 'true') {
       query.completada = false;
       const ahora = new Date();
       const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 0, 0, 0, 0); // Inicio del día actual
-      const en24Horas = new Date(ahora.getTime() + 24 * 60 * 60 * 1000);
-      // Incluir desde el inicio del día actual hasta 24 horas desde ahora
-      query.fecha = { $gte: hoy, $lte: en24Horas };
+      // Calcular fin de día dentro de 30 días para incluir todas las reuniones de ese día
+      const fechaLimite = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + 30, 23, 59, 59, 999);
+      // Incluir desde el inicio del día actual hasta el final del día en 30 días
+      query.fecha = { $gte: hoy, $lte: fechaLimite };
     }
     
     const reuniones = await Meeting.find(query)

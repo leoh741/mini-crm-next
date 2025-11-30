@@ -33,40 +33,24 @@ function HomePageContent() {
 
   const cargarReunionesProximas = async () => {
     try {
-      // Obtener reuniones del día actual
-      const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);
-      const fechaHoy = hoy.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+      // Obtener reuniones próximas (desde hoy hasta 30 días en el futuro, no completadas)
+      // La API ya filtra por fecha y estado completada
+      const reuniones = await getReuniones(null, false, true, false);
+      console.log('[Home] Reuniones próximas obtenidas:', reuniones.length, reuniones);
       
-      console.log('[Home] Cargando reuniones para:', fechaHoy, 'Fecha local:', hoy.toLocaleDateString('es-AR'));
-      
-      // Obtener reuniones del día actual (sin filtrar por completada en el API)
-      const reunionesHoy = await getReuniones(fechaHoy, null, false, false);
-      console.log('[Home] Reuniones del día obtenidas:', reunionesHoy.length, reunionesHoy);
-      
-      // Obtener reuniones próximas (próximas 24 horas desde ahora, no completadas)
-      const reunionesProximas = await getReuniones(null, false, true, false);
-      console.log('[Home] Reuniones próximas obtenidas:', reunionesProximas.length, reunionesProximas);
-      
-      // Combinar y eliminar duplicados de forma eficiente
-      const todasReuniones = [...reunionesHoy, ...reunionesProximas];
-      const reunionesMap = new Map();
-      
-      todasReuniones.forEach(reunion => {
-        if (reunion.reunionId && !reunionesMap.has(reunion.reunionId)) {
-          // Solo incluir reuniones no completadas
-          if (!reunion.completada) {
-            reunionesMap.set(reunion.reunionId, reunion);
-          } else {
-            console.log('[Home] Reunión completada excluida:', reunion.titulo, reunion.fecha);
-          }
+      // Filtrar solo reuniones no completadas (doble verificación por seguridad)
+      const reunionesFiltradas = reuniones.filter(reunion => {
+        if (reunion.completada) {
+          console.log('[Home] Reunión completada excluida:', reunion.titulo, reunion.fecha);
+          return false;
         }
+        return true;
       });
       
-      console.log('[Home] Total reuniones después de filtrar completadas:', reunionesMap.size);
+      console.log('[Home] Total reuniones después de filtrar completadas:', reunionesFiltradas.length);
       
       // Ordenar por fecha y hora
-      const reunionesOrdenadas = Array.from(reunionesMap.values()).sort((a, b) => {
+      const reunionesOrdenadas = reunionesFiltradas.sort((a, b) => {
         const fechaA = new Date(a.fecha);
         const fechaB = new Date(b.fecha);
         if (fechaA.getTime() !== fechaB.getTime()) {
