@@ -1,7 +1,20 @@
 import Link from "next/link";
 import { memo } from "react";
+import QuickTagManager from "./QuickTagManager";
 
-function ClientList({ clientes }) {
+function ClientList({ clientes, onClientUpdate }) {
+  // Capitalizar primera letra de una etiqueta
+  const capitalizarEtiqueta = (etiqueta) => {
+    if (!etiqueta) return '';
+    return etiqueta.charAt(0).toUpperCase() + etiqueta.slice(1);
+  };
+
+  // Obtener todas las etiquetas de todos los clientes
+  const todasLasEtiquetas = clientes
+    .map(c => c.etiquetas || [])
+    .flat()
+    .filter(Boolean);
+
   // Colores predefinidos para etiquetas
   const getTagColor = (tag, index) => {
     const colors = [
@@ -24,36 +37,47 @@ function ClientList({ clientes }) {
       {clientes.map((cliente) => {
         const clienteId = cliente.id || cliente._id || cliente.crmId;
         return (
-        <Link
+        <div
           key={clienteId}
-          href={`/clientes/${clienteId}`}
-          prefetch={true}
-          className="block p-4 border border-slate-700 rounded hover:bg-slate-800 transition"
+          className="relative p-4 pr-12 border border-slate-700 rounded hover:bg-slate-800 transition"
         >
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold">{cliente.nombre}</h3>
-              {cliente.rubro && <p className="text-sm text-slate-400 mt-1">{cliente.rubro}</p>}
-              {cliente.etiquetas && cliente.etiquetas.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {cliente.etiquetas.slice(0, 5).map((etiqueta, index) => (
-                    <span
-                      key={index}
-                      className={`px-2 py-0.5 rounded text-xs border ${getTagColor(etiqueta, index)}`}
-                    >
-                      {etiqueta}
-                    </span>
-                  ))}
-                  {cliente.etiquetas.length > 5 && (
-                    <span className="px-2 py-0.5 rounded text-xs border border-slate-700 text-slate-400">
-                      +{cliente.etiquetas.length - 5}
-                    </span>
-                  )}
-                </div>
-              )}
+          <Link
+            href={`/clientes/${clienteId}`}
+            prefetch={true}
+            className="block"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold">{cliente.nombre}</h3>
+                {cliente.rubro && <p className="text-sm text-slate-400 mt-1">{cliente.rubro}</p>}
+                {cliente.etiquetas && cliente.etiquetas.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {cliente.etiquetas.slice(0, 5).map((etiqueta, index) => (
+                      <span
+                        key={index}
+                        className={`px-2 py-0.5 rounded text-xs border ${getTagColor(etiqueta, index)}`}
+                      >
+                        {capitalizarEtiqueta(etiqueta)}
+                      </span>
+                    ))}
+                    {cliente.etiquetas.length > 5 && (
+                      <span className="px-2 py-0.5 rounded text-xs border border-slate-700 text-slate-400">
+                        +{cliente.etiquetas.length - 5}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
+          </Link>
+          <div className="absolute top-2 right-2 z-10">
+            <QuickTagManager
+              cliente={cliente}
+              todasLasEtiquetas={todasLasEtiquetas}
+              onUpdate={onClientUpdate}
+            />
           </div>
-        </Link>
+        </div>
         );
       })}
     </div>

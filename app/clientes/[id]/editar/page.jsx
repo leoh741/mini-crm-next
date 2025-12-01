@@ -639,12 +639,14 @@ function EditarClientePageContent() {
                   ];
                   const hash = etiqueta.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
                   const colorClass = colors[hash % colors.length];
+                  // Capitalizar primera letra
+                  const etiquetaCapitalizada = etiqueta.charAt(0).toUpperCase() + etiqueta.slice(1);
                   return (
                     <span
                       key={index}
                       className={`px-3 py-1 rounded text-xs border ${colorClass} flex items-center gap-2`}
                     >
-                      {etiqueta}
+                      {etiquetaCapitalizada}
                       <button
                         type="button"
                         onClick={() => eliminarEtiqueta(index)}

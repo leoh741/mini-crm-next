@@ -131,7 +131,21 @@ function ClientesPageContent() {
           <p className="text-slate-400">No se encontraron clientes que coincidan con "{busqueda}"</p>
         </div>
       ) : (
-        <ClientList clientes={clientesFiltrados} />
+        <ClientList 
+          clientes={clientesFiltrados} 
+          onClientUpdate={() => {
+            // Recargar clientes después de actualizar etiquetas
+            const cargarClientes = async () => {
+              try {
+                const clientesData = await getClientes(true);
+                setClientes(clientesData || []);
+              } catch (err) {
+                console.error('Error al recargar clientes:', err);
+              }
+            };
+            cargarClientes();
+          }}
+        />
       )}
     </div>
   );

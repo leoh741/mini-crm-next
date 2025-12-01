@@ -21,7 +21,9 @@ import {
   HiFolder,          // 📑 Ver
   HiDownload,        // 📥 Exportar
   HiUpload,          // 📤 Importar
-  HiEmojiHappy       // 👋 Bienvenido (alternativa)
+  HiEmojiHappy,      // 👋 Bienvenido (alternativa)
+  HiTag,             // 🏷️ Etiqueta
+  HiX                // ✕ Cerrar
 } from 'react-icons/hi';
 
 export const Icons = {
@@ -47,6 +49,8 @@ export const Icons = {
   Folder: HiFolder,
   Download: HiDownload,
   Upload: HiUpload,
-  WavingHand: HiEmojiHappy
+  WavingHand: HiEmojiHappy,
+  Tag: HiTag,
+  X: HiX
 };
 
