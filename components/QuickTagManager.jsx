@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { actualizarCliente, limpiarCacheClientes } from "../lib/clientesUtils";
 import { Icons } from "./Icons";
 
-export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas = [], todosLosClientes = [] }) {
+export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas = [], todosLosClientes = [], onPanelToggle }) {
   const [mostrarPanel, setMostrarPanel] = useState(false);
   const [etiquetasCliente, setEtiquetasCliente] = useState(cliente.etiquetas || []);
   const [actualizando, setActualizando] = useState(false);
@@ -174,10 +174,15 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          setMostrarPanel(!mostrarPanel);
+          const nuevoEstado = !mostrarPanel;
+          setMostrarPanel(nuevoEstado);
+          if (onPanelToggle) {
+            onPanelToggle(nuevoEstado);
+          }
         }}
-        className={`p-1.5 hover:bg-slate-700 rounded transition-colors relative ${mostrarPanel ? 'z-[200]' : 'z-20'}`}
+        className="p-1.5 hover:bg-slate-700 rounded transition-colors relative z-20"
         title="Gestionar etiquetas"
+        style={{ position: 'relative' }}
       >
         <Icons.Tag className="text-slate-400 hover:text-blue-400" />
       </button>
@@ -187,13 +192,23 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
           {/* Overlay para cerrar al hacer click fuera y cubrir otros elementos */}
           <div 
             className="fixed inset-0 z-[150] bg-transparent"
-            onClick={() => setMostrarPanel(false)}
+            onClick={() => {
+              setMostrarPanel(false);
+              if (onPanelToggle) {
+                onPanelToggle(false);
+              }
+            }}
           />
-          <div className="absolute right-0 sm:right-0 top-full mt-2 z-[200] w-64 max-w-[calc(100vw-1rem)] sm:max-w-none bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-3 transform sm:transform-none -translate-x-0 sm:translate-x-0" style={{ backgroundColor: 'rgb(30 41 55)', position: 'relative' }}>
+          <div className="absolute right-0 top-full mt-2 z-[200] w-64 max-w-[calc(100vw-2rem)] sm:max-w-none bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-3 mb-4" style={{ backgroundColor: 'rgb(30 41 55)' }}>
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-semibold text-slate-200">Etiquetas</h4>
             <button
-              onClick={() => setMostrarPanel(false)}
+              onClick={() => {
+                setMostrarPanel(false);
+                if (onPanelToggle) {
+                  onPanelToggle(false);
+                }
+              }}
               className="text-slate-400 hover:text-slate-200"
             >
               <Icons.X className="text-sm" />

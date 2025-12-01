@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { memo } from "react";
+import { memo, useState } from "react";
 import QuickTagManager from "./QuickTagManager";
 
 function ClientList({ clientes, todosLosClientes, onClientUpdate }) {
+  const [panelAbiertoIndex, setPanelAbiertoIndex] = useState(null);
   // Capitalizar primera letra de una etiqueta
   const capitalizarEtiqueta = (etiqueta) => {
     if (!etiqueta) return '';
@@ -35,8 +36,10 @@ function ClientList({ clientes, todosLosClientes, onClientUpdate }) {
 
   return (
     <div className="space-y-2">
-      {clientes.map((cliente) => {
+      {clientes.map((cliente, index) => {
         const clienteId = cliente.id || cliente._id || cliente.crmId;
+        const esPanelAbierto = panelAbiertoIndex === index;
+        const esSiguienteCliente = panelAbiertoIndex !== null && (index === panelAbiertoIndex + 1 || index === panelAbiertoIndex + 2);
         return (
         <div
           key={clienteId}
@@ -71,12 +74,15 @@ function ClientList({ clientes, todosLosClientes, onClientUpdate }) {
               </div>
             </div>
           </Link>
-          <div className="absolute top-2 right-2 z-10">
+          <div className={`absolute top-2 right-2 z-10 ${esSiguienteCliente && !esPanelAbierto ? 'opacity-0 pointer-events-none' : ''}`}>
             <QuickTagManager
               cliente={cliente}
               todasLasEtiquetas={todasLasEtiquetas}
               todosLosClientes={clientesParaEtiquetas}
               onUpdate={onClientUpdate}
+              onPanelToggle={(abierto) => {
+                setPanelAbiertoIndex(abierto ? index : null);
+              }}
             />
           </div>
         </div>
