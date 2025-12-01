@@ -169,7 +169,7 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
   };
 
   return (
-    <div className="relative z-20" ref={panelRef}>
+    <div className="relative z-30" ref={panelRef}>
       <button
         onClick={(e) => {
           e.preventDefault();
@@ -183,7 +183,7 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
       </button>
 
       {mostrarPanel && (
-        <div className="absolute right-0 sm:right-0 top-full mt-2 z-50 w-64 max-w-[calc(100vw-1rem)] sm:max-w-none bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-3 transform sm:transform-none -translate-x-0 sm:translate-x-0">
+        <div className="absolute right-0 sm:right-0 top-full mt-2 z-[100] w-64 max-w-[calc(100vw-1rem)] sm:max-w-none bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-3 transform sm:transform-none -translate-x-0 sm:translate-x-0" style={{ backgroundColor: 'rgb(30 41 55)' }}>
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-semibold text-slate-200">Etiquetas</h4>
             <button
@@ -220,7 +220,7 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
           {etiquetasDisponibles.length > 0 && (
             <div className="mb-3">
               <p className="text-xs text-slate-400 mb-2">Etiquetas disponibles:</p>
-              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto relative z-10 bg-slate-800">
+              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto relative z-10 bg-slate-800 rounded">
                 {etiquetasDisponibles.map((etiqueta) => {
                   const tieneEtiqueta = etiquetasCliente.includes(etiqueta.toLowerCase());
                   return (
