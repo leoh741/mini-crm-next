@@ -404,34 +404,34 @@ function HomePageContent() {
             <div className="absolute bottom-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mb-12 group-hover:scale-150 transition-transform duration-500"></div>
           </div>
         </Link>
-      </div>
 
-      <div className="flex-shrink-0 mt-3 pt-3 border-t border-slate-700">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold text-slate-300">Presupuestos</h3>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Link
-              href="/presupuestos/nuevo"
-              className="group relative flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-teal-500/30 overflow-hidden text-center"
-            >
-              <span className="relative z-10 flex items-center justify-center gap-1.5">
-                <Icons.Clipboard className="text-sm" />
-                <span>Nuevo Presupuesto</span>
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-            </Link>
-            <Link
-              href="/presupuestos"
-              className="group relative flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-teal-500/30 overflow-hidden text-center"
-            >
-              <span className="relative z-10 flex items-center justify-center gap-1.5">
-                <Icons.Folder className="text-sm" />
-                <span>Ver Presupuestos</span>
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-            </Link>
+        <Link href="/equipo" className="group" prefetch={true}>
+          <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-red-600 via-red-700 to-red-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-red-500/20 flex flex-col justify-between">
+            <div className="flex items-start justify-between mb-2">
+              <Icons.User className="text-3xl group-hover:scale-110 transition-transform duration-300" />
+              <div className="w-1.5 h-1.5 bg-red-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">Equipo</h3>
+              <p className="text-xs text-red-100/90">Gestionar miembros</p>
+            </div>
+            <div className="absolute bottom-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mb-12 group-hover:scale-150 transition-transform duration-500"></div>
           </div>
-        </div>
+        </Link>
+
+        <Link href="/presupuestos" className="group" prefetch={true}>
+          <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-emerald-500/20 flex flex-col justify-between">
+            <div className="flex items-start justify-between mb-2">
+              <Icons.Clipboard className="text-3xl group-hover:scale-110 transition-transform duration-300" />
+              <div className="w-1.5 h-1.5 bg-emerald-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">Presupuestos</h3>
+              <p className="text-xs text-emerald-100/90">Crear y gestionar</p>
+            </div>
+            <div className="absolute bottom-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mb-12 group-hover:scale-150 transition-transform duration-500"></div>
+          </div>
+        </Link>
       </div>
 
       <div className="flex-shrink-0 mt-3 pt-3 border-t border-slate-700">

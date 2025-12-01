@@ -30,7 +30,7 @@ export default function QuickHabilidadesManager({ miembro, onUpdate, todasLasHab
   }, [todasLasHabilidades, todosLosMiembros]);
 
   // Asignar colores únicos cuando cambian las habilidades
-  useMemo(() => {
+  useEffect(() => {
     if (todasLasHabilidadesParaColores.length > 0) {
       asignarColoresUnicos(todasLasHabilidadesParaColores);
     }
