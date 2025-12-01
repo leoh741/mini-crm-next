@@ -8,6 +8,8 @@ import { generarResumenPagoPDF } from "../../../lib/pdfGenerator";
 import Link from "next/link";
 import ProtectedRoute from "../../../components/ProtectedRoute";
 import { Icons } from "../../../components/Icons";
+import { getTagColor } from "../../../lib/tagColors";
+import { getClientes } from "../../../lib/clientesUtils";
 
 function ClienteDetailPageContent() {
   const params = useParams();
@@ -22,8 +24,28 @@ function ClienteDetailPageContent() {
   const [actualizandoPago, setActualizandoPago] = useState(false);
   const [estadoPagoMes, setEstadoPagoMes] = useState(null);
   const [actualizandoServicio, setActualizandoServicio] = useState(null);
+  const [todasLasEtiquetas, setTodasLasEtiquetas] = useState([]);
   
   const fromPagos = searchParams.get('from') === 'pagos';
+
+  // Cargar todas las etiquetas para asignar colores únicos
+  useEffect(() => {
+    const cargarEtiquetas = async () => {
+      try {
+        const clientes = await getClientes(false);
+        if (clientes && clientes.length > 0) {
+          const etiquetas = clientes
+            .map(c => c.etiquetas || [])
+            .flat()
+            .filter(Boolean);
+          setTodasLasEtiquetas(Array.from(new Set(etiquetas)));
+        }
+      } catch (err) {
+        console.error('Error al cargar etiquetas:', err);
+      }
+    };
+    cargarEtiquetas();
+  }, []);
 
   useEffect(() => {
     const cargarCliente = async () => {
@@ -468,20 +490,9 @@ function ClienteDetailPageContent() {
               <p className="text-slate-300 font-medium mb-2">Etiquetas:</p>
               <div className="flex flex-wrap gap-2">
                 {cliente.etiquetas.map((etiqueta, index) => {
-                  const colors = [
-                    'bg-blue-900/30 text-blue-400 border-blue-700',
-                    'bg-purple-900/30 text-purple-400 border-purple-700',
-                    'bg-green-900/30 text-green-400 border-green-700',
-                    'bg-yellow-900/30 text-yellow-400 border-yellow-700',
-                    'bg-pink-900/30 text-pink-400 border-pink-700',
-                    'bg-indigo-900/30 text-indigo-400 border-indigo-700',
-                    'bg-teal-900/30 text-teal-400 border-teal-700',
-                    'bg-orange-900/30 text-orange-400 border-orange-700',
-                  ];
-                  const hash = etiqueta.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-                  const colorClass = colors[hash % colors.length];
                   // Capitalizar primera letra
                   const etiquetaCapitalizada = etiqueta.charAt(0).toUpperCase() + etiqueta.slice(1);
+                  const colorClass = getTagColor(etiqueta, todasLasEtiquetas);
                   return (
                     <span
                       key={index}

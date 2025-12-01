@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { actualizarCliente, limpiarCacheClientes } from "../lib/clientesUtils";
 import { Icons } from "./Icons";
+import { getTagColor, asignarColoresUnicos } from "../lib/tagColors";
 
 export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas = [], todosLosClientes = [], onPanelToggle }) {
   const [mostrarPanel, setMostrarPanel] = useState(false);
@@ -18,21 +19,25 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
     return etiqueta.charAt(0).toUpperCase() + etiqueta.slice(1);
   };
 
-  // Colores para etiquetas
-  const getTagColor = (tag) => {
-    const colors = [
-      'bg-blue-900/30 text-blue-400 border-blue-700',
-      'bg-purple-900/30 text-purple-400 border-purple-700',
-      'bg-green-900/30 text-green-400 border-green-700',
-      'bg-yellow-900/30 text-yellow-400 border-yellow-700',
-      'bg-pink-900/30 text-pink-400 border-pink-700',
-      'bg-indigo-900/30 text-indigo-400 border-indigo-700',
-      'bg-teal-900/30 text-teal-400 border-teal-700',
-      'bg-orange-900/30 text-orange-400 border-orange-700',
-    ];
-    const hash = tag.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return colors[hash % colors.length];
-  };
+  // Obtener todas las etiquetas para asignar colores únicos
+  const todasLasEtiquetasParaColores = useMemo(() => {
+    const etiquetas = [...todasLasEtiquetas];
+    if (todosLosClientes.length > 0) {
+      const etiquetasDeClientes = todosLosClientes
+        .map(c => c.etiquetas || [])
+        .flat()
+        .filter(Boolean);
+      etiquetas.push(...etiquetasDeClientes);
+    }
+    return Array.from(new Set(etiquetas));
+  }, [todasLasEtiquetas, todosLosClientes]);
+
+  // Asignar colores únicos cuando cambian las etiquetas
+  useMemo(() => {
+    if (todasLasEtiquetasParaColores.length > 0) {
+      asignarColoresUnicos(todasLasEtiquetasParaColores);
+    }
+  }, [todasLasEtiquetasParaColores]);
 
   // Obtener etiquetas únicas de todos los clientes
   // Si todasLasEtiquetas está vacío pero tenemos todosLosClientes, extraer de ahí

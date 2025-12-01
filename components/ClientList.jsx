@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { memo, useState } from "react";
+import { memo, useState, useMemo } from "react";
 import QuickTagManager from "./QuickTagManager";
+import { getTagColor, asignarColoresUnicos } from "../lib/tagColors";
 
 function ClientList({ clientes, todosLosClientes, onClientUpdate }) {
   const [panelAbiertoIndex, setPanelAbiertoIndex] = useState(null);
@@ -12,27 +13,19 @@ function ClientList({ clientes, todosLosClientes, onClientUpdate }) {
 
   // Obtener todas las etiquetas de todos los clientes (usar todosLosClientes si está disponible, sino usar clientes)
   const clientesParaEtiquetas = todosLosClientes && todosLosClientes.length > 0 ? todosLosClientes : clientes;
-  const todasLasEtiquetas = clientesParaEtiquetas
-    .map(c => c.etiquetas || [])
-    .flat()
-    .filter(Boolean);
+  const todasLasEtiquetas = useMemo(() => {
+    return clientesParaEtiquetas
+      .map(c => c.etiquetas || [])
+      .flat()
+      .filter(Boolean);
+  }, [clientesParaEtiquetas]);
 
-  // Colores predefinidos para etiquetas
-  const getTagColor = (tag, index) => {
-    const colors = [
-      'bg-blue-900/30 text-blue-400 border-blue-700',
-      'bg-purple-900/30 text-purple-400 border-purple-700',
-      'bg-green-900/30 text-green-400 border-green-700',
-      'bg-yellow-900/30 text-yellow-400 border-yellow-700',
-      'bg-pink-900/30 text-pink-400 border-pink-700',
-      'bg-indigo-900/30 text-indigo-400 border-indigo-700',
-      'bg-teal-900/30 text-teal-400 border-teal-700',
-      'bg-orange-900/30 text-orange-400 border-orange-700',
-    ];
-    // Usar hash del tag para asignar color consistente
-    const hash = tag.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return colors[hash % colors.length];
-  };
+  // Asignar colores únicos a todas las etiquetas
+  useMemo(() => {
+    if (todasLasEtiquetas.length > 0) {
+      asignarColoresUnicos(todasLasEtiquetas);
+    }
+  }, [todasLasEtiquetas]);
 
   return (
     <div className="space-y-2">
@@ -59,7 +52,7 @@ function ClientList({ clientes, todosLosClientes, onClientUpdate }) {
                     {cliente.etiquetas.slice(0, 5).map((etiqueta, index) => (
                       <span
                         key={index}
-                        className={`px-2 py-0.5 rounded text-xs border ${getTagColor(etiqueta, index)}`}
+                        className={`px-2 py-0.5 rounded text-xs border ${getTagColor(etiqueta, todasLasEtiquetas)}`}
                       >
                         {capitalizarEtiqueta(etiqueta)}
                       </span>
