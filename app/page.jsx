@@ -188,13 +188,25 @@ function HomePageContent() {
     <div className="flex flex-col space-y-3" style={{ maxWidth: '100%', overflowX: 'hidden' }}>
       <div className="flex-shrink-0">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-          <div>
-            <h2 className="text-lg md:text-xl font-semibold">
-              Bienvenido 👋
-            </h2>
-            <p className="text-xs md:text-sm text-slate-400">
-              Digital Space CRM
-            </p>
+          <div className="flex items-center gap-3">
+            <div>
+              <h2 className="text-lg md:text-xl font-semibold">
+                Bienvenido 👋
+              </h2>
+              <p className="text-xs md:text-sm text-slate-400">
+                Digital Space CRM
+              </p>
+            </div>
+            <a 
+              href="https://drive.google.com/drive/folders/1V0yno1ceB-F1vfOFNWtpulphCYnBVCBz" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 rounded-lg text-xs font-medium text-white transition-colors duration-200 border border-amber-500/30 shadow-sm hover:shadow-md"
+              title="Abrir Drive Digital Space"
+            >
+              <Icons.Folder className="text-sm" />
+              <span>Drive</span>
+            </a>
           </div>
           <div className="px-3 py-1.5 bg-slate-800 rounded-lg border border-slate-700 w-full sm:w-auto">
             <p className="text-xs text-slate-300 font-medium text-center sm:text-left" suppressHydrationWarning>
