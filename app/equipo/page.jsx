@@ -30,6 +30,7 @@ function EquipoPageContent() {
           miembrosData.map(m => m.habilidades || []).flat().filter(Boolean)
         )).sort();
         setTodasLasHabilidades(habilidadesUnicas);
+        // Asignar colores únicos - esto asegura que no haya duplicados
         asignarColoresUnicos(habilidadesUnicas);
       } catch (err) {
         console.error('Error al cargar miembros del equipo:', err);
@@ -42,6 +43,13 @@ function EquipoPageContent() {
 
     cargarMiembros();
   }, []);
+
+  // Efecto para asegurar que los colores sean únicos cuando cambien las habilidades
+  useEffect(() => {
+    if (todasLasHabilidades.length > 0) {
+      asignarColoresUnicos(todasLasHabilidades);
+    }
+  }, [todasLasHabilidades]);
 
   const miembrosFiltrados = useMemo(() => {
     let miembrosResult = miembros;
