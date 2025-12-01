@@ -169,21 +169,21 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
   };
 
   return (
-    <div className="relative" ref={panelRef}>
+    <div className="relative z-20" ref={panelRef}>
       <button
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
           setMostrarPanel(!mostrarPanel);
         }}
-        className="p-1.5 hover:bg-slate-700 rounded transition-colors"
+        className="p-1.5 hover:bg-slate-700 rounded transition-colors relative z-20"
         title="Gestionar etiquetas"
       >
         <Icons.Tag className="text-slate-400 hover:text-blue-400" />
       </button>
 
       {mostrarPanel && (
-        <div className="absolute right-0 top-full mt-2 z-50 w-64 bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-3">
+        <div className="absolute right-0 sm:right-0 top-full mt-2 z-50 w-64 max-w-[calc(100vw-1rem)] sm:max-w-none bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-3 transform sm:transform-none -translate-x-0 sm:translate-x-0">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-semibold text-slate-200">Etiquetas</h4>
             <button
@@ -197,20 +197,20 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
           {/* Campo para crear nueva etiqueta */}
           <div className="mb-3">
             <p className="text-xs text-slate-400 mb-2">Crear nueva etiqueta:</p>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               <input
                 type="text"
                 value={nuevaEtiqueta}
                 onChange={(e) => setNuevaEtiqueta(e.target.value)}
                 onKeyDown={handleNuevaEtiquetaKeyDown}
                 placeholder="Escribe y presiona Enter"
-                className="flex-1 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-slate-100 focus:outline-none focus:border-blue-500 placeholder:text-slate-500"
+                className="flex-1 min-w-0 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-slate-100 focus:outline-none focus:border-blue-500 placeholder:text-slate-500"
                 disabled={creandoEtiqueta || actualizando}
               />
               <button
                 onClick={crearYAgregarEtiqueta}
                 disabled={!nuevaEtiqueta.trim() || creandoEtiqueta || actualizando}
-                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed rounded text-sm font-medium transition-colors"
+                className="flex-shrink-0 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed rounded text-sm font-medium transition-colors whitespace-nowrap"
               >
                 {creandoEtiqueta ? '...' : '+'}
               </button>
@@ -220,7 +220,7 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
           {etiquetasDisponibles.length > 0 && (
             <div className="mb-3">
               <p className="text-xs text-slate-400 mb-2">Etiquetas disponibles:</p>
-              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto relative z-10 bg-slate-800">
                 {etiquetasDisponibles.map((etiqueta) => {
                   const tieneEtiqueta = etiquetasCliente.includes(etiqueta.toLowerCase());
                   return (
@@ -228,7 +228,7 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
                       key={etiqueta}
                       onClick={(e) => toggleEtiqueta(e, etiqueta)}
                       disabled={actualizando || creandoEtiqueta}
-                      className={`px-2 py-1 rounded text-xs border transition-all ${
+                      className={`px-2 py-1 rounded text-xs border transition-all relative z-10 ${
                         tieneEtiqueta
                           ? `${getTagColor(etiqueta)} ring-2 ring-blue-500`
                           : `${getTagColor(etiqueta)} opacity-60 hover:opacity-100`

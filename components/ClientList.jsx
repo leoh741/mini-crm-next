@@ -40,7 +40,7 @@ function ClientList({ clientes, todosLosClientes, onClientUpdate }) {
         return (
         <div
           key={clienteId}
-          className="relative p-4 pr-12 border border-slate-700 rounded hover:bg-slate-800 transition"
+          className="relative p-4 pr-12 sm:pr-12 border border-slate-700 rounded hover:bg-slate-800 transition overflow-visible"
         >
           <Link
             href={`/clientes/${clienteId}`}
