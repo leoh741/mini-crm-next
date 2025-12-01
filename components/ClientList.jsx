@@ -71,7 +71,7 @@ function ClientList({ clientes, todosLosClientes, onClientUpdate }) {
               </div>
             </div>
           </Link>
-          <div className="absolute top-2 right-2 z-20">
+          <div className="absolute top-2 right-2 z-10">
             <QuickTagManager
               cliente={cliente}
               todasLasEtiquetas={todasLasEtiquetas}

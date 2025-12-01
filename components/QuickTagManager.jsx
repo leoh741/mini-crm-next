@@ -169,21 +169,27 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
   };
 
   return (
-    <div className="relative z-30" ref={panelRef}>
+    <div className={`relative ${mostrarPanel ? 'z-[200]' : 'z-30'}`} ref={panelRef}>
       <button
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
           setMostrarPanel(!mostrarPanel);
         }}
-        className="p-1.5 hover:bg-slate-700 rounded transition-colors relative z-20"
+        className={`p-1.5 hover:bg-slate-700 rounded transition-colors relative ${mostrarPanel ? 'z-[200]' : 'z-20'}`}
         title="Gestionar etiquetas"
       >
         <Icons.Tag className="text-slate-400 hover:text-blue-400" />
       </button>
 
       {mostrarPanel && (
-        <div className="absolute right-0 sm:right-0 top-full mt-2 z-[100] w-64 max-w-[calc(100vw-1rem)] sm:max-w-none bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-3 transform sm:transform-none -translate-x-0 sm:translate-x-0" style={{ backgroundColor: 'rgb(30 41 55)' }}>
+        <>
+          {/* Overlay para cerrar al hacer click fuera y cubrir otros elementos */}
+          <div 
+            className="fixed inset-0 z-[150] bg-transparent"
+            onClick={() => setMostrarPanel(false)}
+          />
+          <div className="absolute right-0 sm:right-0 top-full mt-2 z-[200] w-64 max-w-[calc(100vw-1rem)] sm:max-w-none bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-3 transform sm:transform-none -translate-x-0 sm:translate-x-0" style={{ backgroundColor: 'rgb(30 41 55)', position: 'relative' }}>
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-semibold text-slate-200">Etiquetas</h4>
             <button
@@ -248,6 +254,7 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
             <p>Click en una etiqueta para aplicarla o removerla</p>
           </div>
         </div>
+        </>
       )}
     </div>
   );
