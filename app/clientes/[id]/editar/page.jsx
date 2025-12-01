@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { getClienteById, actualizarCliente, getEstadoPagoMes, guardarEstadoPagoMes, limpiarCacheClientes } from "../../../../lib/clientesUtils";
+import { useSearchParams } from "next/navigation";
 import { todosLosServiciosPagados } from "../../../../lib/clienteHelpers";
 import ProtectedRoute from "../../../../components/ProtectedRoute";
 import { Icons } from "../../../../components/Icons";
@@ -10,6 +11,7 @@ import { Icons } from "../../../../components/Icons";
 function EditarClientePageContent() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const id = params.id;
   const [cliente, setCliente] = useState(null);
   const [formData, setFormData] = useState({
@@ -29,6 +31,8 @@ function EditarClientePageContent() {
   const [loading, setLoading] = useState(false);
   const [cargandoCliente, setCargandoCliente] = useState(true);
   const [serviciosPagados, setServiciosPagados] = useState({});
+  const [etiquetas, setEtiquetas] = useState([]);
+  const [nuevaEtiqueta, setNuevaEtiqueta] = useState("");
 
   useEffect(() => {
     const cargarCliente = async () => {
@@ -36,13 +40,17 @@ function EditarClientePageContent() {
         setCargandoCliente(true);
         setError("");
         
-        // Intentar primero con caché (más rápido), si falla intentar sin caché
-        let clienteData = await getClienteById(id, true);
+        // IMPORTANTE: Para edición, siempre cargar datos frescos sin caché
+        // Esto asegura que se muestren los datos más recientes del servidor
+        // Limpiar caché antes de cargar para asegurar datos actualizados
+        limpiarCacheClientes();
         
-        // Si no se encuentra con caché, intentar sin caché
+        let clienteData = await getClienteById(id, false);
+        
+        // Si no se encuentra sin caché, intentar con caché como fallback
         if (!clienteData) {
-          console.warn(`Cliente ${id} no encontrado con caché, intentando sin caché`);
-          clienteData = await getClienteById(id, false);
+          console.warn(`Cliente ${id} no encontrado sin caché, intentando con caché como fallback`);
+          clienteData = await getClienteById(id, true);
         }
         
         if (clienteData) {
@@ -78,7 +86,8 @@ function EditarClientePageContent() {
           const mesActual = hoy.getMonth();
           const añoActual = hoy.getFullYear();
           const clienteId = clienteData._id || clienteData.id || clienteData.crmId;
-          const estadoPago = await getEstadoPagoMes(clienteId, mesActual, añoActual, true);
+          // IMPORTANTE: Cargar estado de pago sin caché para datos frescos
+          const estadoPago = await getEstadoPagoMes(clienteId, mesActual, añoActual, false);
           if (estadoPago && estadoPago.serviciosPagados) {
             setServiciosPagados(estadoPago.serviciosPagados);
           } else if (clienteData.pagado && clienteData.servicios && clienteData.servicios.length > 0) {
@@ -88,6 +97,11 @@ function EditarClientePageContent() {
               todosPagados[index] = true;
             });
             setServiciosPagados(todosPagados);
+          }
+          
+          // Cargar etiquetas
+          if (clienteData.etiquetas && Array.isArray(clienteData.etiquetas)) {
+            setEtiquetas(clienteData.etiquetas);
           }
         } else {
           setError("Cliente no encontrado");
@@ -106,7 +120,17 @@ function EditarClientePageContent() {
       setError("ID de cliente no proporcionado");
       setCargandoCliente(false);
     }
-  }, [id]);
+    
+    // Recargar si hay un parámetro refresh en la URL
+    const refreshParam = searchParams.get('refresh');
+    if (refreshParam && id) {
+      // Pequeño delay para asegurar que la BD se actualizó
+      const timer = setTimeout(() => {
+        cargarCliente();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [id, searchParams]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -154,6 +178,25 @@ function EditarClientePageContent() {
       ...prev,
       [index]: !prev[index]
     }));
+  };
+
+  const agregarEtiqueta = () => {
+    const etiqueta = nuevaEtiqueta.trim().toLowerCase();
+    if (etiqueta && !etiquetas.includes(etiqueta)) {
+      setEtiquetas([...etiquetas, etiqueta]);
+      setNuevaEtiqueta("");
+    }
+  };
+
+  const eliminarEtiqueta = (index) => {
+    setEtiquetas(etiquetas.filter((_, i) => i !== index));
+  };
+
+  const handleEtiquetaKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      agregarEtiqueta();
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -225,6 +268,11 @@ function EditarClientePageContent() {
     }
     if (formData.observaciones.trim()) {
       datosActualizados.observaciones = formData.observaciones.trim();
+    }
+    if (etiquetas.length > 0) {
+      datosActualizados.etiquetas = etiquetas;
+    } else {
+      datosActualizados.etiquetas = [];
     }
     
     console.log('Datos a actualizar:', JSON.stringify(datosActualizados, null, 2));
@@ -551,6 +599,66 @@ function EditarClientePageContent() {
               </label>
             </div>
           )}
+        </div>
+
+        {/* Campo de etiquetas */}
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">
+            Etiquetas de Seguimiento
+          </label>
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={nuevaEtiqueta}
+                onChange={(e) => setNuevaEtiqueta(e.target.value)}
+                onKeyPress={handleEtiquetaKeyPress}
+                className="flex-1 px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-blue-500"
+                placeholder="Escribe una etiqueta y presiona Enter o click en +"
+              />
+              <button
+                type="button"
+                onClick={agregarEtiqueta}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium"
+              >
+                +
+              </button>
+            </div>
+            {etiquetas.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {etiquetas.map((etiqueta, index) => {
+                  const colors = [
+                    'bg-blue-900/30 text-blue-400 border-blue-700',
+                    'bg-purple-900/30 text-purple-400 border-purple-700',
+                    'bg-green-900/30 text-green-400 border-green-700',
+                    'bg-yellow-900/30 text-yellow-400 border-yellow-700',
+                    'bg-pink-900/30 text-pink-400 border-pink-700',
+                    'bg-indigo-900/30 text-indigo-400 border-indigo-700',
+                    'bg-teal-900/30 text-teal-400 border-teal-700',
+                    'bg-orange-900/30 text-orange-400 border-orange-700',
+                  ];
+                  const hash = etiqueta.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                  const colorClass = colors[hash % colors.length];
+                  return (
+                    <span
+                      key={index}
+                      className={`px-3 py-1 rounded text-xs border ${colorClass} flex items-center gap-2`}
+                    >
+                      {etiqueta}
+                      <button
+                        type="button"
+                        onClick={() => eliminarEtiqueta(index)}
+                        className="hover:text-red-400 transition-colors"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-slate-400 mt-1">Las etiquetas ayudan a organizar y filtrar clientes</p>
         </div>
 
         {/* Campo de observaciones */}

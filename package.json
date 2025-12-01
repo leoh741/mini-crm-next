@@ -16,7 +16,9 @@
     "check-processes": "node scripts/checkAutoProcesses.js",
     "check-errors": "node scripts/checkErrors.js",
     "check-all-dbs": "node scripts/checkDatabaseStatus.js",
-    "find-data-loss": "node scripts/findDataLoss.js"
+    "find-data-loss": "node scripts/findDataLoss.js",
+    "setup-local-mongodb": "node scripts/setup-local-mongodb.js",
+    "dev:local": "node scripts/setup-local-mongodb.js && npm run dev"
   },
   "dependencies": {
     "dotenv": "^17.2.3",

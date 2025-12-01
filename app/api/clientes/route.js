@@ -19,7 +19,7 @@ export async function GET() {
     // El índice en createdAt hace el sort más rápido
     // IMPORTANTE: Incluir _id explícitamente para que esté disponible
     const clientes = await Client.find({})
-      .select('_id crmId nombre rubro ciudad email montoPago fechaPago pagado pagoUnico pagoMesSiguiente servicios observaciones createdAt updatedAt')
+      .select('_id crmId nombre rubro ciudad email montoPago fechaPago pagado pagoUnico pagoMesSiguiente servicios observaciones etiquetas createdAt updatedAt')
       .sort({ createdAt: -1 })
       .lean() // Usar lean() para obtener objetos planos (más rápido, sin overhead de Mongoose)
       .maxTimeMS(15000); // Timeout optimizado para VPS (15 segundos)

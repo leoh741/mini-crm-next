@@ -16,7 +16,7 @@ export async function GET(request, { params }) {
       if (isValidObjectId) {
         try {
           cliente = await Client.findById(searchId)
-            .select('crmId nombre rubro ciudad email montoPago fechaPago pagado pagoUnico pagoMesSiguiente servicios observaciones')
+            .select('crmId nombre rubro ciudad email montoPago fechaPago pagado pagoUnico pagoMesSiguiente servicios observaciones etiquetas')
             .lean()
             .maxTimeMS(30000); // Timeout aumentado a 30 segundos para servidor VPS
         } catch (idError) {
@@ -28,7 +28,7 @@ export async function GET(request, { params }) {
       // Si no se encontró por _id, buscar por crmId (usando índice)
       if (!cliente) {
         cliente = await Client.findOne({ crmId: searchId })
-          .select('crmId nombre rubro ciudad email montoPago fechaPago pagado pagoUnico pagoMesSiguiente servicios observaciones')
+          .select('crmId nombre rubro ciudad email montoPago fechaPago pagado pagoUnico pagoMesSiguiente servicios observaciones etiquetas')
           .lean()
           .maxTimeMS(30000); // Timeout aumentado a 30 segundos para servidor VPS
       }
@@ -123,6 +123,7 @@ export async function PUT(request, { params }) {
     if (body.fechaPago !== undefined) updateData.fechaPago = body.fechaPago;
     if (body.servicios !== undefined) updateData.servicios = body.servicios;
     if (body.observaciones !== undefined) updateData.observaciones = body.observaciones;
+    if (body.etiquetas !== undefined) updateData.etiquetas = body.etiquetas;
     
     console.log('Datos a actualizar en MongoDB:', JSON.stringify(updateData, null, 2));
     
@@ -138,7 +139,7 @@ export async function PUT(request, { params }) {
         lean: true // Usar lean() directamente para mejor rendimiento
       }
     )
-    .select('crmId nombre rubro ciudad email montoPago fechaPago pagado pagoUnico pagoMesSiguiente servicios observaciones');
+    .select('crmId nombre rubro ciudad email montoPago fechaPago pagado pagoUnico pagoMesSiguiente servicios observaciones etiquetas');
     
     if (!clienteActualizado) {
       return NextResponse.json(

@@ -32,6 +32,21 @@ logs/
 .env*.local
 .env
 
+# local MongoDB data and config
+/data/mongodb/
+/mongodb-data/
+*.mongodb
+/data/
+
+# local backups
+/backups/local/
+*.backup.local
+*.backup-dev
+
+# local development files
+.env.local
+.env.development.local
+.env.test.local
 
 # vercel
 .vercel

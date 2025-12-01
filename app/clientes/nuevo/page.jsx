@@ -25,6 +25,8 @@ function NuevoClientePageContent() {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [serviciosPagados, setServiciosPagados] = useState({});
+  const [etiquetas, setEtiquetas] = useState([]);
+  const [nuevaEtiqueta, setNuevaEtiqueta] = useState("");
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -70,6 +72,25 @@ function NuevoClientePageContent() {
       ...prev,
       [index]: !prev[index]
     }));
+  };
+
+  const agregarEtiqueta = () => {
+    const etiqueta = nuevaEtiqueta.trim().toLowerCase();
+    if (etiqueta && !etiquetas.includes(etiqueta)) {
+      setEtiquetas([...etiquetas, etiqueta]);
+      setNuevaEtiqueta("");
+    }
+  };
+
+  const eliminarEtiqueta = (index) => {
+    setEtiquetas(etiquetas.filter((_, i) => i !== index));
+  };
+
+  const handleEtiquetaKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      agregarEtiqueta();
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -128,7 +149,8 @@ function NuevoClientePageContent() {
       pagoUnico: formData.pagoUnico,
       pagado: formData.pagado || todosPagados,
       pagoMesSiguiente: formData.pagoMesSiguiente && !formData.pagoUnico,
-      observaciones: formData.observaciones.trim() || undefined
+      observaciones: formData.observaciones.trim() || undefined,
+      etiquetas: etiquetas.length > 0 ? etiquetas : undefined
     };
 
     // Guardar cliente
@@ -413,6 +435,66 @@ function NuevoClientePageContent() {
               </label>
             </div>
           )}
+        </div>
+
+        {/* Campo de etiquetas */}
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">
+            Etiquetas de Seguimiento
+          </label>
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={nuevaEtiqueta}
+                onChange={(e) => setNuevaEtiqueta(e.target.value)}
+                onKeyPress={handleEtiquetaKeyPress}
+                className="flex-1 px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-blue-500"
+                placeholder="Escribe una etiqueta y presiona Enter o click en +"
+              />
+              <button
+                type="button"
+                onClick={agregarEtiqueta}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium"
+              >
+                +
+              </button>
+            </div>
+            {etiquetas.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {etiquetas.map((etiqueta, index) => {
+                  const colors = [
+                    'bg-blue-900/30 text-blue-400 border-blue-700',
+                    'bg-purple-900/30 text-purple-400 border-purple-700',
+                    'bg-green-900/30 text-green-400 border-green-700',
+                    'bg-yellow-900/30 text-yellow-400 border-yellow-700',
+                    'bg-pink-900/30 text-pink-400 border-pink-700',
+                    'bg-indigo-900/30 text-indigo-400 border-indigo-700',
+                    'bg-teal-900/30 text-teal-400 border-teal-700',
+                    'bg-orange-900/30 text-orange-400 border-orange-700',
+                  ];
+                  const hash = etiqueta.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                  const colorClass = colors[hash % colors.length];
+                  return (
+                    <span
+                      key={index}
+                      className={`px-3 py-1 rounded text-xs border ${colorClass} flex items-center gap-2`}
+                    >
+                      {etiqueta}
+                      <button
+                        type="button"
+                        onClick={() => eliminarEtiqueta(index)}
+                        className="hover:text-red-400 transition-colors"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-slate-400 mt-1">Las etiquetas ayudan a organizar y filtrar clientes</p>
         </div>
 
         {/* Campo de observaciones */}

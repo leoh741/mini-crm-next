@@ -409,7 +409,7 @@ function ClienteDetailPageContent() {
               <Icons.Document className="inline mr-1" /> PDF
             </button>
             <Link
-              href={`/clientes/${id}/editar`}
+              href={`/clientes/${id}/editar?refresh=${Date.now()}`}
               className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap text-center"
             >
               <Icons.Pencil className="inline mr-1" /> Editar
@@ -462,6 +462,35 @@ function ClienteDetailPageContent() {
           )}
           {cliente.email && (
             <p><strong className="text-slate-300">Email:</strong> <span className="text-slate-200">{cliente.email}</span></p>
+          )}
+          {cliente.etiquetas && Array.isArray(cliente.etiquetas) && cliente.etiquetas.length > 0 && (
+            <div>
+              <p className="text-slate-300 font-medium mb-2">Etiquetas:</p>
+              <div className="flex flex-wrap gap-2">
+                {cliente.etiquetas.map((etiqueta, index) => {
+                  const colors = [
+                    'bg-blue-900/30 text-blue-400 border-blue-700',
+                    'bg-purple-900/30 text-purple-400 border-purple-700',
+                    'bg-green-900/30 text-green-400 border-green-700',
+                    'bg-yellow-900/30 text-yellow-400 border-yellow-700',
+                    'bg-pink-900/30 text-pink-400 border-pink-700',
+                    'bg-indigo-900/30 text-indigo-400 border-indigo-700',
+                    'bg-teal-900/30 text-teal-400 border-teal-700',
+                    'bg-orange-900/30 text-orange-400 border-orange-700',
+                  ];
+                  const hash = etiqueta.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                  const colorClass = colors[hash % colors.length];
+                  return (
+                    <span
+                      key={index}
+                      className={`px-3 py-1 rounded text-xs border ${colorClass}`}
+                    >
+                      {etiqueta}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
           )}
           <div>
             <p className="text-slate-300 font-medium mb-2">Servicios:</p>

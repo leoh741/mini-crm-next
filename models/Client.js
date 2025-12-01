@@ -37,7 +37,12 @@ const ClientSchema = new mongoose.Schema({
     nombre: String,
     precio: Number
   }],
-  observaciones: String
+  observaciones: String,
+  etiquetas: [{
+    type: String,
+    trim: true,
+    lowercase: true
+  }],
 }, {
   timestamps: true
 });
@@ -45,6 +50,7 @@ const ClientSchema = new mongoose.Schema({
 // Índice compuesto para búsquedas comunes
 ClientSchema.index({ pagado: 1, createdAt: -1 });
 ClientSchema.index({ rubro: 1, pagado: 1 });
+ClientSchema.index({ etiquetas: 1 }); // Índice para búsquedas por etiquetas
 
 export default mongoose.models.Client || mongoose.model('Client', ClientSchema);
 
