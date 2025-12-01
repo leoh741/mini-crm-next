@@ -66,22 +66,27 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
     setEtiquetasCliente(cliente.etiquetas || []);
   }, [cliente.etiquetas]);
 
-  const toggleEtiqueta = async (etiqueta) => {
-    if (actualizando) return;
+  const toggleEtiqueta = async (e, etiqueta) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (actualizando || creandoEtiqueta) return;
 
+    // Usar el estado actual más reciente
+    const etiquetasActuales = etiquetasCliente.length > 0 ? etiquetasCliente : (cliente.etiquetas || []);
     const etiquetaLower = etiqueta.toLowerCase();
-    const tieneEtiqueta = etiquetasCliente.includes(etiquetaLower);
+    const tieneEtiqueta = etiquetasActuales.includes(etiquetaLower);
     
     let nuevasEtiquetas;
     if (tieneEtiqueta) {
       // Remover etiqueta
-      nuevasEtiquetas = etiquetasCliente.filter(e => e !== etiquetaLower);
+      nuevasEtiquetas = etiquetasActuales.filter(e => e !== etiquetaLower);
     } else {
       // Agregar etiqueta
-      nuevasEtiquetas = [...etiquetasCliente, etiquetaLower];
+      nuevasEtiquetas = [...etiquetasActuales, etiquetaLower];
     }
 
-    // Actualización optimista
+    // Actualización optimista inmediata
     setEtiquetasCliente(nuevasEtiquetas);
     setActualizando(true);
 
@@ -91,8 +96,12 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
       
       if (resultado) {
         limpiarCacheClientes();
+        // Actualizar el cliente local para reflejar el cambio
         if (onUpdate) {
-          onUpdate();
+          // Pequeño delay para asegurar que el servidor procesó el cambio
+          setTimeout(() => {
+            onUpdate();
+          }, 100);
         }
       } else {
         // Revertir si falla
@@ -217,7 +226,7 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
                   return (
                     <button
                       key={etiqueta}
-                      onClick={() => toggleEtiqueta(etiqueta)}
+                      onClick={(e) => toggleEtiqueta(e, etiqueta)}
                       disabled={actualizando || creandoEtiqueta}
                       className={`px-2 py-1 rounded text-xs border transition-all ${
                         tieneEtiqueta
