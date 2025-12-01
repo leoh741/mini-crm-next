@@ -19,13 +19,70 @@ export async function GET(request) {
       query.crmClientId = { $in: idsArray };
     }
     
-    // Optimización para VPS: usar lean() y seleccionar solo campos necesarios
-    // El índice compuesto { mes: 1, crmClientId: 1 } hace esta query muy rápida
-    const pagos = await MonthlyPayment.find(query)
-      .select('mes crmClientId pagado serviciosPagados fechaActualizacion createdAt updatedAt')
-      .sort({ mes: -1, createdAt: -1 })
-      .lean()
-      .maxTimeMS(10000); // Timeout optimizado para VPS (10 segundos)
+    // Verificar si es un mes pasado para aplicar lógica de "congelamiento" de ingresos
+    let esMesPasado = false;
+    let fechaFinMes = null;
+    if (mes) {
+      const [año, mesNum] = mes.split('-').map(Number);
+      fechaFinMes = new Date(año, mesNum, 0, 23, 59, 59, 999); // Último día del mes
+      
+      // Verificar si es un mes pasado (no el mes actual)
+      const ahora = new Date();
+      esMesPasado = año < ahora.getFullYear() || 
+                   (año === ahora.getFullYear() && mesNum < (ahora.getMonth() + 1));
+    }
+    
+    let pagos;
+    
+    if (esMesPasado && mes) {
+      // Para meses pasados, usar agregación para obtener el estado de pago tal como estaba al final del mes
+      // Esto "congela" los ingresos al valor que tenían al cerrar el mes
+      const pipeline = [
+        { $match: query },
+        // PRIMERO filtrar para mantener solo los pagos actualizados durante o antes del mes consultado
+        {
+          $match: {
+            $or: [
+              { fechaActualizacion: { $lte: fechaFinMes } },
+              { fechaActualizacion: { $exists: false } } // Para pagos sin fechaActualizacion (compatibilidad)
+            ]
+          }
+        },
+        // Ordenar por fechaActualizacion descendente para obtener el estado más reciente dentro del mes
+        { $sort: { fechaActualizacion: -1 } },
+        // Agrupar por crmClientId y tomar el primer documento (el más reciente dentro del mes)
+        {
+          $group: {
+            _id: '$crmClientId',
+            mes: { $first: '$mes' },
+            pagado: { $first: '$pagado' },
+            serviciosPagados: { $first: '$serviciosPagados' },
+            fechaActualizacion: { $first: '$fechaActualizacion' },
+            createdAt: { $first: '$createdAt' },
+            updatedAt: { $first: '$updatedAt' }
+          }
+        },
+        // Restaurar el campo crmClientId
+        {
+          $addFields: {
+            crmClientId: '$_id'
+          }
+        },
+        { $project: { _id: 0 } }
+      ];
+      
+      pagos = await MonthlyPayment.aggregate(pipeline)
+        .maxTimeMS(15000); // Timeout aumentado para agregación
+    } else {
+      // Para el mes actual, usar query normal (más rápido)
+      // Optimización para VPS: usar lean() y seleccionar solo campos necesarios
+      // El índice compuesto { mes: 1, crmClientId: 1 } hace esta query muy rápida
+      pagos = await MonthlyPayment.find(query)
+        .select('mes crmClientId pagado serviciosPagados fechaActualizacion createdAt updatedAt')
+        .sort({ mes: -1, createdAt: -1 })
+        .lean()
+        .maxTimeMS(10000); // Timeout optimizado para VPS (10 segundos)
+    }
     
     // Convertir Map de serviciosPagados a objeto plano para JSON
     pagos.forEach(pago => {
