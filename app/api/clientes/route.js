@@ -50,9 +50,21 @@ export async function POST(request) {
     await connectDB();
     const body = await request.json();
     
+    // Logging en desarrollo para diagnóstico
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    if (isDevelopment) {
+      console.log('[API Clientes POST] Datos recibidos:', JSON.stringify(body, null, 2));
+      console.log('[API Clientes POST] Base de datos:', mongoose.connection.db?.databaseName || 'N/A');
+    }
+    
     // Generar crmId si no viene
     if (!body.crmId) {
       body.crmId = `client-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+    }
+    
+    // Asegurar que etiquetas sea un array
+    if (body.etiquetas && !Array.isArray(body.etiquetas)) {
+      body.etiquetas = [];
     }
     
     // Optimizado para servidor VPS: validadores habilitados pero con timeout adecuado
@@ -60,8 +72,15 @@ export async function POST(request) {
       runValidators: true, // Habilitar validadores para integridad de datos
       maxTimeMS: 30000 // Timeout aumentado a 30 segundos para servidor VPS
     });
+    
+    if (isDevelopment) {
+      console.log('[API Clientes POST] Cliente creado exitosamente:', cliente._id);
+    }
+    
     return NextResponse.json({ success: true, data: cliente }, { status: 201 });
   } catch (error) {
+    console.error('[API Clientes POST] Error completo:', error);
+    console.error('[API Clientes POST] Stack:', error.stack);
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 400 }

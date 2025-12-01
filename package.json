@@ -18,6 +18,7 @@
     "check-all-dbs": "node scripts/checkDatabaseStatus.js",
     "find-data-loss": "node scripts/findDataLoss.js",
     "setup-local-mongodb": "node scripts/setup-local-mongodb.js",
+    "start-mongodb": "node scripts/start-local-mongodb.js",
     "dev:local": "node scripts/setup-local-mongodb.js && npm run dev"
   },
   "dependencies": {
