@@ -5,6 +5,7 @@
 /* Prevenir overflow horizontal */
 html, body {
   overflow-x: hidden;
+  overflow-y: visible;
   max-width: 100vw;
 }
 

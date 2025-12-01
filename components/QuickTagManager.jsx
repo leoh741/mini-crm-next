@@ -204,7 +204,7 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
               }
             }}
           />
-          <div className="absolute right-0 top-full mt-2 z-[200] w-64 max-w-[calc(100vw-2rem)] sm:max-w-none bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-3 mb-4" style={{ backgroundColor: 'rgb(30 41 55)' }}>
+          <div className="absolute right-0 top-full mt-2 z-[200] w-64 max-w-[calc(100vw-2rem)] sm:max-w-none bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-3 mb-4" style={{ backgroundColor: 'rgb(30 41 55)', zIndex: 200, position: 'absolute', opacity: 1 }}>
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-semibold text-slate-200">Etiquetas</h4>
             <button

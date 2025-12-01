@@ -12,6 +12,7 @@ import User from '../../../../models/User';
 import Budget from '../../../../models/Budget';
 import Meeting from '../../../../models/Meeting';
 import Task from '../../../../models/Task';
+import TeamMember from '../../../../models/TeamMember';
 
 export async function POST(request) {
   // PROTECCIÓN CRÍTICA: Bloquear importaciones desde desarrollo local si se conecta a base remota
@@ -37,20 +38,31 @@ export async function POST(request) {
     );
   }
   // PROTECCIÓN CRÍTICA: Verificar si existe archivo de bloqueo
+  // NOTA: En desarrollo local, permitir importaciones si se usa base de datos local
   try {
     const lockFile = path.join(process.cwd(), 'app', 'api', 'backup', 'import', 'route.js.lock');
     
     if (fs.existsSync(lockFile)) {
-      const timestamp = new Date().toISOString();
-      console.error(`[BACKUP IMPORT] [${timestamp}] 🚫 BLOQUEO ACTIVO: El endpoint de importación está deshabilitado por archivo de bloqueo`);
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'El endpoint de importación está temporalmente deshabilitado por seguridad. Contacta al administrador.',
-          bloqueado: true
-        },
-        { status: 503 }
-      );
+      // Verificar si estamos en desarrollo local con base de datos local
+      const isLocalDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+      const mongoUri = process.env.MONGODB_URI || '';
+      const isLocalMongo = mongoUri.includes('localhost') || mongoUri.includes('127.0.0.1') || mongoUri.includes('mongodb://localhost') || mongoUri.includes('mongodb://127.0.0.1');
+      
+      // Si estamos en desarrollo local con base de datos local, permitir la importación
+      if (isLocalDev && isLocalMongo) {
+        console.warn('[BACKUP IMPORT] Archivo de bloqueo detectado, pero permitiendo importación en desarrollo local con base de datos local');
+      } else {
+        const timestamp = new Date().toISOString();
+        console.error(`[BACKUP IMPORT] [${timestamp}] 🚫 BLOQUEO ACTIVO: El endpoint de importación está deshabilitado por archivo de bloqueo`);
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'El endpoint de importación está temporalmente deshabilitado por seguridad. Contacta al administrador.',
+            bloqueado: true
+          },
+          { status: 503 }
+        );
+      }
     }
   } catch (lockError) {
     // Si hay error al verificar el bloqueo, continuar (no es crítico)
@@ -93,7 +105,8 @@ export async function POST(request) {
       User,
       Budget,
       Meeting,
-      Task
+      Task,
+      TeamMember
     });
     logDatabaseState('BEFORE_IMPORT', countsBefore);
     logOperation('IMPORT_START', {
@@ -178,6 +191,7 @@ export async function POST(request) {
     let presupuestos = [];
     let reuniones = [];
     let tareas = [];
+    let equipo = []; // Inicializar equipo como array vacío para compatibilidad con backups antiguos
 
     // Función helper para parsear strings JSON que pueden estar doblemente serializados
     const parseJsonField = (field, fieldName) => {
@@ -208,7 +222,13 @@ export async function POST(request) {
       } catch (parseError) {
         console.error(`[BACKUP IMPORT] [${timestamp}] Error al parsear ${fieldName}:`, parseError.message);
         // Si falla, devolver valor por defecto
-        return fieldName.includes('clientes') || fieldName.includes('usuarios') || fieldName.includes('presupuestos') ? [] : {};
+        // Para campos de array (clientes, usuarios, presupuestos, reuniones, tareas, equipo)
+        if (fieldName.includes('clientes') || fieldName.includes('usuarios') || fieldName.includes('presupuestos') || 
+            fieldName.includes('reuniones') || fieldName.includes('tareas') || fieldName.includes('equipo')) {
+          return [];
+        }
+        // Para campos de objeto (pagosMensuales, gastos, ingresos)
+        return {};
       }
     };
 
@@ -227,6 +247,12 @@ export async function POST(request) {
       presupuestos = parseJsonField(body.presupuestos, 'presupuestos');
       reuniones = parseJsonField(body.reuniones, 'reuniones');
       tareas = parseJsonField(body.tareas, 'tareas');
+      // Equipo puede no existir en backups antiguos (versión < 2.3), usar array vacío por defecto
+      if (body.equipo !== undefined && body.equipo !== null) {
+        equipo = parseJsonField(body.equipo, 'equipo');
+      } else {
+        equipo = []; // Backup antiguo sin equipo
+      }
       
       console.log(`[BACKUP IMPORT] [${timestamp}] Datos parseados:`);
       console.log(`[BACKUP IMPORT] [${timestamp}] - Clientes:`, Array.isArray(clientes) ? `${clientes.length} clientes` : `NO ES ARRAY (tipo: ${typeof clientes})`);
@@ -240,13 +266,23 @@ export async function POST(request) {
       console.log(`[BACKUP IMPORT] [${timestamp}] - Presupuestos:`, Array.isArray(presupuestos) ? `${presupuestos.length} presupuestos` : `NO ES ARRAY (tipo: ${typeof presupuestos})`);
       console.log(`[BACKUP IMPORT] [${timestamp}] - Reuniones:`, Array.isArray(reuniones) ? `${reuniones.length} reuniones` : `NO ES ARRAY (tipo: ${typeof reuniones})`);
       console.log(`[BACKUP IMPORT] [${timestamp}] - Tareas:`, Array.isArray(tareas) ? `${tareas.length} tareas` : `NO ES ARRAY (tipo: ${typeof tareas})`);
+      console.log(`[BACKUP IMPORT] [${timestamp}] - Equipo:`, Array.isArray(equipo) ? `${equipo.length} miembros` : `NO ES ARRAY (tipo: ${typeof equipo})`);
     } catch (parseError) {
       console.error(`[BACKUP IMPORT] [${timestamp}] Error al parsear JSON:`, parseError);
       console.error(`[BACKUP IMPORT] [${timestamp}] Stack:`, parseError.stack);
+      // Asegurar que equipo esté inicializado incluso si hay error
+      if (typeof equipo === 'undefined') {
+        equipo = [];
+      }
       return NextResponse.json(
         { success: false, error: 'Error al parsear los datos JSON: ' + parseError.message },
         { status: 400 }
       );
+    }
+
+    // Asegurar que equipo esté inicializado (por si acaso)
+    if (typeof equipo === 'undefined') {
+      equipo = [];
     }
 
     // VALIDAR que hay datos para importar ANTES de borrar
@@ -257,6 +293,18 @@ export async function POST(request) {
     const tienePresupuestos = Array.isArray(presupuestos) && presupuestos.length > 0;
     const tieneReuniones = Array.isArray(reuniones) && reuniones.length > 0;
     const tieneTareas = Array.isArray(tareas) && tareas.length > 0;
+    const tieneEquipo = Array.isArray(equipo) && equipo.length > 0;
+    
+    // Logging detallado para diagnóstico
+    console.log(`[BACKUP IMPORT] [${timestamp}] Resumen de datos recibidos:`);
+    console.log(`[BACKUP IMPORT] [${timestamp}] - tieneClientes: ${tieneClientes} (${Array.isArray(clientes) ? clientes.length : 'NO ES ARRAY'})`);
+    console.log(`[BACKUP IMPORT] [${timestamp}] - tienePagos: ${tienePagos} (${typeof pagosMensuales === 'object' && pagosMensuales !== null ? Object.keys(pagosMensuales).length : 'NO ES OBJETO'})`);
+    console.log(`[BACKUP IMPORT] [${timestamp}] - tieneGastos: ${tieneGastos} (${typeof gastos === 'object' && gastos !== null ? Object.keys(gastos).length : 'NO ES OBJETO'})`);
+    console.log(`[BACKUP IMPORT] [${timestamp}] - tieneIngresos: ${tieneIngresos} (${typeof ingresos === 'object' && ingresos !== null ? Object.keys(ingresos).length : 'NO ES OBJETO'})`);
+    console.log(`[BACKUP IMPORT] [${timestamp}] - tienePresupuestos: ${tienePresupuestos} (${Array.isArray(presupuestos) ? presupuestos.length : 'NO ES ARRAY'})`);
+    console.log(`[BACKUP IMPORT] [${timestamp}] - tieneReuniones: ${tieneReuniones} (${Array.isArray(reuniones) ? reuniones.length : 'NO ES ARRAY'})`);
+    console.log(`[BACKUP IMPORT] [${timestamp}] - tieneTareas: ${tieneTareas} (${Array.isArray(tareas) ? tareas.length : 'NO ES ARRAY'})`);
+    console.log(`[BACKUP IMPORT] [${timestamp}] - tieneEquipo: ${tieneEquipo} (${Array.isArray(equipo) ? equipo.length : 'NO ES ARRAY'})`);
 
     // VALIDACIÓN CRÍTICA: Verificar que los clientes tienen nombre válido ANTES de borrar
     let clientesValidos = [];
@@ -294,12 +342,38 @@ export async function POST(request) {
       console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Validación de clientes: ${clientesValidos.length} válidos de ${clientes.length} totales`);
     }
 
-    if (!tieneClientes && !tienePagos && !tieneGastos && !tieneIngresos && !tienePresupuestos && !tieneReuniones && !tieneTareas) {
+    if (!tieneClientes && !tienePagos && !tieneGastos && !tieneIngresos && !tienePresupuestos && !tieneReuniones && !tieneTareas && !tieneEquipo) {
       console.error(`[BACKUP IMPORT] [${timestamp}] ❌ Error: No hay datos válidos para importar`);
       console.error(`[BACKUP IMPORT] [${timestamp}] User-Agent: ${userAgent}`);
       console.error(`[BACKUP IMPORT] [${timestamp}] Referer: ${referer}`);
+      console.error(`[BACKUP IMPORT] [${timestamp}] Body keys recibidos:`, Object.keys(body || {}));
+      console.error(`[BACKUP IMPORT] [${timestamp}] Tipos de datos en body:`, {
+        clientes: typeof body?.clientes,
+        pagosMensuales: typeof body?.pagosMensuales,
+        gastos: typeof body?.gastos,
+        ingresos: typeof body?.ingresos,
+        usuarios: typeof body?.usuarios,
+        presupuestos: typeof body?.presupuestos,
+        reuniones: typeof body?.reuniones,
+        tareas: typeof body?.tareas,
+        equipo: typeof body?.equipo
+      });
       return NextResponse.json(
-        { success: false, error: 'No hay datos válidos para importar. El backup está vacío o tiene formato incorrecto. Los datos NO fueron borrados.' },
+        { 
+          success: false, 
+          error: 'No hay datos válidos para importar. El backup está vacío o tiene formato incorrecto. Los datos NO fueron borrados.',
+          debug: {
+            tieneClientes,
+            tienePagos,
+            tieneGastos,
+            tieneIngresos,
+            tienePresupuestos,
+            tieneReuniones,
+            tieneTareas,
+            tieneEquipo,
+            bodyKeys: Object.keys(body || {})
+          }
+        },
         { status: 400 }
       );
     }
@@ -312,7 +386,8 @@ export async function POST(request) {
       ingresos: tieneIngresos ? await Income.countDocuments() : 0,
       presupuestos: tienePresupuestos ? await Budget.countDocuments() : 0,
       reuniones: tieneReuniones ? await Meeting.countDocuments() : 0,
-      tareas: tieneTareas ? await Task.countDocuments() : 0
+      tareas: tieneTareas ? await Task.countDocuments() : 0,
+      equipo: tieneEquipo ? await TeamMember.countDocuments() : 0
     };
     
     console.log(`[BACKUP IMPORT] [${timestamp}] Documentos existentes que se borrarán:`, documentosExistentes);
@@ -326,6 +401,7 @@ export async function POST(request) {
     let presupuestosPreparados = [];
     let reunionesPreparadas = [];
     let tareasPreparadas = [];
+    let equipoPreparado = []; // Inicializar como array vacío
     
     // Preparar clientes ANTES de borrar
     if (tieneClientes && clientesValidos.length > 0) {
@@ -352,9 +428,10 @@ export async function POST(request) {
             fechaPago: cliente.fechaPago !== undefined && cliente.fechaPago !== null ? Number(cliente.fechaPago) : undefined,
             pagado: Boolean(cliente.pagado),
             pagoUnico: Boolean(cliente.pagoUnico),
-            pagoMesSiguiente: Boolean(cliente.pagoMesSiguiente),
-            servicios: Array.isArray(cliente.servicios) ? cliente.servicios : [],
-            observaciones: cliente.observaciones || undefined
+          pagoMesSiguiente: Boolean(cliente.pagoMesSiguiente),
+          servicios: Array.isArray(cliente.servicios) ? cliente.servicios : [],
+          observaciones: cliente.observaciones || undefined,
+          etiquetas: Array.isArray(cliente.etiquetas) ? cliente.etiquetas.map(e => String(e).trim().toLowerCase()).filter(e => e) : []
           };
         }
         
@@ -370,7 +447,8 @@ export async function POST(request) {
           pagoUnico: Boolean(cliente.pagoUnico),
           pagoMesSiguiente: Boolean(cliente.pagoMesSiguiente),
           servicios: Array.isArray(cliente.servicios) ? cliente.servicios : [],
-          observaciones: cliente.observaciones || undefined
+          observaciones: cliente.observaciones || undefined,
+          etiquetas: Array.isArray(cliente.etiquetas) ? cliente.etiquetas.map(e => String(e).trim().toLowerCase()).filter(e => e) : []
         };
       }).filter(c => {
         // Filtrar nuevamente por seguridad - debe tener crmId y nombre válidos
@@ -538,8 +616,32 @@ export async function POST(request) {
       console.log(`[BACKUP IMPORT] [${timestamp}] ✅ ${tareasPreparadas.length} tareas preparadas para importar`);
     }
     
+    // Preparar equipo ANTES de borrar
+    if (tieneEquipo && Array.isArray(equipo) && equipo.length > 0) {
+      equipoPreparado = equipo.map(miembro => {
+        const crmId = miembro.crmId || miembro.id || `team-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+        return {
+          crmId: String(crmId),
+          nombre: miembro.nombre?.trim() || '',
+          cargo: miembro.cargo?.trim() || undefined,
+          email: miembro.email?.trim() || undefined,
+          telefono: miembro.telefono?.trim() || undefined,
+          calificacion: miembro.calificacion !== undefined && miembro.calificacion !== null ? Math.max(0, Math.min(10, Number(miembro.calificacion))) : 0,
+          comentarios: Array.isArray(miembro.comentarios) ? miembro.comentarios.map(c => ({
+            texto: String(c.texto || '').trim(),
+            autor: String(c.autor || '').trim(),
+            fecha: c.fecha ? new Date(c.fecha) : new Date(),
+            calificacion: c.calificacion !== undefined && c.calificacion !== null ? Math.max(0, Math.min(10, Number(c.calificacion))) : undefined
+          })).filter(c => c.texto && c.autor) : [],
+          habilidades: Array.isArray(miembro.habilidades) ? miembro.habilidades.map(h => String(h).trim().toLowerCase()).filter(h => h) : [],
+          activo: miembro.activo !== undefined ? Boolean(miembro.activo) : true
+        };
+      }).filter(m => m.nombre && m.nombre.trim().length > 0);
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ ${equipoPreparado.length} miembros del equipo preparados para importar`);
+    }
+    
     // VALIDACIÓN FINAL ANTES DE BORRAR: Verificar que tenemos al menos algunos datos válidos
-    const totalDatosPreparados = clientesPreparados.length + pagosPreparados.length + gastosPreparados.length + ingresosPreparados.length + presupuestosPreparados.length + reunionesPreparadas.length + tareasPreparadas.length;
+    const totalDatosPreparados = clientesPreparados.length + pagosPreparados.length + gastosPreparados.length + ingresosPreparados.length + presupuestosPreparados.length + reunionesPreparadas.length + tareasPreparadas.length + equipoPreparado.length;
     if (totalDatosPreparados === 0) {
       console.error(`[BACKUP IMPORT] [${timestamp}] ERROR CRÍTICO: No hay datos válidos preparados. NO se borrará nada.`);
       return NextResponse.json(
@@ -552,7 +654,7 @@ export async function POST(request) {
     const totalDatosExistentes = documentosExistentes.clientes + documentosExistentes.pagos + 
                                  documentosExistentes.gastos + documentosExistentes.ingresos +
                                  documentosExistentes.presupuestos + documentosExistentes.reuniones +
-                                 documentosExistentes.tareas;
+                                 documentosExistentes.tareas + documentosExistentes.equipo;
     
     if (totalDatosExistentes > 0 && totalDatosPreparados < totalDatosExistentes) {
       console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ ADVERTENCIA: El backup tiene MENOS datos (${totalDatosPreparados}) que los existentes (${totalDatosExistentes})`);
@@ -648,6 +750,11 @@ export async function POST(request) {
       advertenciasPerdida.push(`Tareas: Tienes ${documentosExistentes.tareas} pero el backup solo tiene ${documentosAImportar.tareas} (pérdida de ${documentosExistentes.tareas - documentosAImportar.tareas} tareas)`);
     }
     
+    if (documentosExistentes.equipo > 0 && documentosAImportar.equipo < documentosExistentes.equipo) {
+      hayPerdidaPotencial = true;
+      advertenciasPerdida.push(`Equipo: Tienes ${documentosExistentes.equipo} pero el backup solo tiene ${documentosAImportar.equipo} (pérdida de ${documentosExistentes.equipo - documentosAImportar.equipo} miembros)`);
+    }
+    
     // Si hay pérdida potencial significativa, requerir confirmación adicional
     if (hayPerdidaPotencial) {
       console.error(`[BACKUP IMPORT] [${timestamp}] ⚠️ ADVERTENCIA CRÍTICA: El backup tiene MENOS datos que los existentes!`);
@@ -674,14 +781,15 @@ export async function POST(request) {
     // PROTECCIÓN CRÍTICA: Crear backup automático ANTES de borrar cualquier cosa
     console.log(`[BACKUP IMPORT] [${timestamp}] 🔒 Creando backup automático de seguridad antes de importar...`);
     try {
-      const [clientesExistentes, pagosExistentes, gastosExistentes, ingresosExistentes, presupuestosExistentes, reunionesExistentes, tareasExistentes] = await Promise.all([
+      const [clientesExistentes, pagosExistentes, gastosExistentes, ingresosExistentes, presupuestosExistentes, reunionesExistentes, tareasExistentes, equipoExistentes] = await Promise.all([
         Client.find({}).lean(),
         MonthlyPayment.find({}).lean(),
         Expense.find({}).lean(),
         Income.find({}).lean(),
         Budget.find({}).lean(),
         Meeting.find({}).lean(),
-        Task.find({}).lean()
+        Task.find({}).lean(),
+        TeamMember.find({}).lean()
       ]);
       
       // Formatear para backup (igual que en export)
@@ -698,7 +806,8 @@ export async function POST(request) {
         pagoUnico: c.pagoUnico || false,
         pagoMesSiguiente: c.pagoMesSiguiente || false,
         servicios: c.servicios || [],
-        observaciones: c.observaciones
+        observaciones: c.observaciones,
+        etiquetas: c.etiquetas || []
       }));
       
       // Formatear pagos mensuales
@@ -799,6 +908,22 @@ export async function POST(request) {
         updatedAt: t.updatedAt || null
       }));
       
+      // Formatear equipo
+      const equipoBackup = equipoExistentes.map(m => ({
+        id: m.crmId || m._id.toString(),
+        crmId: m.crmId || m._id.toString(),
+        nombre: m.nombre,
+        cargo: m.cargo || undefined,
+        email: m.email || undefined,
+        telefono: m.telefono || undefined,
+        calificacion: m.calificacion || 0,
+        comentarios: m.comentarios || [],
+        habilidades: m.habilidades || [],
+        activo: m.activo !== undefined ? m.activo : true,
+        createdAt: m.createdAt || null,
+        updatedAt: m.updatedAt || null
+      }));
+      
       backupAutomatico = {
         clientes: JSON.stringify(clientesBackup),
         pagosMensuales: JSON.stringify(pagosMensualesBackup),
@@ -807,14 +932,15 @@ export async function POST(request) {
         presupuestos: JSON.stringify(presupuestosBackup),
         reuniones: JSON.stringify(reunionesBackup),
         tareas: JSON.stringify(tareasBackup),
+        equipo: JSON.stringify(equipoBackup),
         fechaExportacion: new Date().toISOString(),
-        version: '2.2',
+        version: '2.3',
         tipo: 'backup_automatico_pre_importacion'
       };
       
       const totalItems = clientesBackup.length + Object.keys(pagosMensualesBackup).length + 
                          Object.keys(gastosBackup).length + Object.keys(ingresosBackup).length + 
-                         presupuestosBackup.length + reunionesBackup.length + tareasBackup.length;
+                         presupuestosBackup.length + reunionesBackup.length + tareasBackup.length + equipoBackup.length;
       
       console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Backup automático creado:`);
       console.log(`[BACKUP IMPORT] [${timestamp}]   - ${clientesBackup.length} clientes`);
@@ -943,6 +1069,15 @@ export async function POST(request) {
       await Task.deleteMany({});
       console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Tareas eliminadas: ${countAntes} (se importarán ${tareasPreparadas.length})`);
     }
+    if (tieneEquipo && equipoPreparado.length > 0) {
+      const countAntes = documentosExistentes.equipo;
+      logDeleteOperation('TeamMember', countAntes, 'Importación de backup', {
+        equipoPreparado: equipoPreparado.length,
+        timestamp
+      });
+      await TeamMember.deleteMany({});
+      console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Equipo eliminado: ${countAntes} (se importarán ${equipoPreparado.length})`);
+    }
     // NO eliminamos usuarios - se mantienen y se hace merge
 
     const resultados = {
@@ -954,7 +1089,8 @@ export async function POST(request) {
       usuariosMantenidos: 0,
       presupuestos: 0,
       reuniones: 0,
-      tareas: 0
+      tareas: 0,
+      equipo: 0
     };
 
     // Importar clientes (usar los ya preparados y validados)
@@ -1452,6 +1588,66 @@ export async function POST(request) {
       
       if (errores > 0) {
         console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ Hubo ${errores} errores al importar tareas`);
+      }
+    }
+
+    // Importar equipo (usar los ya preparados)
+    if (equipoPreparado.length > 0) {
+      console.log(`[BACKUP IMPORT] [${timestamp}] Insertando ${equipoPreparado.length} miembros del equipo usando upsert...`);
+      let insertados = 0;
+      let actualizados = 0;
+      let errores = 0;
+      
+      for (let i = 0; i < equipoPreparado.length; i++) {
+        const miembro = equipoPreparado[i];
+        try {
+          // Validar que tenga los campos requeridos
+          if (!miembro.crmId || !miembro.nombre || miembro.nombre.trim().length === 0) {
+            console.warn(`[BACKUP IMPORT] Miembro ${i + 1} omitido: faltan campos requeridos`, miembro);
+            errores++;
+            continue;
+          }
+          
+          // Verificar si el miembro ya existe
+          const existeAntes = await TeamMember.findOne({ crmId: miembro.crmId }).select('_id').lean();
+          const eraNuevo = !existeAntes;
+          
+          // Excluir crmId del update para evitar conflictos
+          const { crmId, ...miembroParaActualizar } = miembro;
+          
+          const resultado = await TeamMember.findOneAndUpdate(
+            { crmId: miembro.crmId },
+            { $set: miembroParaActualizar },
+            { upsert: true, new: true, runValidators: true }
+          );
+          
+          // Verificar que se guardó
+          if (!resultado || !resultado._id) {
+            throw new Error('El miembro no se guardó correctamente (sin _id)');
+          }
+          
+          if (eraNuevo) {
+            insertados++;
+          } else {
+            actualizados++;
+          }
+          
+          if ((insertados + actualizados) % 50 === 0) {
+            console.log(`[BACKUP IMPORT] [${timestamp}] Procesados ${insertados + actualizados}/${equipoPreparado.length} miembros...`);
+          }
+        } catch (e) {
+          errores++;
+          if (errores <= 5) {
+            console.error(`[BACKUP IMPORT] Error al insertar miembro [${i + 1}]:`, e.message);
+          }
+        }
+      }
+      
+      resultados.equipo = insertados + actualizados;
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Equipo importado: ${insertados} insertados, ${actualizados} actualizados, ${errores} errores`);
+      
+      if (errores > 0) {
+        console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ Hubo ${errores} errores al importar equipo`);
       }
     }
 

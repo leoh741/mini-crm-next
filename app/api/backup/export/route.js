@@ -8,6 +8,7 @@ import User from '../../../../models/User';
 import Budget from '../../../../models/Budget';
 import Meeting from '../../../../models/Meeting';
 import Task from '../../../../models/Task';
+import TeamMember from '../../../../models/TeamMember';
 import { logOperation, logDatabaseState, getDatabaseCounts } from '../../../../lib/auditLogger';
 import mongoose from 'mongoose';
 
@@ -37,7 +38,8 @@ export async function GET() {
       User,
       Budget,
       Meeting,
-      Task
+      Task,
+      TeamMember
     });
     
     logDatabaseState('BEFORE_EXPORT', countsBefore);
@@ -64,7 +66,7 @@ export async function GET() {
 
     // Obtener todos los datos - SOLO LECTURA, NUNCA ESCRITURA O BORRADO
     // IMPORTANTE: Estas operaciones SOLO leen datos, no los modifican
-    const [clientes, pagos, gastos, ingresos, usuarios, presupuestos, reuniones, tareas] = await Promise.all([
+    const [clientes, pagos, gastos, ingresos, usuarios, presupuestos, reuniones, tareas, equipo] = await Promise.all([
       Client.find({}).lean().maxTimeMS(30000), // Timeout de 30 segundos
       MonthlyPayment.find({}).lean().maxTimeMS(30000),
       Expense.find({}).lean().maxTimeMS(30000),
@@ -72,7 +74,8 @@ export async function GET() {
       User.find({}).lean().maxTimeMS(30000),
       Budget.find({}).lean().maxTimeMS(30000),
       Meeting.find({}).lean().maxTimeMS(30000),
-      Task.find({}).lean().maxTimeMS(30000)
+      Task.find({}).lean().maxTimeMS(30000),
+      TeamMember.find({}).lean().maxTimeMS(30000)
     ]);
     
     // PROTECCIÓN: Verificar inmediatamente después de leer que no se haya borrado nada
@@ -84,7 +87,8 @@ export async function GET() {
       User,
       Budget,
       Meeting,
-      Task
+      Task,
+      TeamMember
     });
     
     const dataLossAfterRead = Object.keys(countsBefore).some(key => {
@@ -129,7 +133,10 @@ export async function GET() {
       pagoUnico: cliente.pagoUnico || false,
       pagoMesSiguiente: cliente.pagoMesSiguiente || false,
       servicios: cliente.servicios || [],
-      observaciones: cliente.observaciones
+      observaciones: cliente.observaciones,
+      etiquetas: cliente.etiquetas || [],
+      createdAt: cliente.createdAt || null,
+      updatedAt: cliente.updatedAt || null
     }));
 
     // Convertir pagos mensuales al formato esperado (objeto anidado por mes)
@@ -240,6 +247,22 @@ export async function GET() {
       updatedAt: tarea.updatedAt || null
     }));
 
+    // Convertir equipo al formato esperado
+    const equipoFormateado = equipo.map(miembro => ({
+      id: miembro.crmId || miembro._id.toString(),
+      crmId: miembro.crmId || miembro._id.toString(),
+      nombre: miembro.nombre,
+      cargo: miembro.cargo || undefined,
+      email: miembro.email || undefined,
+      telefono: miembro.telefono || undefined,
+      calificacion: miembro.calificacion || 0,
+      comentarios: miembro.comentarios || [],
+      habilidades: miembro.habilidades || [],
+      activo: miembro.activo !== undefined ? miembro.activo : true,
+      createdAt: miembro.createdAt || null,
+      updatedAt: miembro.updatedAt || null
+    }));
+
     // Formato compatible: devolver como objetos/arrays directamente
     // El frontend los serializará cuando cree el archivo JSON
     const datos = {
@@ -252,8 +275,9 @@ export async function GET() {
       presupuestos: presupuestosFormateados, // Array directamente
       reuniones: reunionesFormateadas, // Array directamente
       tareas: tareasFormateadas, // Array directamente
+      equipo: equipoFormateado, // Array directamente
       fechaExportacion: new Date().toISOString(),
-      version: '2.2'
+      version: '2.3'
     };
 
     // PROTECCIÓN: Verificar que no se haya borrado nada durante la exportación
@@ -266,7 +290,8 @@ export async function GET() {
       User,
       Budget,
       Meeting,
-      Task
+      Task,
+      TeamMember
     });
     
     // Verificar que los conteos no hayan cambiado después de formatear
@@ -307,7 +332,8 @@ export async function GET() {
       User,
       Budget,
       Meeting,
-      Task
+      Task,
+      TeamMember
     });
     
     logDatabaseState('AFTER_EXPORT', countsAfter);
@@ -356,7 +382,8 @@ export async function GET() {
         usuarios: datos.usuarios.length,
         presupuestos: datos.presupuestos.length,
         reuniones: datos.reuniones.length,
-        tareas: datos.tareas.length
+        tareas: datos.tareas.length,
+        equipo: datos.equipo.length
       }
     });
     

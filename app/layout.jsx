@@ -46,7 +46,7 @@ export default function RootLayout({ children }) {
       <body className="bg-slate-900 text-slate-100" suppressHydrationWarning>
         <DisablePWA />
         <Header />
-        <main className="pt-20 md:pt-24 pb-20 md:pb-16 px-3 md:p-4 max-w-4xl mx-auto min-h-screen">{children}</main>
+        <main className="pt-20 md:pt-24 pb-20 md:pb-16 px-3 md:p-4 max-w-4xl mx-auto min-h-screen" style={{ overflow: 'visible' }}>{children}</main>
         <Footer />
       </body>
     </html>
