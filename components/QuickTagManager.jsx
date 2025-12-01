@@ -4,10 +4,12 @@ import { useState, useEffect, useRef } from "react";
 import { actualizarCliente, limpiarCacheClientes } from "../lib/clientesUtils";
 import { Icons } from "./Icons";
 
-export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas = [] }) {
+export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas = [], todosLosClientes = [] }) {
   const [mostrarPanel, setMostrarPanel] = useState(false);
   const [etiquetasCliente, setEtiquetasCliente] = useState(cliente.etiquetas || []);
   const [actualizando, setActualizando] = useState(false);
+  const [nuevaEtiqueta, setNuevaEtiqueta] = useState("");
+  const [creandoEtiqueta, setCreandoEtiqueta] = useState(false);
   const panelRef = useRef(null);
 
   // Capitalizar primera letra
@@ -33,7 +35,17 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
   };
 
   // Obtener etiquetas únicas de todos los clientes
-  const etiquetasDisponibles = Array.from(new Set(todasLasEtiquetas.flat())).sort();
+  // Si todasLasEtiquetas está vacío pero tenemos todosLosClientes, extraer de ahí
+  let etiquetasDisponibles = Array.from(new Set(todasLasEtiquetas.flat())).sort();
+  
+  // Si no hay etiquetas disponibles pero tenemos la lista de clientes, extraerlas
+  if (etiquetasDisponibles.length === 0 && todosLosClientes.length > 0) {
+    const etiquetasDeTodos = todosLosClientes
+      .map(c => c.etiquetas || [])
+      .flat()
+      .filter(Boolean);
+    etiquetasDisponibles = Array.from(new Set(etiquetasDeTodos)).sort();
+  }
 
   // Cerrar panel al hacer click fuera
   useEffect(() => {
@@ -97,6 +109,56 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
     }
   };
 
+  const crearYAgregarEtiqueta = async () => {
+    if (!nuevaEtiqueta.trim() || creandoEtiqueta) return;
+
+    const etiquetaLower = nuevaEtiqueta.trim().toLowerCase();
+    
+    // Verificar si ya existe
+    if (etiquetasCliente.includes(etiquetaLower)) {
+      alert('Esta etiqueta ya está aplicada a este cliente');
+      setNuevaEtiqueta("");
+      return;
+    }
+
+    setCreandoEtiqueta(true);
+    const nuevasEtiquetas = [...etiquetasCliente, etiquetaLower];
+    
+    // Actualización optimista
+    setEtiquetasCliente(nuevasEtiquetas);
+    setNuevaEtiqueta("");
+
+    try {
+      const clienteId = cliente.id || cliente._id || cliente.crmId;
+      const resultado = await actualizarCliente(clienteId, { etiquetas: nuevasEtiquetas }, true);
+      
+      if (resultado) {
+        limpiarCacheClientes();
+        if (onUpdate) {
+          onUpdate();
+        }
+      } else {
+        // Revertir si falla
+        setEtiquetasCliente(cliente.etiquetas || []);
+        alert('Error al crear la etiqueta. Por favor, intenta nuevamente.');
+      }
+    } catch (error) {
+      console.error('Error al crear etiqueta:', error);
+      // Revertir si falla
+      setEtiquetasCliente(cliente.etiquetas || []);
+      alert('Error al crear la etiqueta. Por favor, intenta nuevamente.');
+    } finally {
+      setCreandoEtiqueta(false);
+    }
+  };
+
+  const handleNuevaEtiquetaKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      crearYAgregarEtiqueta();
+    }
+  };
+
   return (
     <div className="relative" ref={panelRef}>
       <button
@@ -123,6 +185,29 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
             </button>
           </div>
 
+          {/* Campo para crear nueva etiqueta */}
+          <div className="mb-3">
+            <p className="text-xs text-slate-400 mb-2">Crear nueva etiqueta:</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={nuevaEtiqueta}
+                onChange={(e) => setNuevaEtiqueta(e.target.value)}
+                onKeyDown={handleNuevaEtiquetaKeyDown}
+                placeholder="Escribe y presiona Enter"
+                className="flex-1 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-slate-100 focus:outline-none focus:border-blue-500 placeholder:text-slate-500"
+                disabled={creandoEtiqueta || actualizando}
+              />
+              <button
+                onClick={crearYAgregarEtiqueta}
+                disabled={!nuevaEtiqueta.trim() || creandoEtiqueta || actualizando}
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed rounded text-sm font-medium transition-colors"
+              >
+                {creandoEtiqueta ? '...' : '+'}
+              </button>
+            </div>
+          </div>
+
           {etiquetasDisponibles.length > 0 && (
             <div className="mb-3">
               <p className="text-xs text-slate-400 mb-2">Etiquetas disponibles:</p>
@@ -133,7 +218,7 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
                     <button
                       key={etiqueta}
                       onClick={() => toggleEtiqueta(etiqueta)}
-                      disabled={actualizando}
+                      disabled={actualizando || creandoEtiqueta}
                       className={`px-2 py-1 rounded text-xs border transition-all ${
                         tieneEtiqueta
                           ? `${getTagColor(etiqueta)} ring-2 ring-blue-500`

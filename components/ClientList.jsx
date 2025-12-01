@@ -2,15 +2,16 @@ import Link from "next/link";
 import { memo } from "react";
 import QuickTagManager from "./QuickTagManager";
 
-function ClientList({ clientes, onClientUpdate }) {
+function ClientList({ clientes, todosLosClientes, onClientUpdate }) {
   // Capitalizar primera letra de una etiqueta
   const capitalizarEtiqueta = (etiqueta) => {
     if (!etiqueta) return '';
     return etiqueta.charAt(0).toUpperCase() + etiqueta.slice(1);
   };
 
-  // Obtener todas las etiquetas de todos los clientes
-  const todasLasEtiquetas = clientes
+  // Obtener todas las etiquetas de todos los clientes (usar todosLosClientes si está disponible, sino usar clientes)
+  const clientesParaEtiquetas = todosLosClientes && todosLosClientes.length > 0 ? todosLosClientes : clientes;
+  const todasLasEtiquetas = clientesParaEtiquetas
     .map(c => c.etiquetas || [])
     .flat()
     .filter(Boolean);
@@ -74,6 +75,7 @@ function ClientList({ clientes, onClientUpdate }) {
             <QuickTagManager
               cliente={cliente}
               todasLasEtiquetas={todasLasEtiquetas}
+              todosLosClientes={clientesParaEtiquetas}
               onUpdate={onClientUpdate}
             />
           </div>

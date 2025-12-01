@@ -132,7 +132,8 @@ function ClientesPageContent() {
         </div>
       ) : (
         <ClientList 
-          clientes={clientesFiltrados} 
+          clientes={clientesFiltrados}
+          todosLosClientes={clientes}
           onClientUpdate={() => {
             // Recargar clientes después de actualizar etiquetas
             const cargarClientes = async () => {
