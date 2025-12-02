@@ -1,0 +1,19 @@
+{
+  "name": "Digital Space CRM",
+  "short_name": "DS CRM",
+  "description": "CRM para gestionar clientes de Digital Space",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
+

@@ -18,25 +18,26 @@ export default function RootLayout({ children }) {
       <head>
         <link rel="icon" href="/logo-512x512.png" type="image/png" />
         <link rel="apple-touch-icon" href="/logo-512x512.png" />
+        <link rel="manifest" href="/manifest.json" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-        <meta name="mobile-web-app-capable" content="no" />
-        <meta name="apple-mobile-web-app-capable" content="no" />
+        <meta name="theme-color" content="#0f172a" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="application-name" content="" />
-        <meta name="msapplication-TileColor" content="" />
-        <meta name="msapplication-config" content="" />
+        <meta name="application-name" content="Digital Space CRM" />
+        <meta name="msapplication-TileColor" content="#0f172a" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              // Prevenir instalación de PWA - ejecutar inmediatamente
+              // Prevenir instalación automática de PWA, pero permitir "Agregar a la pantalla de inicio"
               (function() {
+                // Prevenir el prompt automático de instalación
                 window.addEventListener('beforeinstallprompt', function(e) {
                   e.preventDefault();
-                  e.stopImmediatePropagation();
-                  return false;
+                  // No detenemos la propagación completamente para permitir "Agregar a la pantalla de inicio"
                 }, {capture: true, passive: false});
                 
-                // Desregistrar service workers
+                // Desregistrar service workers para evitar instalación completa
                 if ('serviceWorker' in navigator) {
                   navigator.serviceWorker.getRegistrations().then(function(registrations) {
                     registrations.forEach(function(registration) {
