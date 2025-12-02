@@ -6,12 +6,18 @@ import DisablePWA from '../components/DisablePWA';
 export const metadata = {
   title: "Digital Space CRM",
   description: "CRM para gestionar clientes de Digital Space",
+  icons: {
+    icon: '/logo-512x512.png',
+    apple: '/logo-512x512.png',
+  },
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="es">
       <head>
+        <link rel="icon" href="/logo-512x512.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/logo-512x512.png" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
         <meta name="mobile-web-app-capable" content="no" />
         <meta name="apple-mobile-web-app-capable" content="no" />

@@ -512,24 +512,6 @@ function MiembroDetailPageContent() {
                 </p>
               </div>
             </div>
-            {miembro.habilidades && miembro.habilidades.length > 0 && (
-              <div className="mt-4">
-                <p className="text-sm text-slate-400 mb-2">Habilidades</p>
-                <div className="flex flex-wrap gap-2">
-                  {miembro.habilidades.map((habilidad, index) => {
-                    const colorClass = getTagColor(habilidad, todasLasHabilidades);
-                    return (
-                      <span
-                        key={index}
-                        className={`px-3 py-1 rounded text-xs border ${colorClass}`}
-                      >
-                        {capitalizarEtiqueta(habilidad)}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
