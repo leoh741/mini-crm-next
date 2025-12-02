@@ -236,10 +236,22 @@ function HomePageContent() {
               <div key={reunion.reunionId} className="bg-slate-800/50 rounded p-2 border border-blue-800">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm text-blue-200 truncate">{reunion.titulo}</p>
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <p className="font-medium text-sm text-blue-200 truncate">{reunion.titulo}</p>
+                      {reunion.tipo === 'meet' ? (
+                        <span className="px-2 py-0.5 rounded text-xs bg-blue-900/30 text-blue-400 border border-blue-700 flex items-center gap-1">
+                          <Icons.VideoCamera className="text-xs" />
+                          <span>Meet</span>
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded text-xs bg-green-900/30 text-green-400 border border-green-700 flex items-center gap-1">
+                          <Icons.OfficeBuilding className="text-xs" />
+                          <span>Presencial</span>
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-blue-300/80">
                       {formatearFechaReunion(reunion.fecha)} a las {formatearHoraReunion(reunion.fecha, reunion.hora)}
-                      {reunion.tipo === 'meet' ? <Icons.VideoCamera className="inline ml-1" /> : <Icons.OfficeBuilding className="inline ml-1" />}
                     </p>
                     {reunion.cliente?.nombre && (
                       <p className="text-xs text-blue-300/70">Cliente: {reunion.cliente.nombre}</p>
