@@ -12,6 +12,7 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
   const [nuevaEtiqueta, setNuevaEtiqueta] = useState("");
   const [creandoEtiqueta, setCreandoEtiqueta] = useState(false);
   const panelRef = useRef(null);
+  const panelContentRef = useRef(null);
 
   // Capitalizar primera letra
   const capitalizarEtiqueta = (etiqueta) => {
@@ -70,6 +71,55 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
   useEffect(() => {
     setEtiquetasCliente(cliente.etiquetas || []);
   }, [cliente.etiquetas]);
+
+  // Ajustar posición del panel cuando se muestra
+  useEffect(() => {
+    if (mostrarPanel && panelRef.current && panelContentRef.current) {
+      const buttonRect = panelRef.current.getBoundingClientRect();
+      const footerHeight = 60; // Altura aproximada del footer
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+      const spaceBelow = viewportHeight - buttonRect.bottom;
+      const spaceAbove = buttonRect.top;
+      const spaceRight = viewportWidth - buttonRect.right;
+      const panelHeight = 300; // Altura estimada del panel
+      const panelWidth = 256; // Ancho del panel (w-64 = 256px)
+      
+      // Ajustar posición vertical
+      if (spaceBelow < panelHeight + 20 && spaceAbove > spaceBelow) {
+        // Mostrar arriba si hay más espacio arriba
+        panelContentRef.current.style.top = 'auto';
+        panelContentRef.current.style.bottom = `${buttonRect.height + 8}px`;
+      } else {
+        // Mostrar abajo
+        panelContentRef.current.style.top = `${buttonRect.height + 8}px`;
+        panelContentRef.current.style.bottom = 'auto';
+      }
+      
+      // Ajustar posición horizontal si se sale por la derecha
+      if (spaceRight < panelWidth && buttonRect.left > panelWidth) {
+        // Mostrar a la izquierda del botón
+        panelContentRef.current.style.right = 'auto';
+        panelContentRef.current.style.left = `${buttonRect.left - panelWidth}px`;
+      } else {
+        panelContentRef.current.style.right = '0';
+        panelContentRef.current.style.left = 'auto';
+      }
+      
+      // Asegurar que no quede tapado por el footer
+      const finalTop = parseInt(panelContentRef.current.style.top) || 0;
+      if (finalTop > 0 && finalTop + panelHeight > viewportHeight - footerHeight) {
+        panelContentRef.current.style.maxHeight = `${viewportHeight - footerHeight - finalTop - 20}px`;
+        panelContentRef.current.style.overflowY = 'auto';
+      } else {
+        const finalBottom = parseInt(panelContentRef.current.style.bottom) || 0;
+        if (finalBottom > 0 && viewportHeight - finalBottom - buttonRect.height < footerHeight) {
+          panelContentRef.current.style.maxHeight = `${viewportHeight - footerHeight - buttonRect.height - 20}px`;
+          panelContentRef.current.style.overflowY = 'auto';
+        }
+      }
+    }
+  }, [mostrarPanel]);
 
   const toggleEtiqueta = async (e, etiqueta) => {
     e.preventDefault();
@@ -204,7 +254,11 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
               }
             }}
           />
-          <div className="absolute right-0 top-full mt-2 z-[200] w-64 max-w-[calc(100vw-2rem)] sm:max-w-none bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-3 mb-4" style={{ backgroundColor: 'rgb(30 41 55)', zIndex: 200, position: 'absolute', opacity: 1 }}>
+          <div 
+            ref={panelContentRef}
+            className="absolute right-0 top-full mt-2 z-[200] w-64 max-w-[calc(100vw-2rem)] sm:max-w-none bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-3 mb-4" 
+            style={{ backgroundColor: 'rgb(30 41 55)', zIndex: 200, position: 'absolute', opacity: 1 }}
+          >
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-semibold text-slate-200">Etiquetas</h4>
             <button

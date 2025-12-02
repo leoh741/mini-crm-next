@@ -363,7 +363,7 @@ function MiembroDetailPageContent() {
         {editando ? (
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+              <div className="min-w-0">
                 <label className="block text-sm font-medium text-slate-300 mb-2">Nombre *</label>
                 <input
                   type="text"
@@ -374,7 +374,7 @@ function MiembroDetailPageContent() {
                   className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-blue-500"
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="block text-sm font-medium text-slate-300 mb-2">Cargo</label>
                 <input
                   type="text"
@@ -384,17 +384,18 @@ function MiembroDetailPageContent() {
                   className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-blue-500"
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="block text-sm font-medium text-slate-300 mb-2">Email</label>
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-blue-500"
+                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-blue-500 break-all"
+                  style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="block text-sm font-medium text-slate-300 mb-2">Teléfono</label>
                 <input
                   type="text"
@@ -404,7 +405,7 @@ function MiembroDetailPageContent() {
                   className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-blue-500"
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="block text-sm font-medium text-slate-300 mb-2">Calificación (0-10)</label>
                 <input
                   type="number"
@@ -417,13 +418,13 @@ function MiembroDetailPageContent() {
                   className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-blue-500"
                 />
               </div>
-              <div className="flex items-center">
+              <div className="flex items-center min-w-0">
                 <input
                   type="checkbox"
                   name="activo"
                   checked={formData.activo}
                   onChange={handleChange}
-                  className="w-4 h-4 bg-slate-900 border-slate-700 rounded text-blue-600 focus:ring-blue-500"
+                  className="w-4 h-4 bg-slate-900 border-slate-700 rounded text-blue-600 focus:ring-blue-500 flex-shrink-0"
                 />
                 <label className="ml-2 text-sm font-medium text-slate-300">Miembro activo</label>
               </div>

@@ -81,6 +81,54 @@ export default function QuickHabilidadesManager({ miembro, onUpdate, todasLasHab
     setHabilidadesMiembro(miembro.habilidades || []);
   }, [miembro.habilidades]);
 
+  // Ajustar posición del panel cuando se muestra
+  useEffect(() => {
+    if (mostrarPanel && buttonRef.current && panelContentRef.current) {
+      const buttonRect = buttonRef.current.getBoundingClientRect();
+      const footerHeight = 60; // Altura aproximada del footer
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+      const spaceBelow = viewportHeight - buttonRect.bottom;
+      const spaceAbove = buttonRect.top;
+      const spaceRight = viewportWidth - buttonRect.right;
+      const panelHeight = 300; // Altura estimada del panel
+      const panelWidth = 256; // Ancho del panel (w-64 = 256px)
+      
+      // Ajustar posición vertical
+      let top = buttonRect.bottom + 8;
+      let bottom = 'auto';
+      if (spaceBelow < panelHeight + 20 && spaceAbove > spaceBelow) {
+        // Mostrar arriba si hay más espacio arriba
+        top = 'auto';
+        bottom = `${viewportHeight - buttonRect.top + 8}px`;
+      }
+      
+      // Ajustar posición horizontal
+      let right = viewportWidth - buttonRect.right;
+      let left = 'auto';
+      if (spaceRight < panelWidth && buttonRect.left > panelWidth) {
+        // Mostrar a la izquierda del botón
+        right = 'auto';
+        left = `${buttonRect.left - panelWidth}px`;
+      } else if (right < 0) {
+        // Si se sale por la derecha, ajustar
+        right = '1rem';
+      }
+      
+      panelContentRef.current.style.top = top === 'auto' ? 'auto' : `${top}px`;
+      panelContentRef.current.style.bottom = bottom;
+      panelContentRef.current.style.right = right === 'auto' ? 'auto' : `${right}px`;
+      panelContentRef.current.style.left = left;
+      
+      // Asegurar que no quede tapado por el footer
+      const finalTop = typeof top === 'number' ? top : (viewportHeight - parseInt(bottom) - panelHeight);
+      if (finalTop + panelHeight > viewportHeight - footerHeight) {
+        panelContentRef.current.style.maxHeight = `${viewportHeight - footerHeight - finalTop - 20}px`;
+        panelContentRef.current.style.overflowY = 'auto';
+      }
+    }
+  }, [mostrarPanel]);
+
   const toggleHabilidad = async (e, habilidad) => {
     e.preventDefault();
     e.stopPropagation();
@@ -257,8 +305,6 @@ export default function QuickHabilidadesManager({ miembro, onUpdate, todasLasHab
               background: 'rgb(30 41 55)',
               zIndex: 200, 
               position: 'fixed',
-              top: `${buttonRef.current.getBoundingClientRect().bottom + 8}px`,
-              right: `${window.innerWidth - buttonRef.current.getBoundingClientRect().right}px`,
               opacity: 1,
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75)'
             }}
