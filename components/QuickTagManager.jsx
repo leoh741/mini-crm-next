@@ -76,124 +76,87 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
   useEffect(() => {
     if (mostrarPanel && panelRef.current && panelContentRef.current) {
       const buttonRect = panelRef.current.getBoundingClientRect();
-      const footerHeight = 60; // Altura aproximada del footer
+      const footerHeight = 60;
       const viewportHeight = window.innerHeight;
       const viewportWidth = window.innerWidth;
       const spaceBelow = viewportHeight - buttonRect.bottom;
       const spaceAbove = buttonRect.top;
       const spaceRight = viewportWidth - buttonRect.right;
-      const panelHeight = 300; // Altura estimada del panel
-      const panelWidth = 256; // Ancho del panel (w-64 = 256px)
-      const isMobile = viewportWidth < 640; // sm breakpoint
+      const panelHeight = 300;
+      const panelWidth = 256;
+      const isMobile = viewportWidth < 640;
+      const margin = 16;
       
-      // En móvil, usar posición fixed para evitar problemas de overflow
       if (isMobile) {
+        // Móvil: usar fixed para evitar problemas de overflow
         panelContentRef.current.style.position = 'fixed';
-        const panelWidthActual = Math.min(panelWidth, viewportWidth - 32);
+        const panelWidthActual = Math.min(panelWidth, viewportWidth - (margin * 2));
         panelContentRef.current.style.width = `${panelWidthActual}px`;
         
-        // Calcular posición horizontal: alinear el panel cerca del botón
-        const margin = 16; // Margen mínimo desde los bordes
-        let leftPosition;
+        // Posición horizontal: alinear con el borde derecho del botón
+        let leftPos = buttonRect.right - panelWidthActual;
         
-        // Estrategia: intentar alinear el borde derecho del panel con el borde derecho del botón
-        // Esto funciona bien cuando el botón está en el lado derecho
-        leftPosition = buttonRect.right - panelWidthActual;
-        
-        // Si se sale por la izquierda, intentar alinear el borde izquierdo del panel con el borde izquierdo del botón
-        if (leftPosition < margin) {
-          leftPosition = buttonRect.left;
-          // Si aún se sale por la derecha, ajustar para que quepa
-          if (leftPosition + panelWidthActual > viewportWidth - margin) {
-            leftPosition = viewportWidth - panelWidthActual - margin;
-          }
+        // Si se sale por la izquierda, ajustar
+        if (leftPos < margin) {
+          leftPos = margin;
         }
         
         // Si se sale por la derecha, ajustar
-        if (leftPosition + panelWidthActual > viewportWidth - margin) {
-          leftPosition = viewportWidth - panelWidthActual - margin;
+        if (leftPos + panelWidthActual > viewportWidth - margin) {
+          leftPos = viewportWidth - panelWidthActual - margin;
         }
         
-        // Si después de todos los ajustes se sale por la izquierda, centrarlo en el botón
-        if (leftPosition < margin) {
-          // Centrar el panel en el centro del botón
-          const buttonCenter = buttonRect.left + (buttonRect.width / 2);
-          leftPosition = buttonCenter - (panelWidthActual / 2);
-          
-          // Asegurar que quepa en la pantalla
-          if (leftPosition < margin) {
-            leftPosition = margin;
-          }
-          if (leftPosition + panelWidthActual > viewportWidth - margin) {
-            leftPosition = viewportWidth - panelWidthActual - margin;
-          }
-        }
-        
-        panelContentRef.current.style.left = `${leftPosition}px`;
+        panelContentRef.current.style.left = `${leftPos}px`;
         panelContentRef.current.style.right = 'auto';
         
-        // Calcular posición vertical
+        // Posición vertical
         if (spaceBelow < panelHeight + 20 && spaceAbove > spaceBelow) {
-          // Mostrar arriba si hay más espacio arriba
           panelContentRef.current.style.top = '';
           panelContentRef.current.style.bottom = `${viewportHeight - buttonRect.top + 8}px`;
         } else {
-          // Mostrar abajo
           panelContentRef.current.style.top = `${buttonRect.bottom + 8}px`;
           panelContentRef.current.style.bottom = '';
         }
         
-        // Asegurar que no quede tapado por el footer
+        // Ajustar altura si se sale del viewport
         const finalTop = parseInt(panelContentRef.current.style.top) || 0;
         if (finalTop > 0 && finalTop + panelHeight > viewportHeight - footerHeight) {
           panelContentRef.current.style.maxHeight = `${viewportHeight - footerHeight - finalTop - 20}px`;
           panelContentRef.current.style.overflowY = 'auto';
         } else {
-          const finalBottom = parseInt(panelContentRef.current.style.bottom) || 0;
-          if (finalBottom > 0 && viewportHeight - finalBottom < footerHeight) {
-            panelContentRef.current.style.maxHeight = `${viewportHeight - footerHeight - 20}px`;
-            panelContentRef.current.style.overflowY = 'auto';
-          }
+          panelContentRef.current.style.maxHeight = '';
+          panelContentRef.current.style.overflowY = '';
         }
       } else {
-        // En desktop, mantener posición absoluta
-        panelContentRef.current.style.position = 'absolute';
-        panelContentRef.current.style.width = '';
-        panelContentRef.current.style.left = 'auto';
-        panelContentRef.current.style.right = 'auto';
+        // Desktop: las clases de Tailwind (absolute right-0 top-full mt-2) ya posicionan el panel
+        // Solo ajustar cuando sea necesario para evitar que se salga del viewport
         
-        // Ajustar posición vertical
+        // Limpiar estilos inline que puedan interferir con las clases
+        panelContentRef.current.style.width = '';
+        panelContentRef.current.style.maxHeight = '';
+        panelContentRef.current.style.overflowY = '';
+        
+        // Posición vertical: ajustar solo si necesitamos mostrarlo arriba
         if (spaceBelow < panelHeight + 20 && spaceAbove > spaceBelow) {
-          // Mostrar arriba si hay más espacio arriba
           panelContentRef.current.style.top = 'auto';
           panelContentRef.current.style.bottom = `${buttonRect.height + 8}px`;
         } else {
-          // Mostrar abajo
-          panelContentRef.current.style.top = `${buttonRect.height + 8}px`;
-          panelContentRef.current.style.bottom = 'auto';
+          // Remover estilos inline para que las clases top-full mt-2 funcionen
+          panelContentRef.current.style.removeProperty('top');
+          panelContentRef.current.style.removeProperty('bottom');
         }
         
-        // Ajustar posición horizontal si se sale por la derecha
+        // Posición horizontal: ajustar solo si se sale por la derecha
         if (spaceRight < panelWidth && buttonRect.left > panelWidth) {
           // Mostrar a la izquierda del botón
           panelContentRef.current.style.right = 'auto';
-          panelContentRef.current.style.left = `${buttonRect.left - panelWidth}px`;
+          panelContentRef.current.style.left = '0';
+          panelContentRef.current.style.transform = 'translateX(-100%)';
         } else {
-          panelContentRef.current.style.right = '0';
-          panelContentRef.current.style.left = 'auto';
-        }
-        
-        // Asegurar que no quede tapado por el footer
-        const finalTop = parseInt(panelContentRef.current.style.top) || 0;
-        if (finalTop > 0 && finalTop + panelHeight > viewportHeight - footerHeight) {
-          panelContentRef.current.style.maxHeight = `${viewportHeight - footerHeight - finalTop - 20}px`;
-          panelContentRef.current.style.overflowY = 'auto';
-        } else {
-          const finalBottom = parseInt(panelContentRef.current.style.bottom) || 0;
-          if (finalBottom > 0 && viewportHeight - finalBottom - buttonRect.height < footerHeight) {
-            panelContentRef.current.style.maxHeight = `${viewportHeight - footerHeight - buttonRect.height - 20}px`;
-            panelContentRef.current.style.overflowY = 'auto';
-          }
+          // Remover estilos inline para que la clase right-0 funcione
+          panelContentRef.current.style.removeProperty('right');
+          panelContentRef.current.style.removeProperty('left');
+          panelContentRef.current.style.removeProperty('transform');
         }
       }
     }
@@ -334,7 +297,7 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
           />
           <div 
             ref={panelContentRef}
-            className="z-[200] w-64 max-w-[calc(100vw-2rem)] sm:max-w-none bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-3 mb-4" 
+            className="absolute right-0 top-full mt-2 z-[200] w-64 max-w-[calc(100vw-2rem)] sm:max-w-none bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-3 mb-4" 
             style={{ 
               backgroundColor: 'rgb(30 41 55)', 
               zIndex: 200, 
