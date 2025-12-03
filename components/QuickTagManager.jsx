@@ -109,23 +109,40 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
         panelContentRef.current.style.left = `${leftPos}px`;
         panelContentRef.current.style.right = 'auto';
         
-        // Posición vertical
-        if (spaceBelow < panelHeight + 20 && spaceAbove > spaceBelow) {
+        // Posición vertical: siempre mostrar el panel, aunque no haya mucho espacio
+        // Si no hay espacio abajo, mostrar arriba (incluso si tampoco hay mucho espacio arriba)
+        if (spaceBelow < panelHeight + 20) {
+          // Mostrar arriba del botón
           panelContentRef.current.style.top = '';
           panelContentRef.current.style.bottom = `${viewportHeight - buttonRect.top + 8}px`;
+          
+          // Calcular espacio disponible arriba (desde el top del viewport hasta el botón)
+          const availableSpaceAbove = buttonRect.top - 20; // 20px de margen desde el top
+          
+          // Si no hay suficiente espacio arriba, limitar altura y agregar scroll
+          if (availableSpaceAbove < panelHeight) {
+            const maxHeight = Math.max(200, availableSpaceAbove - 10); // Mínimo 200px, con 10px de margen
+            panelContentRef.current.style.maxHeight = `${maxHeight}px`;
+            panelContentRef.current.style.overflowY = 'auto';
+          } else {
+            panelContentRef.current.style.maxHeight = '';
+            panelContentRef.current.style.overflowY = '';
+          }
         } else {
+          // Hay espacio abajo, mostrar abajo del botón
           panelContentRef.current.style.top = `${buttonRect.bottom + 8}px`;
           panelContentRef.current.style.bottom = '';
-        }
-        
-        // Ajustar altura si se sale del viewport
-        const finalTop = parseInt(panelContentRef.current.style.top) || 0;
-        if (finalTop > 0 && finalTop + panelHeight > viewportHeight - footerHeight) {
-          panelContentRef.current.style.maxHeight = `${viewportHeight - footerHeight - finalTop - 20}px`;
-          panelContentRef.current.style.overflowY = 'auto';
-        } else {
-          panelContentRef.current.style.maxHeight = '';
-          panelContentRef.current.style.overflowY = '';
+          
+          // Ajustar altura si se sale del viewport (por el footer)
+          const finalTop = parseInt(panelContentRef.current.style.top) || 0;
+          if (finalTop + panelHeight > viewportHeight - footerHeight) {
+            const maxHeight = viewportHeight - footerHeight - finalTop - 20;
+            panelContentRef.current.style.maxHeight = `${Math.max(200, maxHeight)}px`; // Mínimo 200px
+            panelContentRef.current.style.overflowY = 'auto';
+          } else {
+            panelContentRef.current.style.maxHeight = '';
+            panelContentRef.current.style.overflowY = '';
+          }
         }
       } else {
         // Desktop: las clases de Tailwind (absolute right-0 top-full mt-2) ya posicionan el panel
