@@ -89,20 +89,44 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
       // En móvil, usar posición fixed para evitar problemas de overflow
       if (isMobile) {
         panelContentRef.current.style.position = 'fixed';
-        panelContentRef.current.style.width = `${Math.min(panelWidth, viewportWidth - 32)}px`;
-        
-        // Calcular posición horizontal
         const panelWidthActual = Math.min(panelWidth, viewportWidth - 32);
-        let leftPosition = buttonRect.right - panelWidthActual;
+        panelContentRef.current.style.width = `${panelWidthActual}px`;
         
-        // Asegurar que no se salga por la izquierda
-        if (leftPosition < 16) {
-          leftPosition = 16;
+        // Calcular posición horizontal: alinear el panel cerca del botón
+        const margin = 16; // Margen mínimo desde los bordes
+        let leftPosition;
+        
+        // Estrategia: intentar alinear el borde derecho del panel con el borde derecho del botón
+        // Esto funciona bien cuando el botón está en el lado derecho
+        leftPosition = buttonRect.right - panelWidthActual;
+        
+        // Si se sale por la izquierda, intentar alinear el borde izquierdo del panel con el borde izquierdo del botón
+        if (leftPosition < margin) {
+          leftPosition = buttonRect.left;
+          // Si aún se sale por la derecha, ajustar para que quepa
+          if (leftPosition + panelWidthActual > viewportWidth - margin) {
+            leftPosition = viewportWidth - panelWidthActual - margin;
+          }
         }
         
-        // Asegurar que no se salga por la derecha
-        if (leftPosition + panelWidthActual > viewportWidth - 16) {
-          leftPosition = viewportWidth - panelWidthActual - 16;
+        // Si se sale por la derecha, ajustar
+        if (leftPosition + panelWidthActual > viewportWidth - margin) {
+          leftPosition = viewportWidth - panelWidthActual - margin;
+        }
+        
+        // Si después de todos los ajustes se sale por la izquierda, centrarlo en el botón
+        if (leftPosition < margin) {
+          // Centrar el panel en el centro del botón
+          const buttonCenter = buttonRect.left + (buttonRect.width / 2);
+          leftPosition = buttonCenter - (panelWidthActual / 2);
+          
+          // Asegurar que quepa en la pantalla
+          if (leftPosition < margin) {
+            leftPosition = margin;
+          }
+          if (leftPosition + panelWidthActual > viewportWidth - margin) {
+            leftPosition = viewportWidth - panelWidthActual - margin;
+          }
         }
         
         panelContentRef.current.style.left = `${leftPosition}px`;
@@ -111,7 +135,6 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
         // Calcular posición vertical
         if (spaceBelow < panelHeight + 20 && spaceAbove > spaceBelow) {
           // Mostrar arriba si hay más espacio arriba
-          // Con position fixed, bottom es la distancia desde el bottom del viewport
           panelContentRef.current.style.top = '';
           panelContentRef.current.style.bottom = `${viewportHeight - buttonRect.top + 8}px`;
         } else {
