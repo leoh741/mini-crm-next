@@ -109,59 +109,64 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
         panelContentRef.current.style.left = `${leftPos}px`;
         panelContentRef.current.style.right = 'auto';
         
-        // Posición vertical: SIEMPRE mostrar el panel, sin excepciones
-        const topMargin = 20; // Margen desde el top del viewport
-        const bottomMargin = footerHeight + 20; // Margen desde el bottom (footer + extra)
-        const minPanelHeight = 150; // Altura mínima absoluta (reducida para que siempre quepa)
+        // Posición vertical: SIEMPRE mostrar el panel usando solo 'top' (más confiable)
+        const topMargin = 20;
+        const bottomMargin = footerHeight + 20;
+        const minPanelHeight = 150;
+        const buttonSpacing = 8;
         
-        const spaceBelowUsable = Math.max(0, spaceBelow - 8); // 8px de margen del botón
-        const spaceAboveUsable = Math.max(0, spaceAbove - topMargin);
+        // Calcular espacio disponible de forma más simple
+        const spaceBelowUsable = Math.max(0, viewportHeight - buttonRect.bottom - buttonSpacing - bottomMargin);
+        const spaceAboveUsable = Math.max(0, buttonRect.top - topMargin - buttonSpacing);
         
-        // Estrategia: siempre mostrar, eligiendo la mejor posición disponible
-        let topPosition = 0;
-        let bottomPosition = 0;
-        let maxHeight = minPanelHeight;
-        let useTop = true;
+        let topPosition;
+        let maxHeight;
         
-        // Intentar mostrar abajo primero
+        // Estrategia simple: intentar abajo primero, si no cabe, arriba
         if (spaceBelowUsable >= minPanelHeight) {
-          // Hay espacio suficiente abajo
-          topPosition = buttonRect.bottom + 8;
-          const availableHeight = viewportHeight - topPosition - bottomMargin;
-          maxHeight = Math.max(minPanelHeight, Math.min(availableHeight, spaceBelowUsable));
-          useTop = true;
+          // Mostrar abajo: hay espacio suficiente
+          topPosition = buttonRect.bottom + buttonSpacing;
+          maxHeight = spaceBelowUsable;
         } else if (spaceAboveUsable >= minPanelHeight) {
-          // No hay espacio abajo, pero sí arriba
-          bottomPosition = viewportHeight - buttonRect.top + 8;
-          const availableHeight = buttonRect.top - topMargin - 8;
-          maxHeight = Math.max(minPanelHeight, Math.min(availableHeight, spaceAboveUsable));
-          useTop = false;
+          // Mostrar arriba: no hay espacio abajo pero sí arriba
+          // Posicionar el panel para que termine justo antes del botón
+          maxHeight = Math.min(panelHeight, spaceAboveUsable);
+          topPosition = buttonRect.top - maxHeight - buttonSpacing;
+          // Asegurar que no se salga del top
+          if (topPosition < topMargin) {
+            topPosition = topMargin;
+            maxHeight = buttonRect.top - topPosition - buttonSpacing;
+          }
         } else {
-          // No hay espacio suficiente en ninguna dirección, usar la que tenga más espacio
-          if (spaceAboveUsable >= spaceBelowUsable) {
+          // No hay espacio suficiente en ninguna dirección
+          // Usar la que tenga más espacio (aunque sea poco)
+          if (spaceAboveUsable > spaceBelowUsable) {
             // Mostrar arriba con el espacio disponible
-            bottomPosition = viewportHeight - buttonRect.top + 8;
             maxHeight = Math.max(minPanelHeight, spaceAboveUsable);
-            useTop = false;
+            topPosition = buttonRect.top - maxHeight - buttonSpacing;
+            if (topPosition < topMargin) {
+              topPosition = topMargin;
+              maxHeight = Math.max(minPanelHeight, buttonRect.top - topPosition - buttonSpacing);
+            }
           } else {
             // Mostrar abajo con el espacio disponible
-            topPosition = buttonRect.bottom + 8;
-            const availableHeight = viewportHeight - topPosition - bottomMargin;
-            maxHeight = Math.max(minPanelHeight, Math.min(availableHeight, spaceBelowUsable));
-            useTop = true;
+            topPosition = buttonRect.bottom + buttonSpacing;
+            maxHeight = Math.max(minPanelHeight, spaceBelowUsable);
           }
         }
         
-        // Aplicar posición
-        if (useTop) {
-          panelContentRef.current.style.top = `${topPosition}px`;
-          panelContentRef.current.style.bottom = '';
-        } else {
-          panelContentRef.current.style.top = '';
-          panelContentRef.current.style.bottom = `${bottomPosition}px`;
+        // Verificación final: asegurar que el panel quepa en el viewport
+        const maxPossibleHeight = viewportHeight - topPosition - bottomMargin;
+        if (maxHeight > maxPossibleHeight) {
+          maxHeight = Math.max(minPanelHeight, maxPossibleHeight);
+        }
+        if (topPosition + maxHeight > viewportHeight - bottomMargin) {
+          maxHeight = Math.max(minPanelHeight, viewportHeight - topPosition - bottomMargin);
         }
         
-        // Aplicar altura máxima y scroll (siempre con scroll para asegurar que todo sea accesible)
+        // Aplicar estilos
+        panelContentRef.current.style.top = `${Math.max(topMargin, topPosition)}px`;
+        panelContentRef.current.style.bottom = '';
         panelContentRef.current.style.maxHeight = `${maxHeight}px`;
         panelContentRef.current.style.overflowY = 'auto';
       } else {
@@ -417,4 +422,5 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
     </div>
   );
 }
+
 
