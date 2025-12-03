@@ -109,41 +109,61 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
         panelContentRef.current.style.left = `${leftPos}px`;
         panelContentRef.current.style.right = 'auto';
         
-        // Posición vertical: siempre mostrar el panel, aunque no haya mucho espacio
-        // Si no hay espacio abajo, mostrar arriba (incluso si tampoco hay mucho espacio arriba)
-        if (spaceBelow < panelHeight + 20) {
-          // Mostrar arriba del botón
-          panelContentRef.current.style.top = '';
-          panelContentRef.current.style.bottom = `${viewportHeight - buttonRect.top + 8}px`;
-          
-          // Calcular espacio disponible arriba (desde el top del viewport hasta el botón)
-          const availableSpaceAbove = buttonRect.top - 20; // 20px de margen desde el top
-          
-          // Si no hay suficiente espacio arriba, limitar altura y agregar scroll
-          if (availableSpaceAbove < panelHeight) {
-            const maxHeight = Math.max(200, availableSpaceAbove - 10); // Mínimo 200px, con 10px de margen
-            panelContentRef.current.style.maxHeight = `${maxHeight}px`;
-            panelContentRef.current.style.overflowY = 'auto';
-          } else {
-            panelContentRef.current.style.maxHeight = '';
-            panelContentRef.current.style.overflowY = '';
-          }
+        // Posición vertical: SIEMPRE mostrar el panel, sin excepciones
+        const topMargin = 20; // Margen desde el top del viewport
+        const bottomMargin = footerHeight + 20; // Margen desde el bottom (footer + extra)
+        const minPanelHeight = 150; // Altura mínima absoluta (reducida para que siempre quepa)
+        
+        const spaceBelowUsable = Math.max(0, spaceBelow - 8); // 8px de margen del botón
+        const spaceAboveUsable = Math.max(0, spaceAbove - topMargin);
+        
+        // Estrategia: siempre mostrar, eligiendo la mejor posición disponible
+        let topPosition = 0;
+        let bottomPosition = 0;
+        let maxHeight = minPanelHeight;
+        let useTop = true;
+        
+        // Intentar mostrar abajo primero
+        if (spaceBelowUsable >= minPanelHeight) {
+          // Hay espacio suficiente abajo
+          topPosition = buttonRect.bottom + 8;
+          const availableHeight = viewportHeight - topPosition - bottomMargin;
+          maxHeight = Math.max(minPanelHeight, Math.min(availableHeight, spaceBelowUsable));
+          useTop = true;
+        } else if (spaceAboveUsable >= minPanelHeight) {
+          // No hay espacio abajo, pero sí arriba
+          bottomPosition = viewportHeight - buttonRect.top + 8;
+          const availableHeight = buttonRect.top - topMargin - 8;
+          maxHeight = Math.max(minPanelHeight, Math.min(availableHeight, spaceAboveUsable));
+          useTop = false;
         } else {
-          // Hay espacio abajo, mostrar abajo del botón
-          panelContentRef.current.style.top = `${buttonRect.bottom + 8}px`;
-          panelContentRef.current.style.bottom = '';
-          
-          // Ajustar altura si se sale del viewport (por el footer)
-          const finalTop = parseInt(panelContentRef.current.style.top) || 0;
-          if (finalTop + panelHeight > viewportHeight - footerHeight) {
-            const maxHeight = viewportHeight - footerHeight - finalTop - 20;
-            panelContentRef.current.style.maxHeight = `${Math.max(200, maxHeight)}px`; // Mínimo 200px
-            panelContentRef.current.style.overflowY = 'auto';
+          // No hay espacio suficiente en ninguna dirección, usar la que tenga más espacio
+          if (spaceAboveUsable >= spaceBelowUsable) {
+            // Mostrar arriba con el espacio disponible
+            bottomPosition = viewportHeight - buttonRect.top + 8;
+            maxHeight = Math.max(minPanelHeight, spaceAboveUsable);
+            useTop = false;
           } else {
-            panelContentRef.current.style.maxHeight = '';
-            panelContentRef.current.style.overflowY = '';
+            // Mostrar abajo con el espacio disponible
+            topPosition = buttonRect.bottom + 8;
+            const availableHeight = viewportHeight - topPosition - bottomMargin;
+            maxHeight = Math.max(minPanelHeight, Math.min(availableHeight, spaceBelowUsable));
+            useTop = true;
           }
         }
+        
+        // Aplicar posición
+        if (useTop) {
+          panelContentRef.current.style.top = `${topPosition}px`;
+          panelContentRef.current.style.bottom = '';
+        } else {
+          panelContentRef.current.style.top = '';
+          panelContentRef.current.style.bottom = `${bottomPosition}px`;
+        }
+        
+        // Aplicar altura máxima y scroll (siempre con scroll para asegurar que todo sea accesible)
+        panelContentRef.current.style.maxHeight = `${maxHeight}px`;
+        panelContentRef.current.style.overflowY = 'auto';
       } else {
         // Desktop: las clases de Tailwind (absolute right-0 top-full mt-2) ya posicionan el panel
         // Solo ajustar cuando sea necesario para evitar que se salga del viewport
