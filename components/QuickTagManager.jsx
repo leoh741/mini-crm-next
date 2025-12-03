@@ -84,38 +84,93 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
       const spaceRight = viewportWidth - buttonRect.right;
       const panelHeight = 300; // Altura estimada del panel
       const panelWidth = 256; // Ancho del panel (w-64 = 256px)
+      const isMobile = viewportWidth < 640; // sm breakpoint
       
-      // Ajustar posición vertical
-      if (spaceBelow < panelHeight + 20 && spaceAbove > spaceBelow) {
-        // Mostrar arriba si hay más espacio arriba
-        panelContentRef.current.style.top = 'auto';
-        panelContentRef.current.style.bottom = `${buttonRect.height + 8}px`;
-      } else {
-        // Mostrar abajo
-        panelContentRef.current.style.top = `${buttonRect.height + 8}px`;
-        panelContentRef.current.style.bottom = 'auto';
-      }
-      
-      // Ajustar posición horizontal si se sale por la derecha
-      if (spaceRight < panelWidth && buttonRect.left > panelWidth) {
-        // Mostrar a la izquierda del botón
+      // En móvil, usar posición fixed para evitar problemas de overflow
+      if (isMobile) {
+        panelContentRef.current.style.position = 'fixed';
+        panelContentRef.current.style.width = `${Math.min(panelWidth, viewportWidth - 32)}px`;
+        
+        // Calcular posición horizontal
+        const panelWidthActual = Math.min(panelWidth, viewportWidth - 32);
+        let leftPosition = buttonRect.right - panelWidthActual;
+        
+        // Asegurar que no se salga por la izquierda
+        if (leftPosition < 16) {
+          leftPosition = 16;
+        }
+        
+        // Asegurar que no se salga por la derecha
+        if (leftPosition + panelWidthActual > viewportWidth - 16) {
+          leftPosition = viewportWidth - panelWidthActual - 16;
+        }
+        
+        panelContentRef.current.style.left = `${leftPosition}px`;
         panelContentRef.current.style.right = 'auto';
-        panelContentRef.current.style.left = `${buttonRect.left - panelWidth}px`;
-      } else {
-        panelContentRef.current.style.right = '0';
-        panelContentRef.current.style.left = 'auto';
-      }
-      
-      // Asegurar que no quede tapado por el footer
-      const finalTop = parseInt(panelContentRef.current.style.top) || 0;
-      if (finalTop > 0 && finalTop + panelHeight > viewportHeight - footerHeight) {
-        panelContentRef.current.style.maxHeight = `${viewportHeight - footerHeight - finalTop - 20}px`;
-        panelContentRef.current.style.overflowY = 'auto';
-      } else {
-        const finalBottom = parseInt(panelContentRef.current.style.bottom) || 0;
-        if (finalBottom > 0 && viewportHeight - finalBottom - buttonRect.height < footerHeight) {
-          panelContentRef.current.style.maxHeight = `${viewportHeight - footerHeight - buttonRect.height - 20}px`;
+        
+        // Calcular posición vertical
+        if (spaceBelow < panelHeight + 20 && spaceAbove > spaceBelow) {
+          // Mostrar arriba si hay más espacio arriba
+          // Con position fixed, bottom es la distancia desde el bottom del viewport
+          panelContentRef.current.style.top = '';
+          panelContentRef.current.style.bottom = `${viewportHeight - buttonRect.top + 8}px`;
+        } else {
+          // Mostrar abajo
+          panelContentRef.current.style.top = `${buttonRect.bottom + 8}px`;
+          panelContentRef.current.style.bottom = '';
+        }
+        
+        // Asegurar que no quede tapado por el footer
+        const finalTop = parseInt(panelContentRef.current.style.top) || 0;
+        if (finalTop > 0 && finalTop + panelHeight > viewportHeight - footerHeight) {
+          panelContentRef.current.style.maxHeight = `${viewportHeight - footerHeight - finalTop - 20}px`;
           panelContentRef.current.style.overflowY = 'auto';
+        } else {
+          const finalBottom = parseInt(panelContentRef.current.style.bottom) || 0;
+          if (finalBottom > 0 && viewportHeight - finalBottom < footerHeight) {
+            panelContentRef.current.style.maxHeight = `${viewportHeight - footerHeight - 20}px`;
+            panelContentRef.current.style.overflowY = 'auto';
+          }
+        }
+      } else {
+        // En desktop, mantener posición absoluta
+        panelContentRef.current.style.position = 'absolute';
+        panelContentRef.current.style.width = '';
+        panelContentRef.current.style.left = 'auto';
+        panelContentRef.current.style.right = 'auto';
+        
+        // Ajustar posición vertical
+        if (spaceBelow < panelHeight + 20 && spaceAbove > spaceBelow) {
+          // Mostrar arriba si hay más espacio arriba
+          panelContentRef.current.style.top = 'auto';
+          panelContentRef.current.style.bottom = `${buttonRect.height + 8}px`;
+        } else {
+          // Mostrar abajo
+          panelContentRef.current.style.top = `${buttonRect.height + 8}px`;
+          panelContentRef.current.style.bottom = 'auto';
+        }
+        
+        // Ajustar posición horizontal si se sale por la derecha
+        if (spaceRight < panelWidth && buttonRect.left > panelWidth) {
+          // Mostrar a la izquierda del botón
+          panelContentRef.current.style.right = 'auto';
+          panelContentRef.current.style.left = `${buttonRect.left - panelWidth}px`;
+        } else {
+          panelContentRef.current.style.right = '0';
+          panelContentRef.current.style.left = 'auto';
+        }
+        
+        // Asegurar que no quede tapado por el footer
+        const finalTop = parseInt(panelContentRef.current.style.top) || 0;
+        if (finalTop > 0 && finalTop + panelHeight > viewportHeight - footerHeight) {
+          panelContentRef.current.style.maxHeight = `${viewportHeight - footerHeight - finalTop - 20}px`;
+          panelContentRef.current.style.overflowY = 'auto';
+        } else {
+          const finalBottom = parseInt(panelContentRef.current.style.bottom) || 0;
+          if (finalBottom > 0 && viewportHeight - finalBottom - buttonRect.height < footerHeight) {
+            panelContentRef.current.style.maxHeight = `${viewportHeight - footerHeight - buttonRect.height - 20}px`;
+            panelContentRef.current.style.overflowY = 'auto';
+          }
         }
       }
     }
@@ -256,8 +311,14 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
           />
           <div 
             ref={panelContentRef}
-            className="absolute right-0 top-full mt-2 z-[200] w-64 max-w-[calc(100vw-2rem)] sm:max-w-none bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-3 mb-4" 
-            style={{ backgroundColor: 'rgb(30 41 55)', zIndex: 200, position: 'absolute', opacity: 1 }}
+            className="z-[200] w-64 max-w-[calc(100vw-2rem)] sm:max-w-none bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-3 mb-4" 
+            style={{ 
+              backgroundColor: 'rgb(30 41 55)', 
+              zIndex: 200, 
+              opacity: 1,
+              visibility: 'visible',
+              display: 'block'
+            }}
           >
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-semibold text-slate-200">Etiquetas</h4>
