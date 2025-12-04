@@ -89,7 +89,11 @@ function InboxPageContent() {
         }
         
         // Cargar contenido después (en segundo plano, sin bloquear)
-        if (!data.mensaje.text && !data.mensaje.html) {
+        // Siempre cargar contenido completo para obtener attachments si no están presentes
+        const necesitaContenido = !data.mensaje.text && !data.mensaje.html;
+        const necesitaAttachments = !data.mensaje.attachments || data.mensaje.attachments.length === 0;
+        
+        if (necesitaContenido || necesitaAttachments) {
           // Usar requestIdleCallback o setTimeout para no bloquear el render
           if (typeof requestIdleCallback !== 'undefined') {
             requestIdleCallback(() => {
