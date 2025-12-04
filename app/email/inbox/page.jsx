@@ -55,24 +55,29 @@ function InboxPageContent() {
         // Usar requestIdleCallback para no bloquear el render
         const preloadEmails = () => {
           data.mensajes.forEach((mail, index) => {
-            // Espaciar las peticiones para no saturar el servidor
+            // Espaciar las peticiones más tiempo para no saturar el servidor (especialmente con attachments)
             setTimeout(() => {
               // Pre-cargar contenido completo (incluyendo attachments) en segundo plano
               fetch(`/api/email/message?uid=${mail.uid}&carpeta=${encodeURIComponent(carpetaActual)}&contenido=true`)
-                .then(() => {
-                  console.log(`✅ Pre-cargado correo UID ${mail.uid} (${index + 1}/${data.mensajes.length})`);
+                .then(res => {
+                  if (res.ok) {
+                    console.log(`✅ Pre-cargado correo UID ${mail.uid} (${index + 1}/${data.mensajes.length})`);
+                  } else {
+                    console.warn(`⚠️ Error HTTP ${res.status} pre-cargando correo UID ${mail.uid}`);
+                  }
                 })
                 .catch(err => {
-                  console.warn(`⚠️ Error pre-cargando correo UID ${mail.uid}:`, err);
+                  // No mostrar error en consola para no saturar (solo warnings importantes)
+                  // Los errores de pre-carga no son críticos, el correo se cargará cuando se abra
                 });
-            }, index * 200); // Espaciar 200ms entre cada petición
+            }, index * 500); // Espaciar 500ms entre cada petición (más tiempo para attachments grandes)
           });
         };
         
         if (typeof requestIdleCallback !== 'undefined') {
-          requestIdleCallback(preloadEmails, { timeout: 2000 });
+          requestIdleCallback(preloadEmails, { timeout: 3000 });
         } else {
-          setTimeout(preloadEmails, 500); // Fallback: esperar 500ms antes de empezar
+          setTimeout(preloadEmails, 1000); // Fallback: esperar 1s antes de empezar
         }
       }
     } catch (err) {
