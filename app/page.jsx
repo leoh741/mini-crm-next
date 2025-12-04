@@ -471,6 +471,22 @@ function HomePageContent() {
 
       <div className="flex-shrink-0 mt-3 pt-3 border-t border-slate-700">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold text-slate-300">Correo</h3>
+          <Link
+            href="/email/inbox"
+            className="group relative w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-blue-500/30 overflow-hidden text-center flex items-center justify-center"
+          >
+            <span className="relative z-10 flex items-center justify-center gap-1.5">
+              <Icons.Folder className="text-sm" />
+              <span>Ver Correos</span>
+            </span>
+            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+          </Link>
+        </div>
+      </div>
+
+      <div className="flex-shrink-0 mt-3 pt-3 border-t border-slate-700">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <h3 className="text-sm font-semibold text-slate-300">Respaldo</h3>
           <div className="flex gap-2 w-full sm:w-auto">
             <button
