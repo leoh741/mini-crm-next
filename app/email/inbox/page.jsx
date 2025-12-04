@@ -49,16 +49,31 @@ function InboxPageContent() {
 
       setEmails(data.mensajes || []);
       
-      // OPTIMIZACIÓN: Pre-cargar los primeros 3 correos en cache (en segundo plano)
+      // OPTIMIZACIÓN: Pre-cargar el contenido completo de todos los correos visibles (en segundo plano)
+      // Esto incluye attachments para que cuando se abran sean instantáneos
       if (data.mensajes && data.mensajes.length > 0) {
-        setTimeout(() => {
-          data.mensajes.slice(0, 3).forEach(mail => {
-            // Pre-cargar en cache sin bloquear
-            fetch(`/api/email/message?uid=${mail.uid}&carpeta=${encodeURIComponent(carpetaActual)}`)
-              .then(() => {})
-              .catch(() => {});
+        // Usar requestIdleCallback para no bloquear el render
+        const preloadEmails = () => {
+          data.mensajes.forEach((mail, index) => {
+            // Espaciar las peticiones para no saturar el servidor
+            setTimeout(() => {
+              // Pre-cargar contenido completo (incluyendo attachments) en segundo plano
+              fetch(`/api/email/message?uid=${mail.uid}&carpeta=${encodeURIComponent(carpetaActual)}&contenido=true`)
+                .then(() => {
+                  console.log(`✅ Pre-cargado correo UID ${mail.uid} (${index + 1}/${data.mensajes.length})`);
+                })
+                .catch(err => {
+                  console.warn(`⚠️ Error pre-cargando correo UID ${mail.uid}:`, err);
+                });
+            }, index * 200); // Espaciar 200ms entre cada petición
           });
-        }, 100);
+        };
+        
+        if (typeof requestIdleCallback !== 'undefined') {
+          requestIdleCallback(preloadEmails, { timeout: 2000 });
+        } else {
+          setTimeout(preloadEmails, 500); // Fallback: esperar 500ms antes de empezar
+        }
       }
     } catch (err) {
       console.error("Error cargando correos:", err);
@@ -432,7 +447,7 @@ function InboxPageContent() {
                     const sizeText = attachment.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
                     
                     // Función para descargar el archivo
-                    const handleDownload = () => {
+                    const handleDownload = async () => {
                       if (attachment.content) {
                         try {
                           // Convertir base64 a blob
@@ -454,8 +469,11 @@ function InboxPageContent() {
                           window.URL.revokeObjectURL(url);
                         } catch (error) {
                           console.error("Error al descargar archivo:", error);
-                          alert("Error al descargar el archivo");
+                          alert("Error al descargar el archivo. El archivo puede ser muy grande.");
                         }
+                      } else {
+                        // Si no hay contenido, el archivo es muy grande y no se puede descargar directamente
+                        alert(`El archivo "${attachment.filename}" es muy grande (${sizeText}) y no se puede descargar directamente. Por favor, descárgalo desde tu cliente de correo.`);
                       }
                     };
                     
