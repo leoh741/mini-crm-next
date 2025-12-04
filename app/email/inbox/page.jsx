@@ -1,0 +1,483 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import ProtectedRoute from "../../../components/ProtectedRoute";
+import { Icons } from "../../../components/Icons";
+import Link from "next/link";
+
+function InboxPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const carpetaParam = searchParams.get("carpeta") || "INBOX";
+  const uidParam = searchParams.get("uid");
+
+  const [carpetas, setCarpetas] = useState([]);
+  const [carpetaActual, setCarpetaActual] = useState(carpetaParam);
+  const [emails, setEmails] = useState([]);
+  const [emailSeleccionado, setEmailSeleccionado] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  const [accionando, setAccionando] = useState(false);
+
+  // Cargar carpetas disponibles
+  const fetchCarpetas = async () => {
+    try {
+      const res = await fetch("/api/email/folders");
+      const data = await res.json();
+      if (data.success) {
+        setCarpetas(data.carpetas || []);
+      }
+    } catch (err) {
+      console.error("Error cargando carpetas:", err);
+    }
+  };
+
+  // Cargar correos de la carpeta actual
+  const fetchEmails = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const res = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaActual)}&limit=50`);
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error || "Error al cargar correos");
+      }
+
+      setEmails(data.mensajes || []);
+    } catch (err) {
+      console.error("Error cargando correos:", err);
+      setError(err.message || "Error desconocido al cargar los correos");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Cargar correo individual
+  const fetchEmail = async (uid) => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaActual)}`);
+      const data = await res.json();
+
+      if (data.success) {
+        setEmailSeleccionado(data.mensaje);
+        // Si no estaba leído, marcarlo como leído
+        if (!data.mensaje.leido) {
+          await marcarComoLeido(uid, true);
+        }
+      } else {
+        throw new Error(data.error || "Error al cargar el correo");
+      }
+    } catch (err) {
+      console.error("Error cargando correo:", err);
+      setError(err.message || "Error al cargar el correo");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Marcar como leído/no leído
+  const marcarComoLeido = async (uid, leido) => {
+    try {
+      setAccionando(true);
+      const res = await fetch("/api/email/mark", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid, carpeta: carpetaActual, leido }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        // Actualizar el estado local
+        setEmails(emails.map((e) => (e.uid === uid ? { ...e, leido } : e)));
+        if (emailSeleccionado && emailSeleccionado.uid === uid) {
+          setEmailSeleccionado({ ...emailSeleccionado, leido });
+        }
+      }
+    } catch (err) {
+      console.error("Error marcando correo:", err);
+    } finally {
+      setAccionando(false);
+    }
+  };
+
+  // Mover correo a otra carpeta
+  const moverCorreo = async (uid, carpetaDestino) => {
+    try {
+      setAccionando(true);
+      const res = await fetch("/api/email/move", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid, carpetaOrigen: carpetaActual, carpetaDestino }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        // Remover el correo de la lista
+        setEmails(emails.filter((e) => e.uid !== uid));
+        if (emailSeleccionado && emailSeleccionado.uid === uid) {
+          setEmailSeleccionado(null);
+        }
+      }
+    } catch (err) {
+      console.error("Error moviendo correo:", err);
+      alert("Error al mover el correo: " + err.message);
+    } finally {
+      setAccionando(false);
+    }
+  };
+
+  // Eliminar correo
+  const eliminarCorreo = async (uid) => {
+    if (!confirm("¿Estás seguro de que quieres eliminar este correo?")) {
+      return;
+    }
+
+    try {
+      setAccionando(true);
+      const res = await fetch("/api/email/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid, carpeta: carpetaActual }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        // Remover el correo de la lista
+        setEmails(emails.filter((e) => e.uid !== uid));
+        if (emailSeleccionado && emailSeleccionado.uid === uid) {
+          setEmailSeleccionado(null);
+        }
+      }
+    } catch (err) {
+      console.error("Error eliminando correo:", err);
+      alert("Error al eliminar el correo: " + err.message);
+    } finally {
+      setAccionando(false);
+    }
+  };
+
+  // Cambiar de carpeta
+  const cambiarCarpeta = (nuevaCarpeta) => {
+    setCarpetaActual(nuevaCarpeta);
+    setEmailSeleccionado(null);
+    router.push(`/email/inbox?carpeta=${encodeURIComponent(nuevaCarpeta)}`);
+  };
+
+  useEffect(() => {
+    fetchCarpetas();
+  }, []);
+
+  useEffect(() => {
+    setCarpetaActual(carpetaParam);
+    fetchEmails();
+  }, [carpetaParam]);
+
+  useEffect(() => {
+    if (uidParam) {
+      fetchEmail(Number(uidParam));
+    } else {
+      setEmailSeleccionado(null);
+    }
+  }, [uidParam, carpetaActual]);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchEmails();
+  };
+
+  const formatearFecha = (fecha) => {
+    if (!fecha) return "";
+    try {
+      const date = new Date(fecha);
+      const hoy = new Date();
+      const ayer = new Date(hoy);
+      ayer.setDate(ayer.getDate() - 1);
+
+      if (date.toDateString() === hoy.toDateString()) {
+        return date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+      }
+      if (date.toDateString() === ayer.toDateString()) {
+        return "Ayer";
+      }
+      const diasDiferencia = Math.floor((hoy - date) / (1000 * 60 * 60 * 24));
+      if (diasDiferencia < 7) {
+        return date.toLocaleDateString("es-AR", { weekday: "short", hour: "2-digit", minute: "2-digit" });
+      }
+      return date.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    } catch (e) {
+      return "";
+    }
+  };
+
+  // Carpetas comunes
+  const carpetasComunes = [
+    { name: "INBOX", label: "Bandeja de entrada", icon: Icons.Folder },
+    { name: "SPAM", label: "Spam", icon: Icons.X },
+    { name: "TRASH", label: "Papelera", icon: Icons.Trash },
+    { name: "Sent", label: "Enviados", icon: Icons.Document },
+    { name: "Drafts", label: "Borradores", icon: Icons.Pencil },
+  ];
+
+  return (
+    <div className="flex h-[calc(100vh-80px)] w-full" style={{ maxWidth: '100vw', margin: '0 auto' }}>
+      {/* Sidebar con carpetas */}
+      <div className="w-64 bg-slate-800 border-r border-slate-700 flex flex-col flex-shrink-0">
+        <div className="p-4 border-b border-slate-700">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-semibold text-slate-100">Carpetas</h2>
+            <button
+              onClick={handleRefresh}
+              disabled={loading || refreshing}
+              className="p-1.5 hover:bg-slate-700 rounded transition-colors"
+              title="Actualizar"
+            >
+              <Icons.Refresh className={`text-sm text-slate-400 ${refreshing ? "animate-spin" : ""}`} />
+            </button>
+          </div>
+          <p className="text-xs text-slate-400">contacto@digitalspace.com.ar</p>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-2">
+          {carpetasComunes.map((carpeta) => (
+            <button
+              key={carpeta.name}
+              onClick={() => cambiarCarpeta(carpeta.name)}
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors mb-1 ${
+                carpetaActual === carpeta.name
+                  ? "bg-blue-600 text-white"
+                  : "text-slate-300 hover:bg-slate-700"
+              }`}
+            >
+              <carpeta.icon className="text-sm" />
+              <span>{carpeta.label}</span>
+            </button>
+          ))}
+
+          {/* Otras carpetas del servidor */}
+          {carpetas
+            .filter((c) => !carpetasComunes.find((cc) => cc.name === c.name))
+            .map((carpeta) => (
+              <button
+                key={carpeta.path}
+                onClick={() => cambiarCarpeta(carpeta.name)}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors mb-1 ${
+                  carpetaActual === carpeta.name
+                    ? "bg-blue-600 text-white"
+                    : "text-slate-300 hover:bg-slate-700"
+                }`}
+              >
+                <Icons.Folder className="text-sm" />
+                <span className="truncate">{carpeta.name}</span>
+              </button>
+            ))}
+        </div>
+      </div>
+
+      {/* Panel principal */}
+      <div className="flex-1 flex flex-col bg-slate-900">
+        {emailSeleccionado ? (
+          /* Vista de correo individual */
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Header del correo */}
+            <div className="bg-slate-800 border-b border-slate-700 p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <button
+                      onClick={() => {
+                        router.push(`/email/inbox?carpeta=${encodeURIComponent(carpetaActual)}`);
+                        setEmailSeleccionado(null);
+                      }}
+                      className="p-1.5 hover:bg-slate-700 rounded transition-colors"
+                    >
+                      <Icons.X className="text-sm text-slate-400" />
+                    </button>
+                    <h1 className="text-xl font-semibold text-slate-100">
+                      {emailSeleccionado.subject || "(Sin asunto)"}
+                    </h1>
+                  </div>
+                  <div className="text-sm text-slate-300 space-y-1">
+                    <div>
+                      <span className="text-slate-400">De:</span> {emailSeleccionado.from || "Sin remitente"}
+                    </div>
+                    {emailSeleccionado.to && (
+                      <div>
+                        <span className="text-slate-400">Para:</span> {emailSeleccionado.to}
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-slate-400">Fecha:</span>{" "}
+                      {formatearFecha(emailSeleccionado.date)}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => marcarComoLeido(emailSeleccionado.uid, !emailSeleccionado.leido)}
+                    disabled={accionando}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 rounded text-xs text-white"
+                  >
+                    {emailSeleccionado.leido ? "Marcar no leído" : "Marcar leído"}
+                  </button>
+                  <button
+                    onClick={() => moverCorreo(emailSeleccionado.uid, "TRASH")}
+                    disabled={accionando}
+                    className="px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:bg-red-800 rounded text-xs text-white"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Contenido del correo */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {emailSeleccionado.html ? (
+                <div
+                  className="prose prose-invert max-w-none"
+                  dangerouslySetInnerHTML={{ __html: emailSeleccionado.html }}
+                />
+              ) : (
+                <div className="text-slate-300 whitespace-pre-wrap">{emailSeleccionado.text || "Sin contenido"}</div>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Lista de correos */
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Header de la lista */}
+            <div className="bg-slate-800 border-b border-slate-700 p-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-slate-100">
+                  {carpetasComunes.find((c) => c.name === carpetaActual)?.label || carpetaActual}
+                </h2>
+                <Link
+                  href="/email/send"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium text-white"
+                >
+                  <Icons.Plus className="inline mr-1" />
+                  Nuevo correo
+                </Link>
+              </div>
+            </div>
+
+            {/* Lista de correos */}
+            <div className="flex-1 overflow-y-auto">
+              {loading && emails.length === 0 && (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-slate-400">Cargando correos...</div>
+                </div>
+              )}
+
+      {error && !error.includes("no existe") && (
+        <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 m-4">
+          <div className="flex items-center gap-2 text-red-400">
+            <Icons.X className="text-lg" />
+            <span className="font-medium">Error</span>
+          </div>
+          <p className="text-red-300 text-sm mt-2">{error}</p>
+        </div>
+      )}
+
+              {!loading && emails.length === 0 && (
+                <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-8 m-4 text-center">
+                  <Icons.Document className="text-4xl text-slate-500 mx-auto mb-3" />
+                  <p className="text-slate-400">
+                    {error && error.includes("no existe")
+                      ? `La carpeta "${carpetaActual}" no existe en el servidor o está vacía`
+                      : "No hay correos en esta carpeta"}
+                  </p>
+                  {error && error.includes("no existe") && (
+                    <p className="text-slate-500 text-xs mt-2">
+                      Verifica que el nombre de la carpeta sea correcto. Los nombres pueden variar según el servidor.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {!loading &&
+                !error &&
+                emails.map((mail) => (
+                  <div
+                    key={mail.uid}
+                    className={`border-b border-slate-700 p-4 hover:bg-slate-800/50 cursor-pointer transition-colors ${
+                      mail.leido ? "" : "bg-blue-900/10"
+                    }`}
+                    onClick={() => {
+                      router.push(
+                        `/email/inbox?carpeta=${encodeURIComponent(carpetaActual)}&uid=${mail.uid}`
+                      );
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          {!mail.leido && (
+                            <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></span>
+                          )}
+                          <span className={`font-semibold ${mail.leido ? "text-slate-200" : "text-blue-300"}`}>
+                            {mail.from || "Sin remitente"}
+                          </span>
+                        </div>
+                        <h3 className={`font-medium mb-1 ${mail.leido ? "text-slate-300" : "text-slate-100"}`}>
+                          {mail.subject || "(Sin asunto)"}
+                        </h3>
+                        {mail.text && (
+                          <p className="text-sm text-slate-400 line-clamp-2">
+                            {mail.text.substring(0, 150)}
+                            {mail.text.length > 150 && "..."}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-xs text-slate-500">{formatearFecha(mail.date)}</span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              marcarComoLeido(mail.uid, !mail.leido);
+                            }}
+                            className="p-1.5 hover:bg-slate-700 rounded transition-colors"
+                            title={mail.leido ? "Marcar no leído" : "Marcar leído"}
+                          >
+                            {mail.leido ? (
+                              <Icons.Check className="text-sm text-slate-400" />
+                            ) : (
+                              <Icons.CheckCircle className="text-sm text-blue-400" />
+                            )}
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              eliminarCorreo(mail.uid);
+                            }}
+                            className="p-1.5 hover:bg-slate-700 rounded transition-colors"
+                            title="Eliminar"
+                          >
+                            <Icons.Trash className="text-sm text-slate-400" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function InboxPage() {
+  return (
+    <ProtectedRoute>
+      <InboxPageContent />
+    </ProtectedRoute>
+  );
+}
