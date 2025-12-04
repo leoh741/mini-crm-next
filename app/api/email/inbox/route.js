@@ -4,6 +4,9 @@
 import { NextResponse } from "next/server";
 import { obtenerUltimosCorreos } from "../../../../lib/emailRead.js";
 
+// Forzar que esta ruta sea dinámica (no pre-renderizada durante el build)
+export const dynamic = 'force-dynamic';
+
 /**
  * Obtiene los últimos correos de una carpeta específica
  * Query params: 

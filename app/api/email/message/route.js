@@ -4,6 +4,9 @@
 import { NextResponse } from "next/server";
 import { obtenerCorreoPorUID } from "../../../../lib/emailRead.js";
 
+// Forzar que esta ruta sea dinámica (no pre-renderizada durante el build)
+export const dynamic = 'force-dynamic';
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);

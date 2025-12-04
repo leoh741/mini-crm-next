@@ -4,6 +4,9 @@
 import { NextResponse } from "next/server";
 import { enviarCorreo } from "../../../../lib/emailSend.js";
 
+// Forzar que esta ruta sea dinámica (no pre-renderizada durante el build)
+export const dynamic = 'force-dynamic';
+
 /**
  * Maneja el envío de correos electrónicos
  * Requiere: { to, subject, text?, html? }

@@ -4,6 +4,9 @@
 import { NextResponse } from "next/server";
 import { obtenerCarpetas } from "../../../../lib/emailRead.js";
 
+// Forzar que esta ruta sea dinámica (no pre-renderizada durante el build)
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const carpetas = await obtenerCarpetas();
