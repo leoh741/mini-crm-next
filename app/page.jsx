@@ -207,6 +207,33 @@ function HomePageContent() {
               <Icons.Folder className="text-sm" />
               <span>Drive</span>
             </a>
+            <a 
+              href="https://quire.io/w/Lista_de_Tareas_27_11_25/7908" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-50 rounded-lg text-xs font-medium transition-colors duration-200 border border-gray-200 shadow-sm hover:shadow-md"
+              style={{ color: '#10b981' }}
+              title="Abrir Quire - Lista de Tareas"
+            >
+              <Icons.Clipboard className="text-sm" style={{ color: '#10b981' }} />
+              <span>Quire</span>
+            </a>
+            <a 
+              href="https://web.whatsapp.com" 
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors duration-200 border shadow-sm hover:shadow-md hover:opacity-90"
+              style={{ backgroundColor: '#25D366', borderColor: '#20b858' }}
+              title="Abrir WhatsApp"
+            >
+              <img 
+                src="/logo-whatsapp.png" 
+                alt="WhatsApp" 
+                className="object-contain"
+                style={{ width: '1rem', height: '1rem' }}
+              />
+              <span>WhatsApp</span>
+            </a>
           </div>
           <div className="px-3 py-1.5 bg-slate-800 rounded-lg border border-slate-700 w-full sm:w-auto">
             <p className="text-xs text-slate-300 font-medium text-center sm:text-left" suppressHydrationWarning>

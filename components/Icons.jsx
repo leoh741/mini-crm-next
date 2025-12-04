@@ -23,7 +23,8 @@ import {
   HiUpload,          // 📤 Importar
   HiEmojiHappy,      // 👋 Bienvenido (alternativa)
   HiTag,             // 🏷️ Etiqueta
-  HiX                // ✕ Cerrar
+  HiX,               // ✕ Cerrar
+  HiChat             // 💬 Chat/WhatsApp
 } from 'react-icons/hi';
 
 export const Icons = {
@@ -51,6 +52,7 @@ export const Icons = {
   Upload: HiUpload,
   WavingHand: HiEmojiHappy,
   Tag: HiTag,
-  X: HiX
+  X: HiX,
+  Chat: HiChat
 };
 
