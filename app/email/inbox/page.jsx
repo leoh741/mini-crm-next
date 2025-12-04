@@ -51,33 +51,51 @@ function InboxPageContent() {
       
       // OPTIMIZACIÓN: Pre-cargar el contenido completo de todos los correos visibles (en segundo plano)
       // Esto incluye attachments para que cuando se abran sean instantáneos
+      // Los correos se guardan automáticamente en MongoDB para acceso ultra-rápido
       if (data.mensajes && data.mensajes.length > 0) {
         // Usar requestIdleCallback para no bloquear el render
-        const preloadEmails = () => {
-          data.mensajes.forEach((mail, index) => {
-            // Espaciar las peticiones más tiempo para no saturar el servidor (especialmente con attachments)
-            setTimeout(() => {
-              // Pre-cargar contenido completo (incluyendo attachments) en segundo plano
-              fetch(`/api/email/message?uid=${mail.uid}&carpeta=${encodeURIComponent(carpetaActual)}&contenido=true`)
-                .then(res => {
-                  if (res.ok) {
-                    console.log(`✅ Pre-cargado correo UID ${mail.uid} (${index + 1}/${data.mensajes.length})`);
-                  } else {
-                    console.warn(`⚠️ Error HTTP ${res.status} pre-cargando correo UID ${mail.uid}`);
-                  }
-                })
-                .catch(err => {
-                  // No mostrar error en consola para no saturar (solo warnings importantes)
-                  // Los errores de pre-carga no son críticos, el correo se cargará cuando se abra
-                });
-            }, index * 500); // Espaciar 500ms entre cada petición (más tiempo para attachments grandes)
-          });
+        const preloadEmails = async () => {
+          // Pre-cargar en secuencia para no saturar el servidor y asegurar que se guarden en DB
+          for (let index = 0; index < data.mensajes.length; index++) {
+            const mail = data.mensajes[index];
+            
+            // Esperar antes de cada petición para no saturar
+            if (index > 0) {
+              await new Promise(resolve => setTimeout(resolve, 300)); // 300ms entre peticiones
+            }
+            
+            try {
+              // Pre-cargar contenido completo (incluyendo attachments) - se guarda automáticamente en MongoDB
+              const res = await fetch(`/api/email/message?uid=${mail.uid}&carpeta=${encodeURIComponent(carpetaActual)}&contenido=true`);
+              
+              if (res.ok) {
+                const emailData = await res.json();
+                if (emailData.success) {
+                  console.log(`✅ Pre-cargado y guardado en DB: UID ${mail.uid} (${index + 1}/${data.mensajes.length})`);
+                } else {
+                  console.warn(`⚠️ Error pre-cargando correo UID ${mail.uid}: ${emailData.error}`);
+                }
+              } else {
+                console.warn(`⚠️ Error HTTP ${res.status} pre-cargando correo UID ${mail.uid}`);
+              }
+            } catch (err) {
+              // Los errores de pre-carga no son críticos, el correo se cargará cuando se abra
+              console.warn(`⚠️ Error pre-cargando correo UID ${mail.uid}:`, err.message);
+            }
+          }
+          
+          console.log(`🎉 Pre-carga completada para ${data.mensajes.length} correos`);
         };
         
         if (typeof requestIdleCallback !== 'undefined') {
-          requestIdleCallback(preloadEmails, { timeout: 3000 });
+          requestIdleCallback(() => {
+            // Ejecutar pre-carga en segundo plano sin bloquear
+            preloadEmails().catch(() => {});
+          }, { timeout: 2000 });
         } else {
-          setTimeout(preloadEmails, 1000); // Fallback: esperar 1s antes de empezar
+          setTimeout(() => {
+            preloadEmails().catch(() => {});
+          }, 1000); // Fallback: esperar 1s antes de empezar
         }
       }
     } catch (err) {
@@ -89,7 +107,7 @@ function InboxPageContent() {
     }
   };
 
-  // Cargar correo individual (primero sin contenido para mostrar rápido)
+  // Cargar correo individual (ultra-optimizado: busca primero en cache con contenido completo)
   const fetchEmail = async (uid, carpeta = carpetaActual) => {
     try {
       setLoading(true);
@@ -97,62 +115,24 @@ function InboxPageContent() {
       const carpetaParaBuscar = carpeta || carpetaActual;
       console.log(`📧 Cargando correo UID ${uid} de carpeta: ${carpetaParaBuscar}`);
       
-      // Primero cargar sin contenido (rápido)
-      const res = await fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}`);
+      // OPTIMIZACIÓN: Buscar directamente con contenido completo
+      // El servidor buscará primero en cache en memoria (~0ms), luego en MongoDB (~10-50ms)
+      // Si está pre-cargado, será instantáneo. Si no, se carga desde IMAP y se guarda en cache.
+      const inicioCarga = Date.now();
+      const res = await fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}&contenido=true`);
       const data = await res.json();
+      const tiempoCarga = Date.now() - inicioCarga;
+      
+      console.log(`⏱️ Tiempo de carga: ${tiempoCarga}ms`);
 
       if (data.success) {
         setEmailSeleccionado(data.mensaje);
-        // Si no estaba leído, marcarlo como leído
+        
+        // Si no estaba leído, marcarlo como leído (en segundo plano, no bloquea)
         if (!data.mensaje.leido) {
-          await marcarComoLeido(uid, true);
-        }
-        
-        // Cargar contenido después (en segundo plano, sin bloquear)
-        // Siempre cargar contenido completo para obtener attachments si no están presentes
-        const necesitaContenido = !data.mensaje.text && !data.mensaje.html;
-        const necesitaAttachments = !data.mensaje.attachments || data.mensaje.attachments.length === 0;
-        
-        if (necesitaContenido || necesitaAttachments) {
-          // Usar requestIdleCallback o setTimeout para no bloquear el render
-          if (typeof requestIdleCallback !== 'undefined') {
-            requestIdleCallback(() => {
-              fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}&contenido=true`)
-                .then(res => res.json())
-                .then(data => {
-                  if (data.success) {
-                    setEmailSeleccionado(prev => ({
-                      ...prev,
-                      text: data.mensaje.text || prev.text,
-                      html: data.mensaje.html || prev.html,
-                      attachments: data.mensaje.attachments || prev.attachments || [],
-                    }));
-                  }
-                })
-                .catch(err => {
-                  console.warn("Error cargando contenido del correo:", err);
-                });
-            }, { timeout: 1000 });
-          } else {
-            // Fallback para navegadores sin requestIdleCallback
-            setTimeout(() => {
-              fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}&contenido=true`)
-                .then(res => res.json())
-                .then(data => {
-                  if (data.success) {
-                    setEmailSeleccionado(prev => ({
-                      ...prev,
-                      text: data.mensaje.text || prev.text,
-                      html: data.mensaje.html || prev.html,
-                      attachments: data.mensaje.attachments || prev.attachments || [],
-                    }));
-                  }
-                })
-                .catch(err => {
-                  console.warn("Error cargando contenido del correo:", err);
-                });
-            }, 50); // Delay más corto
-          }
+          marcarComoLeido(uid, true).catch(err => {
+            console.warn("Error marcando como leído:", err);
+          });
         }
       } else {
         throw new Error(data.error || "Error al cargar el correo");
