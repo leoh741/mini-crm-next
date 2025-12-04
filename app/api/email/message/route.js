@@ -46,10 +46,23 @@ export async function GET(request) {
     );
   } catch (error) {
     console.error("❌ Error en API /api/email/message:", error);
+    
+    // Mensaje de error más descriptivo
+    let mensajeError = error.message || "Error desconocido al obtener el correo";
+    
+    // Si el error es "Command failed", proporcionar más contexto
+    if (mensajeError.includes("Command failed") || mensajeError.includes("NoConnection")) {
+      mensajeError = "Error de conexión con el servidor de correo. Por favor, intenta nuevamente.";
+    } else if (mensajeError.includes("no existe")) {
+      mensajeError = `La carpeta especificada no existe en el servidor.`;
+    } else if (mensajeError.includes("no encontrado")) {
+      mensajeError = "El correo solicitado no se encontró en la carpeta especificada.";
+    }
+    
     return NextResponse.json(
       {
         success: false,
-        error: error.message || "Error desconocido al obtener el correo",
+        error: mensajeError,
       },
       { status: 500 }
     );

@@ -18,7 +18,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const carpeta = searchParams.get("carpeta") || "INBOX";
     const limitParam = searchParams.get("limit");
-    const limit = limitParam ? Number(limitParam) : 20; // Reducido a 20 para carga más rápida
+    const limit = limitParam ? Number(limitParam) : 15; // Reducido a 15 para carga más rápida
 
     // Validar que limit sea un número válido
     if (isNaN(limit) || limit < 1 || limit > 100) {

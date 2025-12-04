@@ -226,18 +226,9 @@ function InboxPageContent() {
 
   return (
     <div className="flex h-[calc(100vh-80px)] w-full relative" style={{ maxWidth: '100vw', margin: '0 auto' }}>
-      {/* Botón para abrir sidebar en móvil - posicionado para no tapar el título */}
-      <button
-        onClick={() => setSidebarAbierto(!sidebarAbierto)}
-        className="md:hidden absolute top-2 left-2 z-50 p-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 shadow-lg"
-        aria-label="Toggle menu"
-        style={{ top: '0.5rem', left: '0.5rem' }}
-      >
-        <Icons.Folder className="text-slate-300" />
-      </button>
 
       {/* Sidebar con carpetas */}
-      <div className={`${sidebarAbierto ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:relative inset-y-0 left-0 z-40 w-64 bg-slate-800 border-r border-slate-700 flex flex-col flex-shrink-0 transition-transform duration-300 ease-in-out`}>
+      <div className={`${sidebarAbierto ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:relative inset-y-0 left-0 z-40 w-64 bg-slate-800 border-r border-slate-700 flex flex-col flex-shrink-0 transition-transform duration-300 ease-in-out shadow-xl md:shadow-none`}>
         <div className="p-4 border-b border-slate-700">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-semibold text-slate-100">Carpetas</h2>
@@ -379,7 +370,15 @@ function InboxPageContent() {
             {/* Header de la lista */}
             <div className="bg-slate-800 border-b border-slate-700 p-3 md:p-4 relative">
               <div className="flex items-center justify-between gap-2">
-                <h2 className="text-base md:text-lg font-semibold text-slate-100 truncate ml-12 md:ml-0">
+                {/* Botón para abrir sidebar en móvil - dentro del header */}
+                <button
+                  onClick={() => setSidebarAbierto(!sidebarAbierto)}
+                  className="md:hidden p-2 bg-slate-700 hover:bg-slate-600 rounded-lg border border-slate-600 flex-shrink-0"
+                  aria-label="Toggle menu"
+                >
+                  <Icons.Folder className="text-slate-300 text-sm" />
+                </button>
+                <h2 className="text-base md:text-lg font-semibold text-slate-100 truncate flex-1">
                   {carpetasComunes.find((c) => c.name === carpetaActual)?.label || carpetaActual}
                 </h2>
                 <Link
