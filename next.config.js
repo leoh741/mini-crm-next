@@ -42,7 +42,7 @@ const nextConfig = {
   },
   
   // Optimizaciones de output
-  output: 'standalone', // Generar build standalone para mejor rendimiento en VPS
+  // output: 'standalone', // Solo usar en producción, comentado para desarrollo
   
   // Optimizaciones de poweredByHeader
   poweredByHeader: false, // Ocultar header X-Powered-By por seguridad

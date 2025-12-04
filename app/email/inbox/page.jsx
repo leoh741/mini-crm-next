@@ -40,7 +40,7 @@ function InboxPageContent() {
     try {
       setLoading(true);
       setError("");
-      const res = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaActual)}&limit=20`);
+      const res = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaActual)}&limit=10`);
       const data = await res.json();
 
       if (!data.success) {
@@ -48,6 +48,18 @@ function InboxPageContent() {
       }
 
       setEmails(data.mensajes || []);
+      
+      // OPTIMIZACIÓN: Pre-cargar los primeros 3 correos en cache (en segundo plano)
+      if (data.mensajes && data.mensajes.length > 0) {
+        setTimeout(() => {
+          data.mensajes.slice(0, 3).forEach(mail => {
+            // Pre-cargar en cache sin bloquear
+            fetch(`/api/email/message?uid=${mail.uid}&carpeta=${encodeURIComponent(carpetaActual)}`)
+              .then(() => {})
+              .catch(() => {});
+          });
+        }, 100);
+      }
     } catch (err) {
       console.error("Error cargando correos:", err);
       setError(err.message || "Error desconocido al cargar los correos");
@@ -57,11 +69,16 @@ function InboxPageContent() {
     }
   };
 
-  // Cargar correo individual
-  const fetchEmail = async (uid) => {
+  // Cargar correo individual (primero sin contenido para mostrar rápido)
+  const fetchEmail = async (uid, carpeta = carpetaActual) => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaActual)}`);
+      setError(""); // Limpiar errores previos
+      const carpetaParaBuscar = carpeta || carpetaActual;
+      console.log(`📧 Cargando correo UID ${uid} de carpeta: ${carpetaParaBuscar}`);
+      
+      // Primero cargar sin contenido (rápido)
+      const res = await fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}`);
       const data = await res.json();
 
       if (data.success) {
@@ -69,6 +86,47 @@ function InboxPageContent() {
         // Si no estaba leído, marcarlo como leído
         if (!data.mensaje.leido) {
           await marcarComoLeido(uid, true);
+        }
+        
+        // Cargar contenido después (en segundo plano, sin bloquear)
+        if (!data.mensaje.text && !data.mensaje.html) {
+          // Usar requestIdleCallback o setTimeout para no bloquear el render
+          if (typeof requestIdleCallback !== 'undefined') {
+            requestIdleCallback(() => {
+              fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}&contenido=true`)
+                .then(res => res.json())
+                .then(data => {
+                  if (data.success && (data.mensaje.text || data.mensaje.html)) {
+                    setEmailSeleccionado(prev => ({
+                      ...prev,
+                      text: data.mensaje.text || prev.text,
+                      html: data.mensaje.html || prev.html,
+                    }));
+                  }
+                })
+                .catch(err => {
+                  console.warn("Error cargando contenido del correo:", err);
+                });
+            }, { timeout: 1000 });
+          } else {
+            // Fallback para navegadores sin requestIdleCallback
+            setTimeout(() => {
+              fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}&contenido=true`)
+                .then(res => res.json())
+                .then(data => {
+                  if (data.success && (data.mensaje.text || data.mensaje.html)) {
+                    setEmailSeleccionado(prev => ({
+                      ...prev,
+                      text: data.mensaje.text || prev.text,
+                      html: data.mensaje.html || prev.html,
+                    }));
+                  }
+                })
+                .catch(err => {
+                  console.warn("Error cargando contenido del correo:", err);
+                });
+            }, 50); // Delay más corto
+          }
         }
       } else {
         throw new Error(data.error || "Error al cargar el correo");
@@ -180,11 +238,13 @@ function InboxPageContent() {
 
   useEffect(() => {
     if (uidParam) {
-      fetchEmail(Number(uidParam));
+      // Asegurarse de que carpetaActual esté sincronizada con carpetaParam
+      const carpetaParaBuscar = carpetaParam || carpetaActual;
+      fetchEmail(Number(uidParam), carpetaParaBuscar);
     } else {
       setEmailSeleccionado(null);
     }
-  }, [uidParam, carpetaActual]);
+  }, [uidParam, carpetaParam, carpetaActual]);
 
   const handleRefresh = () => {
     setRefreshing(true);

@@ -8,12 +8,18 @@ import { obtenerCorreoPorUID } from "../../../../lib/emailRead.js";
 export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
+  console.log("📥 API /api/email/message - Request recibido");
+  
   try {
     const { searchParams } = new URL(request.url);
     const uidParam = searchParams.get("uid");
     const carpeta = searchParams.get("carpeta") || "INBOX";
+    const incluirContenido = searchParams.get("contenido") === "true";
+
+    console.log(`📥 Parámetros recibidos - UID: ${uidParam}, Carpeta: ${carpeta}`);
 
     if (!uidParam) {
+      console.error("❌ Falta el parámetro 'uid'");
       return NextResponse.json(
         { success: false, error: "Falta el parámetro 'uid'" },
         { status: 400 }
@@ -22,13 +28,16 @@ export async function GET(request) {
 
     const uid = Number(uidParam);
     if (isNaN(uid)) {
+      console.error(`❌ UID inválido: ${uidParam}`);
       return NextResponse.json(
         { success: false, error: "El parámetro 'uid' debe ser un número" },
         { status: 400 }
       );
     }
 
-    const mensaje = await obtenerCorreoPorUID(uid, carpeta);
+    console.log(`📥 Llamando a obtenerCorreoPorUID con UID: ${uid}, Carpeta: ${carpeta}, Contenido: ${incluirContenido}`);
+    const mensaje = await obtenerCorreoPorUID(uid, carpeta, incluirContenido);
+    console.log(`✅ Correo obtenido exitosamente`);
 
     if (!mensaje) {
       return NextResponse.json(
@@ -45,17 +54,29 @@ export async function GET(request) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("❌ Error en API /api/email/message:", error);
+    console.error("❌ Error en API /api/email/message:");
+    console.error("  - Tipo:", error.constructor.name);
+    console.error("  - Código:", error.code);
+    console.error("  - Mensaje:", error.message);
+    console.error("  - Stack:", error.stack);
     
     // Mensaje de error más descriptivo
     let mensajeError = error.message || "Error desconocido al obtener el correo";
     
-    // Si el error es "Command failed", proporcionar más contexto
-    if (mensajeError.includes("Command failed") || mensajeError.includes("NoConnection")) {
+    // Detectar diferentes tipos de errores
+    if (mensajeError.includes("Command failed") || 
+        mensajeError.includes("NoConnection") ||
+        mensajeError.includes("Connection") ||
+        mensajeError.includes("ECONNREFUSED") ||
+        mensajeError.includes("ETIMEDOUT") ||
+        mensajeError.includes("timeout") ||
+        error.code === "NoConnection" ||
+        error.code === "ECONNREFUSED" ||
+        error.code === "ETIMEDOUT") {
       mensajeError = "Error de conexión con el servidor de correo. Por favor, intenta nuevamente.";
     } else if (mensajeError.includes("no existe")) {
       mensajeError = `La carpeta especificada no existe en el servidor.`;
-    } else if (mensajeError.includes("no encontrado")) {
+    } else if (mensajeError.includes("no encontrado") || mensajeError.includes("not found")) {
       mensajeError = "El correo solicitado no se encontró en la carpeta especificada.";
     }
     
@@ -63,6 +84,14 @@ export async function GET(request) {
       {
         success: false,
         error: mensajeError,
+        // En desarrollo, incluir más detalles del error
+        ...(process.env.NODE_ENV === 'development' && {
+          details: {
+            type: error.constructor.name,
+            code: error.code,
+            originalMessage: error.message,
+          }
+        })
       },
       { status: 500 }
     );
