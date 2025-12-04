@@ -96,11 +96,12 @@ function InboxPageContent() {
               fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}&contenido=true`)
                 .then(res => res.json())
                 .then(data => {
-                  if (data.success && (data.mensaje.text || data.mensaje.html)) {
+                  if (data.success) {
                     setEmailSeleccionado(prev => ({
                       ...prev,
                       text: data.mensaje.text || prev.text,
                       html: data.mensaje.html || prev.html,
+                      attachments: data.mensaje.attachments || prev.attachments || [],
                     }));
                   }
                 })
@@ -114,11 +115,12 @@ function InboxPageContent() {
               fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}&contenido=true`)
                 .then(res => res.json())
                 .then(data => {
-                  if (data.success && (data.mensaje.text || data.mensaje.html)) {
+                  if (data.success) {
                     setEmailSeleccionado(prev => ({
                       ...prev,
                       text: data.mensaje.text || prev.text,
                       html: data.mensaje.html || prev.html,
+                      attachments: data.mensaje.attachments || prev.attachments || [],
                     }));
                   }
                 })
@@ -411,6 +413,64 @@ function InboxPageContent() {
                 </div>
               </div>
             </div>
+
+            {/* Archivos adjuntos */}
+            {emailSeleccionado.attachments && emailSeleccionado.attachments.length > 0 && (
+              <div className="border-b border-slate-700 bg-slate-800/50 p-4">
+                <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
+                  <Icons.Document className="text-sm" />
+                  Archivos adjuntos ({emailSeleccionado.attachments.length})
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {emailSeleccionado.attachments.map((attachment, index) => {
+                    const sizeKB = (attachment.size / 1024).toFixed(1);
+                    const sizeMB = (attachment.size / (1024 * 1024)).toFixed(2);
+                    const sizeText = attachment.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
+                    
+                    // Función para descargar el archivo
+                    const handleDownload = () => {
+                      if (attachment.content) {
+                        try {
+                          // Convertir base64 a blob
+                          const binaryString = atob(attachment.content);
+                          const bytes = new Uint8Array(binaryString.length);
+                          for (let i = 0; i < binaryString.length; i++) {
+                            bytes[i] = binaryString.charCodeAt(i);
+                          }
+                          const blob = new Blob([bytes], { type: attachment.contentType });
+                          
+                          // Crear URL y descargar
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = attachment.filename;
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          window.URL.revokeObjectURL(url);
+                        } catch (error) {
+                          console.error("Error al descargar archivo:", error);
+                          alert("Error al descargar el archivo");
+                        }
+                      }
+                    };
+                    
+                    return (
+                      <button
+                        key={index}
+                        onClick={handleDownload}
+                        className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm text-slate-200 transition-colors"
+                        title={`Descargar ${attachment.filename} (${sizeText})`}
+                      >
+                        <Icons.Document className="text-base text-blue-400" />
+                        <span className="truncate max-w-[200px]">{attachment.filename}</span>
+                        <span className="text-xs text-slate-400 whitespace-nowrap">{sizeText}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Contenido del correo */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6">
