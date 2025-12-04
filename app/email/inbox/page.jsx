@@ -40,7 +40,7 @@ function InboxPageContent() {
     try {
       setLoading(true);
       setError("");
-      const res = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaActual)}&limit=30`);
+      const res = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaActual)}&limit=20`);
       const data = await res.json();
 
       if (!data.success) {
@@ -226,11 +226,12 @@ function InboxPageContent() {
 
   return (
     <div className="flex h-[calc(100vh-80px)] w-full relative" style={{ maxWidth: '100vw', margin: '0 auto' }}>
-      {/* Botón para abrir sidebar en móvil */}
+      {/* Botón para abrir sidebar en móvil - posicionado para no tapar el título */}
       <button
         onClick={() => setSidebarAbierto(!sidebarAbierto)}
-        className="md:hidden fixed top-20 left-2 z-50 p-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700"
+        className="md:hidden absolute top-2 left-2 z-50 p-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 shadow-lg"
         aria-label="Toggle menu"
+        style={{ top: '0.5rem', left: '0.5rem' }}
       >
         <Icons.Folder className="text-slate-300" />
       </button>
@@ -376,9 +377,9 @@ function InboxPageContent() {
           /* Lista de correos */
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Header de la lista */}
-            <div className="bg-slate-800 border-b border-slate-700 p-3 md:p-4">
+            <div className="bg-slate-800 border-b border-slate-700 p-3 md:p-4 relative">
               <div className="flex items-center justify-between gap-2">
-                <h2 className="text-base md:text-lg font-semibold text-slate-100 truncate">
+                <h2 className="text-base md:text-lg font-semibold text-slate-100 truncate ml-12 md:ml-0">
                   {carpetasComunes.find((c) => c.name === carpetaActual)?.label || carpetaActual}
                 </h2>
                 <Link
