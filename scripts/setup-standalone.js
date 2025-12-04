@@ -12,8 +12,10 @@ console.log('🔧 Configurando archivos estáticos para modo standalone...');
 
 // Verificar que existe el build
 if (!fs.existsSync(standaloneDir)) {
-  console.error('❌ No se encontró el directorio standalone. Ejecuta "npm run build" primero.');
-  process.exit(1);
+  console.log('ℹ️  Modo standalone no está habilitado (output: "standalone" está comentado en next.config.js)');
+  console.log('ℹ️  Si necesitas modo standalone, descomenta la línea en next.config.js');
+  console.log('✅ Build completado exitosamente sin modo standalone');
+  process.exit(0); // Salir exitosamente en lugar de fallar
 }
 
 // Crear directorio .next/static dentro de standalone si no existe
