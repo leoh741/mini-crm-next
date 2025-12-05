@@ -3,6 +3,7 @@
 
 import { NextResponse } from "next/server";
 import { obtenerUltimosCorreos } from "../../../../lib/emailRead.js";
+import { obtenerListaDelCache } from "../../../../lib/emailListCache.js";
 
 // Forzar que esta ruta sea dinámica (no pre-renderizada durante el build)
 export const dynamic = 'force-dynamic';
@@ -29,25 +30,30 @@ export async function GET(request) {
       );
     }
 
-    // Si se solicita solo cache, intentar obtener solo del cache
+    // Si se solicita solo cache, intentar obtener solo del cache (ultra-rápido)
     if (cacheOnly) {
-      const { obtenerListaDelCache } = await import("../../../../lib/emailListCache.js");
-      const mensajesCache = await obtenerListaDelCache(carpeta, limit);
-      
-      if (mensajesCache && mensajesCache.length > 0) {
-        return NextResponse.json(
-          {
-            success: true,
-            mensajes: mensajesCache,
-            carpeta,
-            total: mensajesCache.length,
-            fromCache: true,
-          },
-          { status: 200 }
-        );
+      try {
+        const mensajesCache = await obtenerListaDelCache(carpeta, limit);
+        
+        if (mensajesCache && mensajesCache.length > 0) {
+          console.log(`✅ Cache encontrado para carpeta ${carpeta}: ${mensajesCache.length} correos`);
+          return NextResponse.json(
+            {
+              success: true,
+              mensajes: mensajesCache,
+              carpeta,
+              total: mensajesCache.length,
+              fromCache: true,
+            },
+            { status: 200 }
+          );
+        }
+      } catch (cacheError) {
+        // Si hay error, no es crítico, solo significa que no hay cache
+        console.warn(`⚠️ Error al obtener cache: ${cacheError.message}`);
       }
       
-      // Si no hay cache, retornar vacío
+      // Si no hay cache, retornar vacío (no es un error, status 200)
       return NextResponse.json(
         {
           success: true,

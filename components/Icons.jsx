@@ -24,7 +24,8 @@ import {
   HiEmojiHappy,      // 👋 Bienvenido (alternativa)
   HiTag,             // 🏷️ Etiqueta
   HiX,               // ✕ Cerrar
-  HiChat             // 💬 Chat/WhatsApp
+  HiChat,            // 💬 Chat/WhatsApp
+  HiArrowLeft        // ← Responder/Volver
 } from 'react-icons/hi';
 
 export const Icons = {
@@ -53,6 +54,7 @@ export const Icons = {
   WavingHand: HiEmojiHappy,
   Tag: HiTag,
   X: HiX,
-  Chat: HiChat
+  Chat: HiChat,
+  ArrowUturnLeft: HiArrowLeft  // ← Responder/Volver
 };
 

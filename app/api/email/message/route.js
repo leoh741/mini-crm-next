@@ -3,6 +3,7 @@
 
 import { NextResponse } from "next/server";
 import { obtenerCorreoPorUID } from "../../../../lib/emailRead.js";
+import { obtenerCorreoDelCache } from "../../../../lib/emailCache.js";
 
 // Forzar que esta ruta sea dinámica (no pre-renderizada durante el build)
 export const dynamic = 'force-dynamic';
@@ -38,29 +39,32 @@ export async function GET(request) {
 
     // Si se solicita solo cache, intentar obtener solo del cache
     if (cacheOnly) {
-      const { obtenerCorreoDelCache } = await import("../../../../lib/emailCache.js");
-      const mensajeCache = await obtenerCorreoDelCache(uid, carpeta, incluirContenido);
-      
-      if (mensajeCache) {
-        console.log(`✅ Correo encontrado en cache! UID: ${uid}`);
-        return NextResponse.json(
-          {
-            success: true,
-            mensaje: mensajeCache,
-            fromCache: true,
-          },
-          { status: 200 }
-        );
+      try {
+        const mensajeCache = await obtenerCorreoDelCache(uid, carpeta, incluirContenido);
+        
+        if (mensajeCache) {
+          console.log(`✅ Correo encontrado en cache! UID: ${uid}`);
+          return NextResponse.json(
+            {
+              success: true,
+              mensaje: mensajeCache,
+              fromCache: true,
+            },
+            { status: 200 }
+          );
+        }
+      } catch (cacheError) {
+        console.warn(`⚠️ Error al buscar en cache: ${cacheError.message}`);
       }
       
-      // Si no hay cache, retornar null
+      // Si no hay cache, retornar 200 con success: false (no es un error crítico)
       return NextResponse.json(
         {
           success: false,
           error: "Correo no encontrado en cache",
           fromCache: true,
         },
-        { status: 404 }
+        { status: 200 } // Cambiar a 200 para que no sea tratado como error
       );
     }
 

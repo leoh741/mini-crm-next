@@ -21,6 +21,9 @@ function InboxPageContent() {
   const [refreshing, setRefreshing] = useState(false);
   const [accionando, setAccionando] = useState(false);
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
+  
+  // Cache local en memoria del cliente para acceso ultra-rápido
+  const [localEmailCache, setLocalEmailCache] = useState(new Map());
 
   // Cargar carpetas disponibles
   const fetchCarpetas = async () => {
@@ -43,7 +46,15 @@ function InboxPageContent() {
       // OPTIMIZACIÓN: Primero intentar cargar desde cache SIN mostrar loading (ultra-rápido)
       // Si hay emails en cache, mostrarlos inmediatamente sin mostrar "cargando"
       try {
-        const cacheRes = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaActual)}&limit=10&cacheOnly=true`);
+        // Usar AbortController para timeout rápido si el cache tarda mucho
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 500); // Timeout de 500ms para cache
+        
+        const cacheRes = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaActual)}&limit=10&cacheOnly=true`, {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        
         if (cacheRes.ok) {
           const cacheData = await cacheRes.json();
           if (cacheData.success && cacheData.mensajes && cacheData.mensajes.length > 0) {
@@ -52,7 +63,42 @@ function InboxPageContent() {
             setLoading(false);
             console.log(`✅ Emails cargados desde cache instantáneamente: ${cacheData.mensajes.length}`);
             
-            // Actualizar en segundo plano sin bloquear
+            // OPTIMIZACIÓN: Pre-cargar contenido completo de todos los emails visibles en segundo plano
+            // Esto asegura que cuando se abra un email, esté instantáneamente disponible
+            setTimeout(async () => {
+              try {
+                // Pre-cargar contenido completo de cada email visible
+                for (let index = 0; index < cacheData.mensajes.length; index++) {
+                  const mail = cacheData.mensajes[index];
+                  
+                  try {
+                    // Pre-cargar contenido completo (incluyendo attachments) - se guarda automáticamente en MongoDB
+                    const res = await fetch(`/api/email/message?uid=${mail.uid}&carpeta=${encodeURIComponent(carpetaActual)}&contenido=true`);
+                    
+                    if (res.ok) {
+                      const emailData = await res.json();
+                      if (emailData.success) {
+                        console.log(`✅ Contenido completo pre-cargado: UID ${mail.uid} (${index + 1}/${cacheData.mensajes.length})`);
+                      }
+                    }
+                  } catch (err) {
+                    // Los errores de pre-carga no son críticos
+                    console.warn(`⚠️ Error pre-cargando contenido UID ${mail.uid}:`, err.message);
+                  }
+                  
+                  // Pequeña pausa entre peticiones para no saturar
+                  if (index < cacheData.mensajes.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 100)); // 100ms entre peticiones
+                  }
+                }
+                
+                console.log(`🎉 Pre-carga de contenido completada para ${cacheData.mensajes.length} correos`);
+              } catch (err) {
+                console.warn('Error en pre-carga de contenido:', err);
+              }
+            }, 100);
+            
+            // Actualizar lista desde servidor en segundo plano (después de pre-cargar contenido)
             setTimeout(async () => {
               try {
                 const res = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaActual)}&limit=10`);
@@ -64,13 +110,16 @@ function InboxPageContent() {
               } catch (err) {
                 console.warn('Error actualizando emails en segundo plano:', err);
               }
-            }, 100);
+            }, 500);
             return;
           }
         }
       } catch (cacheError) {
-        // Si falla el cache, continuar con carga normal
-        console.warn('Error cargando desde cache:', cacheError);
+        // Si falla el cache (incluyendo timeout), continuar con carga normal
+        // No es un error crítico, solo significa que no hay cache disponible
+        if (cacheError.name !== 'AbortError') {
+          console.warn('Error cargando desde cache:', cacheError);
+        }
       }
       
       // Solo mostrar loading si no hay cache disponible
@@ -144,71 +193,111 @@ function InboxPageContent() {
     }
   };
 
-  // Cargar correo individual (ultra-optimizado: busca primero en cache sin mostrar loading)
+  // Cargar correo individual (ultra-optimizado: busca primero en cache local, luego en DB)
   const fetchEmail = async (uid, carpeta = carpetaActual) => {
     try {
       setError(""); // Limpiar errores previos
       const carpetaParaBuscar = carpeta || carpetaActual;
+      const cacheKey = `${uid}-${carpetaParaBuscar}`;
       console.log(`📧 Cargando correo UID ${uid} de carpeta: ${carpetaParaBuscar}`);
       
-      // OPTIMIZACIÓN: Primero intentar cargar desde cache SIN mostrar loading (ultra-rápido)
+      // OPTIMIZACIÓN 1: Verificar cache local primero (instantáneo, ~0ms)
+      const cachedLocal = localEmailCache.get(cacheKey);
+      if (cachedLocal && cachedLocal.contenidoCompleto) {
+        setEmailSeleccionado(cachedLocal.mensaje);
+        setLoading(false);
+        console.log(`✅ Correo cargado desde cache local instantáneamente! UID: ${uid}`);
+        
+        // Si no estaba leído, marcarlo como leído (en segundo plano)
+        if (!cachedLocal.mensaje.leido) {
+          marcarComoLeido(uid, true).catch(() => {});
+        }
+        return;
+      }
+      
+      // OPTIMIZACIÓN 2: Intentar cargar desde cache de DB SIN mostrar loading (ultra-rápido)
+      // Usar timeout corto para no esperar mucho si no hay cache
       try {
-        const cacheRes = await fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}&contenido=true&cacheOnly=true`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 200); // Timeout reducido a 200ms
+        
+        const cacheRes = await fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}&contenido=true&cacheOnly=true`, {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        
         if (cacheRes.ok) {
           const cacheData = await cacheRes.json();
           if (cacheData.success && cacheData.mensaje) {
+            // Guardar en cache local para acceso instantáneo la próxima vez
+            setLocalEmailCache(prev => {
+              const newCache = new Map(prev);
+              newCache.set(cacheKey, {
+                mensaje: cacheData.mensaje,
+                contenidoCompleto: true,
+                timestamp: Date.now()
+              });
+              // Limitar tamaño del cache local (últimos 20 correos)
+              if (newCache.size > 20) {
+                const firstKey = newCache.keys().next().value;
+                newCache.delete(firstKey);
+              }
+              return newCache;
+            });
+            
             // Mostrar correo del cache inmediatamente SIN mostrar loading
             setEmailSeleccionado(cacheData.mensaje);
             setLoading(false);
-            console.log(`✅ Correo cargado desde cache instantáneamente! UID: ${uid}`);
+            console.log(`✅ Correo cargado desde cache DB instantáneamente! UID: ${uid}`);
             
             // Si no estaba leído, marcarlo como leído (en segundo plano, no bloquea)
             if (!cacheData.mensaje.leido) {
-              marcarComoLeido(uid, true).catch(err => {
-                console.warn("Error marcando como leído:", err);
-              });
+              marcarComoLeido(uid, true).catch(() => {});
             }
-            
-            // Actualizar desde servidor en segundo plano si es necesario
-            setTimeout(async () => {
-              try {
-                const res = await fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}&contenido=true`);
-                const data = await res.json();
-                if (data.success && data.mensaje) {
-                  setEmailSeleccionado(data.mensaje);
-                  console.log(`✅ Correo actualizado desde servidor: UID ${uid}`);
-                }
-              } catch (err) {
-                console.warn('Error actualizando correo en segundo plano:', err);
-              }
-            }, 100);
             return;
           }
         }
       } catch (cacheError) {
-        // Si falla el cache, continuar con carga normal
-        console.warn('Error cargando desde cache:', cacheError);
+        // Si falla el cache (incluyendo timeout o 404), continuar con carga normal
+        // No es un error crítico si no hay cache
+        if (cacheError.name !== 'AbortError') {
+          console.warn('Cache DB no disponible, cargando desde servidor:', cacheError);
+        }
       }
       
       // Solo mostrar loading si no hay cache disponible
       setLoading(true);
       
-      // Si no hay cache, cargar normalmente desde servidor
+      // OPTIMIZACIÓN 3: Si no hay cache, cargar desde servidor y guardar en cache local
       const inicioCarga = Date.now();
       const res = await fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}&contenido=true`);
       const data = await res.json();
       const tiempoCarga = Date.now() - inicioCarga;
       
-      console.log(`⏱️ Tiempo de carga: ${tiempoCarga}ms`);
+      console.log(`⏱️ Tiempo de carga desde servidor: ${tiempoCarga}ms`);
 
-      if (data.success) {
+      if (data.success && data.mensaje) {
+        // Guardar en cache local para acceso instantáneo la próxima vez
+        setLocalEmailCache(prev => {
+          const newCache = new Map(prev);
+          newCache.set(cacheKey, {
+            mensaje: data.mensaje,
+            contenidoCompleto: true,
+            timestamp: Date.now()
+          });
+          // Limitar tamaño del cache local (últimos 20 correos)
+          if (newCache.size > 20) {
+            const firstKey = newCache.keys().next().value;
+            newCache.delete(firstKey);
+          }
+          return newCache;
+        });
+        
         setEmailSeleccionado(data.mensaje);
         
         // Si no estaba leído, marcarlo como leído (en segundo plano, no bloquea)
         if (!data.mensaje.leido) {
-          marcarComoLeido(uid, true).catch(err => {
-            console.warn("Error marcando como leído:", err);
-          });
+          marcarComoLeido(uid, true).catch(() => {});
         }
       } else {
         throw new Error(data.error || "Error al cargar el correo");
@@ -315,6 +404,7 @@ function InboxPageContent() {
 
   useEffect(() => {
     setCarpetaActual(carpetaParam);
+    // Cargar emails sin mostrar loading inicial (se mostrará solo si no hay cache)
     fetchEmails();
   }, [carpetaParam]);
 

@@ -88,9 +88,9 @@ export async function GET(request) {
         resultados.exitosos++;
         console.log(`✅ Sincronizado correo ${i + 1}/${mensajes.length} - UID: ${mensaje.uid}`);
         
-        // Pequeña pausa entre correos para no saturar
+        // Pequeña pausa entre correos para no saturar (reducida para sincronización más rápida)
         if (i < mensajes.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 200)); // 200ms entre correos
+          await new Promise(resolve => setTimeout(resolve, 100)); // 100ms entre correos (reducido de 200ms)
         }
       } catch (error) {
         resultados.fallidos++;
