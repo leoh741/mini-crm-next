@@ -116,10 +116,12 @@ function SendEmailPageContent() {
       });
       setAttachments([]);
 
-      // Redirigir después de 2 segundos
+      // Esperar un poco más para que el correo se guarde y el cache se actualice
+      // Luego redirigir a la carpeta Sent con forceRefresh para asegurar que se vea el correo
       setTimeout(() => {
-        router.push("/email/inbox");
-      }, 2000);
+        // Redirigir a Sent con un parámetro para forzar actualización
+        router.push("/email/inbox?carpeta=Sent&refresh=true");
+      }, 4000); // Aumentado a 4 segundos para dar tiempo a que se actualice el cache
     } catch (err) {
       console.error("Error enviando correo:", err);
       setError(err.message || "Error desconocido al enviar el correo");
@@ -151,12 +153,12 @@ function SendEmailPageContent() {
       )}
 
       {success && (
-        <div className="bg-green-900/30 border border-green-700 rounded-lg p-4 mb-4">
-          <div className="flex items-center gap-2 text-green-400">
-            <Icons.Check className="text-lg" />
-            <span className="font-medium">Correo enviado exitosamente</span>
+        <div className="bg-green-900/50 border-2 border-green-600 rounded-lg p-4 mb-4 animate-pulse">
+          <div className="flex items-center gap-2 text-green-300">
+            <Icons.Check className="text-xl" />
+            <span className="font-semibold text-lg">¡Correo enviado exitosamente!</span>
           </div>
-          <p className="text-green-300 text-sm mt-2">Redirigiendo a la bandeja de entrada...</p>
+          <p className="text-green-200 text-sm mt-2">El correo ha sido enviado y guardado en la carpeta Enviados. Redirigiendo a la bandeja de entrada...</p>
         </div>
       )}
 

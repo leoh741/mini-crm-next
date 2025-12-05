@@ -42,10 +42,33 @@ function InboxPageContent() {
   };
 
   // Cargar correos de la carpeta actual
-  const fetchEmails = async (carpeta = null) => {
+  const fetchEmails = async (carpeta = null, forzarRefresh = false) => {
     try {
       setError("");
       const carpetaParaUsar = carpeta || carpetaActual;
+      
+      // Si se solicita forzar refresh (por ejemplo, después de enviar un correo o F5 en Sent)
+      // o si es la carpeta Sent y se está refrescando, hacer forceRefresh
+      const esSent = carpetaParaUsar.toLowerCase() === 'sent' || 
+                     carpetaParaUsar.toLowerCase() === 'enviados' ||
+                     carpetaParaUsar.toLowerCase() === 'sent items';
+      
+      if (forzarRefresh || (esSent && !loading)) {
+        console.log(`🔄 Forzando refresh de carpeta ${carpetaParaUsar}...`);
+        setLoading(true);
+        try {
+          const res = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaParaUsar)}&limit=20&forceRefresh=true`);
+          const data = await res.json();
+          if (data.success && data.mensajes) {
+            setEmails(data.mensajes);
+            setLoading(false);
+            console.log(`✅ Emails refrescados desde servidor: ${data.mensajes.length}`);
+            return;
+          }
+        } catch (refreshError) {
+          console.warn('Error en refresh forzado:', refreshError);
+        }
+      }
       
       // OPTIMIZACIÓN: Primero intentar cargar desde cache SIN mostrar loading (ultra-rápido)
       // Si hay emails en cache, mostrarlos inmediatamente sin mostrar "cargando"
@@ -268,10 +291,19 @@ function InboxPageContent() {
         setEmailSeleccionado(cachedLocal.mensaje);
         setLoading(false);
         
-        // Si no estaba leído, marcarlo como leído (en segundo plano)
-        if (!cachedLocal.mensaje.leido) {
-          marcarComoLeido(uid, true).catch(() => {});
-        }
+            // Si no estaba leído, marcarlo como leído automáticamente (en segundo plano)
+            if (!cachedLocal.mensaje.leido) {
+              // Llamar a la API directamente para marcar como leído
+              fetch("/api/email/mark", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ uid, carpeta: carpetaParaBuscar, leido: true }),
+              }).catch(() => {}); // No bloquear si falla
+              
+              // Actualizar el estado local inmediatamente para reflejar el cambio
+              setEmailSeleccionado({ ...cachedLocal.mensaje, leido: true });
+              setEmails(emails.map((e) => (e.uid === uid ? { ...e, leido: true } : e)));
+            }
         return;
       }
       
@@ -307,9 +339,18 @@ function InboxPageContent() {
             setEmailSeleccionado(cacheData.mensaje);
             setLoading(false);
             
-            // Si no estaba leído, marcarlo como leído (en segundo plano)
+            // Si no estaba leído, marcarlo como leído automáticamente (en segundo plano)
             if (!cacheData.mensaje.leido) {
-              marcarComoLeido(uid, true).catch(() => {});
+              // Llamar a la API directamente para marcar como leído
+              fetch("/api/email/mark", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ uid, carpeta: carpetaParaBuscar, leido: true }),
+              }).catch(() => {}); // No bloquear si falla
+              
+              // Actualizar el estado local inmediatamente para reflejar el cambio
+              setEmailSeleccionado({ ...cacheData.mensaje, leido: true });
+              setEmails(emails.map((e) => (e.uid === uid ? { ...e, leido: true } : e)));
             }
             return;
           }
@@ -348,9 +389,18 @@ function InboxPageContent() {
             setEmailSeleccionado(cacheData.mensaje);
             setLoading(false);
             
-            // Si no estaba leído, marcarlo como leído (en segundo plano)
+            // Si no estaba leído, marcarlo como leído automáticamente (en segundo plano)
             if (!cacheData.mensaje.leido) {
-              marcarComoLeido(uid, true).catch(() => {});
+              // Llamar a la API directamente para marcar como leído
+              fetch("/api/email/mark", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ uid, carpeta: carpetaParaBuscar, leido: true }),
+              }).catch(() => {}); // No bloquear si falla
+              
+              // Actualizar el estado local inmediatamente para reflejar el cambio
+              setEmailSeleccionado({ ...cacheData.mensaje, leido: true });
+              setEmails(emails.map((e) => (e.uid === uid ? { ...e, leido: true } : e)));
             }
             
             // Actualizar desde servidor en segundo plano (sin bloquear)
@@ -434,9 +484,18 @@ function InboxPageContent() {
           
           setEmailSeleccionado(data.mensaje);
           
-          // Si no estaba leído, marcarlo como leído (en segundo plano)
+          // Si no estaba leído, marcarlo como leído automáticamente (en segundo plano)
           if (!data.mensaje.leido) {
-            marcarComoLeido(uid, true).catch(() => {});
+            // Llamar a la API directamente para marcar como leído
+            fetch("/api/email/mark", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ uid, carpeta: carpetaParaBuscar, leido: true }),
+            }).catch(() => {}); // No bloquear si falla
+            
+            // Actualizar el estado local inmediatamente para reflejar el cambio
+            setEmailSeleccionado({ ...data.mensaje, leido: true });
+            setEmails(emails.map((e) => (e.uid === uid ? { ...e, leido: true } : e)));
           }
         } else {
           throw new Error(data.error || "Error al cargar el correo");
@@ -618,13 +677,14 @@ function InboxPageContent() {
     fetchCarpetas();
     
     // Sincronización automática en segundo plano al ingresar al módulo
-    // Solo sincronizar INBOX inicialmente (las otras carpetas se sincronizan cuando se abren)
+    // Sincronizar INBOX, Sent y SPAM inicialmente para que estén listos
     setTimeout(() => {
+      // Sincronizar INBOX
       fetch('/api/email/sync?carpeta=INBOX&limit=20')
         .then(res => res.json())
         .then(data => {
           if (data.success && data.sincronizados > 0) {
-            console.log(`✅ ${data.sincronizados} emails sincronizados automáticamente al ingresar al módulo`);
+            console.log(`✅ ${data.sincronizados} emails sincronizados automáticamente en INBOX`);
             // Refrescar la lista si estamos en INBOX
             if (carpetaActual === 'INBOX') {
               fetchEmails('INBOX');
@@ -632,10 +692,83 @@ function InboxPageContent() {
           }
         })
         .catch(err => {
-          console.warn('Error en sincronización automática:', err);
+          console.warn('Error en sincronización automática de INBOX:', err);
+        });
+      
+      // Sincronizar Sent también para que esté disponible rápidamente
+      fetch('/api/email/sync?carpeta=Sent&limit=20')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.sincronizados > 0) {
+            console.log(`✅ ${data.sincronizados} emails sincronizados automáticamente en Sent`);
+            // Refrescar la lista si estamos en Sent
+            if (carpetaActual === 'Sent') {
+              fetchEmails('Sent');
+            }
+          }
+        })
+        .catch(err => {
+          console.warn('Error en sincronización automática de Sent:', err);
+        });
+      
+      // Sincronizar SPAM también para que esté disponible rápidamente
+      fetch('/api/email/sync?carpeta=SPAM&limit=20')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.sincronizados > 0) {
+            console.log(`✅ ${data.sincronizados} emails sincronizados automáticamente en SPAM`);
+            // Refrescar la lista si estamos en SPAM
+            if (carpetaActual === 'SPAM') {
+              fetchEmails('SPAM');
+            }
+          }
+        })
+        .catch(err => {
+          console.warn('Error en sincronización automática de SPAM:', err);
         });
     }, 2000); // Esperar 2 segundos para no interferir con la carga inicial
-  }, []);
+
+    // Polling automático para detectar nuevos correos cada 15 segundos (solo en INBOX)
+    const pollingInterval = setInterval(() => {
+      if (carpetaActual === 'INBOX' && !loading && !refreshing) {
+        // Sincronizar primero para detectar nuevos correos
+        fetch('/api/email/sync?carpeta=INBOX&limit=20')
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              const correosSincronizados = data.sincronizados || 0;
+              const totalCorreos = data.total || 0;
+              
+              // Si hay correos sincronizados o el total es diferente, refrescar la lista
+              if (correosSincronizados > 0 || (totalCorreos > 0 && totalCorreos !== emails.length)) {
+                console.log(`✅ ${correosSincronizados} nuevos emails detectados, total: ${totalCorreos}, actual: ${emails.length}`);
+                
+                // Forzar actualización desde el servidor (ignora cache)
+                fetch('/api/email/inbox?carpeta=INBOX&limit=20&forceRefresh=true')
+                  .then(res => res.json())
+                  .then(refreshData => {
+                    if (refreshData.success && refreshData.mensajes) {
+                      // Actualizar la lista con los nuevos correos
+                      setEmails(refreshData.mensajes);
+                      console.log(`✅ Lista actualizada con ${refreshData.mensajes.length} correos`);
+                    }
+                  })
+                  .catch(err => {
+                    console.warn('Error refrescando lista después de sincronización:', err);
+                    // Si falla, intentar recargar normalmente
+                    fetchEmails('INBOX');
+                  });
+              }
+            }
+          })
+          .catch(err => {
+            console.warn('Error en polling automático:', err);
+          });
+      }
+    }, 15000); // Cada 15 segundos (más frecuente para detectar correos nuevos más rápido)
+
+    return () => clearInterval(pollingInterval);
+  }, [carpetaActual, loading, refreshing]);
 
   useEffect(() => {
     // Actualizar carpeta actual cuando cambia el parámetro
@@ -645,24 +778,83 @@ function InboxPageContent() {
     setEmailSeleccionado(null);
     setSincronizando(false);
     
-    // Cargar emails pasando la carpeta directamente para evitar problemas de sincronización
-    fetchEmails(carpetaParam);
+    // Verificar si hay parámetro refresh (viene de enviar correo)
+    const forceRefresh = searchParams.get('refresh') === 'true';
+    const esSent = carpetaParam === 'Sent' || carpetaParam === 'sent' || carpetaParam === 'SENT' ||
+                   carpetaParam === 'Enviados' || carpetaParam === 'enviados' ||
+                   carpetaParam === 'Sent Items' || carpetaParam === 'sent items';
+    
+    // Si es Sent y viene de enviar correo, forzar actualización inmediata
+    if (esSent && forceRefresh) {
+      console.log(`🔄 Forzando actualización de Sent después de enviar correo...`);
+      // Esperar un momento para que el correo esté guardado
+      setTimeout(() => {
+        fetch(`/api/email/inbox?carpeta=Sent&limit=20&forceRefresh=true`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && data.mensajes) {
+              console.log(`✅ Sent actualizado con ${data.mensajes.length} correos (después de enviar)`);
+              setEmails(data.mensajes);
+              // Limpiar el parámetro refresh de la URL
+              router.replace(`/email/inbox?carpeta=Sent`);
+            } else {
+              // Si no hay correos, cargar normalmente
+              fetchEmails(carpetaParam, true); // Forzar refresh
+            }
+          })
+          .catch(err => {
+            console.warn('Error forzando actualización de Sent:', err);
+            fetchEmails(carpetaParam, true); // Forzar refresh
+          });
+      }, 3000); // Aumentado a 3 segundos para dar más tiempo al servidor
+    } else if (esSent) {
+      // Si es Sent (sin parámetro refresh), también forzar refresh para asegurar que se vean los correos más recientes
+      console.log(`🔄 Cargando Sent con refresh forzado para ver correos recientes...`);
+      fetchEmails(carpetaParam, true); // Forzar refresh
+    } else {
+      // Cargar emails normalmente
+      fetchEmails(carpetaParam);
+    }
     
     // Sincronizar automáticamente los últimos 10 emails con contenido completo al cambiar de carpeta
     // Esto asegura que siempre estén listos para abrir instantáneamente
-    if (carpetaParam === 'INBOX') {
-      fetch('/api/email/sync?carpeta=INBOX&limit=10')
+    // Aplicar a INBOX, Sent y SPAM para que carguen rápido
+    const esSPAM = carpetaParam === 'SPAM' || carpetaParam === 'spam' || carpetaParam === 'Spam' || carpetaParam === 'Junk' || carpetaParam === 'JUNK' || carpetaParam === 'junk';
+    
+    if (carpetaParam === 'INBOX' || esSent || esSPAM) {
+      let carpetaParaSync = 'INBOX';
+      if (esSent) carpetaParaSync = 'Sent';
+      else if (esSPAM) carpetaParaSync = 'SPAM';
+      
+      // Para Sent y SPAM, también forzar actualización desde servidor (si no se hizo antes)
+      if ((esSent || esSPAM) && !forceRefresh) {
+        // Forzar actualización desde servidor
+        fetch(`/api/email/inbox?carpeta=${carpetaParaSync}&limit=20&forceRefresh=true`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && data.mensajes) {
+              console.log(`✅ ${carpetaParaSync} actualizado con ${data.mensajes.length} correos`);
+              setEmails(data.mensajes);
+            }
+          })
+          .catch(err => {
+            console.warn(`Error forzando actualización de ${carpetaParaSync}:`, err);
+          });
+      }
+      
+      // Luego sincronizar con contenido completo
+      fetch(`/api/email/sync?carpeta=${encodeURIComponent(carpetaParaSync)}&limit=10`)
         .then(res => res.json())
         .then(data => {
           if (data.success && data.sincronizados > 0) {
-            console.log(`✅ ${data.sincronizados} emails sincronizados automáticamente con contenido completo`);
+            console.log(`✅ ${data.sincronizados} emails sincronizados automáticamente con contenido completo en ${carpetaParaSync}`);
           }
         })
         .catch(err => {
           console.warn('Error en sincronización automática:', err);
         });
     }
-  }, [carpetaParam]);
+  }, [carpetaParam, searchParams]);
 
   useEffect(() => {
     if (uidParam) {
@@ -709,7 +901,6 @@ function InboxPageContent() {
     { name: "SPAM", label: "Spam", icon: Icons.X },
     { name: "TRASH", label: "Papelera", icon: Icons.Trash },
     { name: "Sent", label: "Enviados", icon: Icons.Document },
-    { name: "Drafts", label: "Borradores", icon: Icons.Pencil },
   ];
   
   // Obtener todas las carpetas disponibles (comunes + del servidor)

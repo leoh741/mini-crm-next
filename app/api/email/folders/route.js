@@ -26,7 +26,6 @@ export async function GET() {
       { name: 'SPAM', path: 'SPAM', delimiter: '/', flags: [], specialUse: null },
       { name: 'TRASH', path: 'TRASH', delimiter: '/', flags: [], specialUse: null },
       { name: 'Sent', path: 'Sent', delimiter: '/', flags: [], specialUse: null },
-      { name: 'Drafts', path: 'Drafts', delimiter: '/', flags: [], specialUse: null },
     ];
     
     // Detectar si es un error de conexión
