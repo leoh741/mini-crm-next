@@ -12,14 +12,19 @@ export async function POST(request) {
     const body = await request.json();
     const { uid, carpeta, leido } = body;
 
+    console.log(`📥 API /api/email/mark - Request recibido: UID=${uid}, Carpeta=${carpeta}, Leido=${leido}`);
+
     if (uid === undefined || !carpeta || leido === undefined) {
+      console.warn(`⚠️ Faltan parámetros: uid=${uid}, carpeta=${carpeta}, leido=${leido}`);
       return NextResponse.json(
         { success: false, error: "Faltan parámetros: uid, carpeta y leido son obligatorios" },
         { status: 400 }
       );
     }
 
+    console.log(`🔄 Llamando a marcarComoLeido(${uid}, ${carpeta}, ${leido})...`);
     await marcarComoLeido(uid, carpeta, leido);
+    console.log(`✅ marcarComoLeido completado exitosamente para UID=${uid}`);
 
     return NextResponse.json(
       {
@@ -30,6 +35,7 @@ export async function POST(request) {
     );
   } catch (error) {
     console.error("❌ Error en API /api/email/mark:", error);
+    console.error("❌ Stack:", error.stack);
     return NextResponse.json(
       {
         success: false,

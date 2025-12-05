@@ -285,25 +285,71 @@ function InboxPageContent() {
       const carpetaParaBuscar = carpeta || carpetaActual;
       const cacheKey = `${uid}-${carpetaParaBuscar}`;
       
+      console.log(`🔍 fetchEmail llamado: UID=${uid}, Carpeta=${carpetaParaBuscar}, leido=${undefined}`);
+      
       // OPTIMIZACIÓN 1: Verificar cache local primero (instantáneo, ~0ms)
       const cachedLocal = localEmailCache.get(cacheKey);
       if (cachedLocal && cachedLocal.contenidoCompleto) {
+        console.log(`📦 Correo encontrado en cache local: UID=${uid}, leido=${cachedLocal.mensaje.leido}`);
         setEmailSeleccionado(cachedLocal.mensaje);
         setLoading(false);
         
-            // Si no estaba leído, marcarlo como leído automáticamente (en segundo plano)
-            if (!cachedLocal.mensaje.leido) {
-              // Llamar a la API directamente para marcar como leído
-              fetch("/api/email/mark", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ uid, carpeta: carpetaParaBuscar, leido: true }),
-              }).catch(() => {}); // No bloquear si falla
-              
-              // Actualizar el estado local inmediatamente para reflejar el cambio
-              setEmailSeleccionado({ ...cachedLocal.mensaje, leido: true });
+        // CRÍTICO: Si no estaba leído, marcarlo como leído automáticamente
+        // Esto debe hacerse SIEMPRE, incluso si viene del cache
+        if (!cachedLocal.mensaje.leido) {
+          console.log(`📧 Marcando correo ${uid} como leído automáticamente (desde cache local)...`);
+          // Llamar a la API para marcar como leído y esperar a que complete
+          // Esto asegura que el cache se actualice correctamente
+          fetch("/api/email/mark", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ uid, carpeta: carpetaParaBuscar, leido: true }),
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              console.log(`✅ Correo ${uid} marcado como leído en servidor`);
+              // Actualizar el estado local después de que el servidor confirme
+              const correoActualizado = { ...cachedLocal.mensaje, leido: true };
+              setEmailSeleccionado(correoActualizado);
               setEmails(emails.map((e) => (e.uid === uid ? { ...e, leido: true } : e)));
+              
+              // Actualizar también el cache local
+              setLocalEmailCache(prev => {
+                const newCache = new Map(prev);
+                newCache.set(cacheKey, {
+                  mensaje: correoActualizado,
+                  contenidoCompleto: true,
+                  timestamp: Date.now()
+                });
+                return newCache;
+              });
+              
+              // Refrescar la lista después de un momento para asegurar que el cache se actualice
+              setTimeout(() => {
+                fetchEmails(carpetaParaBuscar);
+              }, 500);
             }
+          })
+          .catch(err => {
+            console.warn('Error marcando como leído:', err);
+            // Aún así actualizar el estado local para feedback inmediato
+            const correoActualizado = { ...cachedLocal.mensaje, leido: true };
+            setEmailSeleccionado(correoActualizado);
+            setEmails(emails.map((e) => (e.uid === uid ? { ...e, leido: true } : e)));
+            
+            // Actualizar también el cache local
+            setLocalEmailCache(prev => {
+              const newCache = new Map(prev);
+              newCache.set(cacheKey, {
+                mensaje: correoActualizado,
+                contenidoCompleto: true,
+                timestamp: Date.now()
+              });
+              return newCache;
+            });
+          });
+        }
         return;
       }
       
@@ -336,21 +382,63 @@ function InboxPageContent() {
             });
             
             // Mostrar correo del cache inmediatamente SIN mostrar loading
+            console.log(`📦 Correo encontrado en cache DB: UID=${uid}, leido=${cacheData.mensaje.leido}`);
             setEmailSeleccionado(cacheData.mensaje);
             setLoading(false);
             
-            // Si no estaba leído, marcarlo como leído automáticamente (en segundo plano)
+            // CRÍTICO: Si no estaba leído, marcarlo como leído automáticamente
             if (!cacheData.mensaje.leido) {
-              // Llamar a la API directamente para marcar como leído
+              console.log(`📧 Marcando correo ${uid} como leído automáticamente (desde cache DB)...`);
+              // Llamar a la API para marcar como leído y esperar a que complete
               fetch("/api/email/mark", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ uid, carpeta: carpetaParaBuscar, leido: true }),
-              }).catch(() => {}); // No bloquear si falla
-              
-              // Actualizar el estado local inmediatamente para reflejar el cambio
-              setEmailSeleccionado({ ...cacheData.mensaje, leido: true });
-              setEmails(emails.map((e) => (e.uid === uid ? { ...e, leido: true } : e)));
+              })
+              .then(res => res.json())
+              .then(markData => {
+                if (markData.success) {
+                  console.log(`✅ Correo ${uid} marcado como leído en servidor`);
+                  // Actualizar el estado local después de que el servidor confirme
+                  const correoActualizado = { ...cacheData.mensaje, leido: true };
+                  setEmailSeleccionado(correoActualizado);
+                  setEmails(emails.map((e) => (e.uid === uid ? { ...e, leido: true } : e)));
+                  
+                  // Actualizar también el cache local
+                  setLocalEmailCache(prev => {
+                    const newCache = new Map(prev);
+                    newCache.set(cacheKey, {
+                      mensaje: correoActualizado,
+                      contenidoCompleto: true,
+                      timestamp: Date.now()
+                    });
+                    return newCache;
+                  });
+                  
+                  // Refrescar la lista después de un momento para asegurar que el cache se actualice
+                  setTimeout(() => {
+                    fetchEmails(carpetaParaBuscar);
+                  }, 500);
+                }
+              })
+              .catch(err => {
+                console.warn('Error marcando como leído:', err);
+                // Aún así actualizar el estado local para feedback inmediato
+                const correoActualizado = { ...cacheData.mensaje, leido: true };
+                setEmailSeleccionado(correoActualizado);
+                setEmails(emails.map((e) => (e.uid === uid ? { ...e, leido: true } : e)));
+                
+                // Actualizar también el cache local
+                setLocalEmailCache(prev => {
+                  const newCache = new Map(prev);
+                  newCache.set(cacheKey, {
+                    mensaje: correoActualizado,
+                    contenidoCompleto: true,
+                    timestamp: Date.now()
+                  });
+                  return newCache;
+                });
+              });
             }
             return;
           }
@@ -389,18 +477,59 @@ function InboxPageContent() {
             setEmailSeleccionado(cacheData.mensaje);
             setLoading(false);
             
-            // Si no estaba leído, marcarlo como leído automáticamente (en segundo plano)
+            // CRÍTICO: Si no estaba leído, marcarlo como leído automáticamente
             if (!cacheData.mensaje.leido) {
-              // Llamar a la API directamente para marcar como leído
+              console.log(`📧 Marcando correo ${uid} como leído automáticamente (desde cache DB con loading)...`);
+              // Llamar a la API para marcar como leído y esperar a que complete
               fetch("/api/email/mark", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ uid, carpeta: carpetaParaBuscar, leido: true }),
-              }).catch(() => {}); // No bloquear si falla
-              
-              // Actualizar el estado local inmediatamente para reflejar el cambio
-              setEmailSeleccionado({ ...cacheData.mensaje, leido: true });
-              setEmails(emails.map((e) => (e.uid === uid ? { ...e, leido: true } : e)));
+              })
+              .then(res => res.json())
+              .then(markData => {
+                if (markData.success) {
+                  console.log(`✅ Correo ${uid} marcado como leído en servidor`);
+                  // Actualizar el estado local después de que el servidor confirme
+                  const correoActualizado = { ...cacheData.mensaje, leido: true };
+                  setEmailSeleccionado(correoActualizado);
+                  setEmails(emails.map((e) => (e.uid === uid ? { ...e, leido: true } : e)));
+                  
+                  // Actualizar también el cache local
+                  setLocalEmailCache(prev => {
+                    const newCache = new Map(prev);
+                    newCache.set(cacheKey, {
+                      mensaje: correoActualizado,
+                      contenidoCompleto: true,
+                      timestamp: Date.now()
+                    });
+                    return newCache;
+                  });
+                  
+                  // Refrescar la lista después de un momento para asegurar que el cache se actualice
+                  setTimeout(() => {
+                    fetchEmails(carpetaParaBuscar);
+                  }, 500);
+                }
+              })
+              .catch(err => {
+                console.warn('Error marcando como leído:', err);
+                // Aún así actualizar el estado local para feedback inmediato
+                const correoActualizado = { ...cacheData.mensaje, leido: true };
+                setEmailSeleccionado(correoActualizado);
+                setEmails(emails.map((e) => (e.uid === uid ? { ...e, leido: true } : e)));
+                
+                // Actualizar también el cache local
+                setLocalEmailCache(prev => {
+                  const newCache = new Map(prev);
+                  newCache.set(cacheKey, {
+                    mensaje: correoActualizado,
+                    contenidoCompleto: true,
+                    timestamp: Date.now()
+                  });
+                  return newCache;
+                });
+              });
             }
             
             // Actualizar desde servidor en segundo plano (sin bloquear)
@@ -482,20 +611,62 @@ function InboxPageContent() {
             return newCache;
           });
           
+          console.log(`📦 Correo cargado desde servidor: UID=${uid}, leido=${data.mensaje.leido}`);
           setEmailSeleccionado(data.mensaje);
           
-          // Si no estaba leído, marcarlo como leído automáticamente (en segundo plano)
+          // CRÍTICO: Si no estaba leído, marcarlo como leído automáticamente
           if (!data.mensaje.leido) {
-            // Llamar a la API directamente para marcar como leído
+            console.log(`📧 Marcando correo ${uid} como leído automáticamente (desde servidor)...`);
+            // Llamar a la API para marcar como leído y esperar a que complete
             fetch("/api/email/mark", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ uid, carpeta: carpetaParaBuscar, leido: true }),
-            }).catch(() => {}); // No bloquear si falla
-            
-            // Actualizar el estado local inmediatamente para reflejar el cambio
-            setEmailSeleccionado({ ...data.mensaje, leido: true });
-            setEmails(emails.map((e) => (e.uid === uid ? { ...e, leido: true } : e)));
+            })
+            .then(res => res.json())
+            .then(markData => {
+              if (markData.success) {
+                console.log(`✅ Correo ${uid} marcado como leído en servidor`);
+                // Actualizar el estado local después de que el servidor confirme
+                const correoActualizado = { ...data.mensaje, leido: true };
+                setEmailSeleccionado(correoActualizado);
+                setEmails(emails.map((e) => (e.uid === uid ? { ...e, leido: true } : e)));
+                
+                // Actualizar también el cache local
+                setLocalEmailCache(prev => {
+                  const newCache = new Map(prev);
+                  newCache.set(cacheKey, {
+                    mensaje: correoActualizado,
+                    contenidoCompleto: true,
+                    timestamp: Date.now()
+                  });
+                  return newCache;
+                });
+                
+                // Refrescar la lista después de un momento para asegurar que el cache se actualice
+                setTimeout(() => {
+                  fetchEmails(carpetaParaBuscar);
+                }, 500);
+              }
+            })
+            .catch(err => {
+              console.warn('Error marcando como leído:', err);
+              // Aún así actualizar el estado local para feedback inmediato
+              const correoActualizado = { ...data.mensaje, leido: true };
+              setEmailSeleccionado(correoActualizado);
+              setEmails(emails.map((e) => (e.uid === uid ? { ...e, leido: true } : e)));
+              
+              // Actualizar también el cache local
+              setLocalEmailCache(prev => {
+                const newCache = new Map(prev);
+                newCache.set(cacheKey, {
+                  mensaje: correoActualizado,
+                  contenidoCompleto: true,
+                  timestamp: Date.now()
+                });
+                return newCache;
+              });
+            });
           }
         } else {
           throw new Error(data.error || "Error al cargar el correo");
@@ -548,11 +719,19 @@ function InboxPageContent() {
 
       const data = await res.json();
       if (data.success) {
-        // Actualizar el estado local
+        // Actualizar el estado local inmediatamente
         setEmails(emails.map((e) => (e.uid === uid ? { ...e, leido } : e)));
         if (emailSeleccionado && emailSeleccionado.uid === uid) {
           setEmailSeleccionado({ ...emailSeleccionado, leido });
         }
+        
+        // CRÍTICO: Esperar un momento para que el cache se actualice completamente
+        // Luego refrescar la lista desde el servidor para asegurar que el estado se refleje correctamente después de F5
+        setTimeout(() => {
+          // Refrescar la lista desde el servidor con forceRefresh para obtener el estado correcto
+          console.log(`🔄 Refrescando lista después de marcar como leído para actualizar cache...`);
+          fetchEmails(carpetaActual, true); // Forzar refresh desde servidor
+        }, 1500); // Esperar 1.5 segundos para que el cache se actualice completamente
       }
     } catch (err) {
       console.error("Error marcando correo:", err);
@@ -858,8 +1037,10 @@ function InboxPageContent() {
 
   useEffect(() => {
     if (uidParam) {
+      console.log(`🔄 useEffect detectó cambio en uidParam: ${uidParam}, carpetaParam: ${carpetaParam}, carpetaActual: ${carpetaActual}`);
       // Asegurarse de que carpetaActual esté sincronizada con carpetaParam
       const carpetaParaBuscar = carpetaParam || carpetaActual;
+      console.log(`📧 Abriendo correo UID=${uidParam} en carpeta=${carpetaParaBuscar}`);
       fetchEmail(Number(uidParam), carpetaParaBuscar);
     } else {
       setEmailSeleccionado(null);
