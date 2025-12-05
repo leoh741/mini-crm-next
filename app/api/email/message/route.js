@@ -37,13 +37,16 @@ export async function GET(request) {
       );
     }
 
-    // Si se solicita solo cache, intentar obtener solo del cache
-    if (cacheOnly) {
-      try {
-        const mensajeCache = await obtenerCorreoDelCache(uid, carpeta, incluirContenido);
+    // CRÍTICO: SIEMPRE intentar obtener desde cache primero (ultra-rápido)
+    // Esto asegura que después de F5, los correos se abran instantáneamente desde la DB
+    try {
+      const mensajeCache = await obtenerCorreoDelCache(uid, carpeta, incluirContenido);
+      
+      if (mensajeCache) {
+        console.log(`✅ Correo encontrado en cache persistente! UID: ${uid}`);
         
-        if (mensajeCache) {
-          console.log(`✅ Correo encontrado en cache! UID: ${uid}`);
+        // Si se solicita solo cache, retornar inmediatamente
+        if (cacheOnly) {
           return NextResponse.json(
             {
               success: true,
@@ -53,39 +56,99 @@ export async function GET(request) {
             { status: 200 }
           );
         }
-      } catch (cacheError) {
-        console.warn(`⚠️ Error al buscar en cache: ${cacheError.message}`);
+        
+        // Si no es cacheOnly, retornar desde cache pero actualizar en segundo plano
+        // Esto hace que la respuesta sea instantánea pero los datos estén actualizados
+        obtenerCorreoPorUID(uid, carpeta, incluirContenido).catch(err => {
+          console.warn(`⚠️ Error actualizando correo desde IMAP en segundo plano: ${err.message}`);
+        });
+        
+        return NextResponse.json(
+          {
+            success: true,
+            mensaje: mensajeCache,
+            fromCache: true,
+          },
+          { status: 200 }
+        );
       }
-      
-      // Si no hay cache, retornar 200 con success: false (no es un error crítico)
+    } catch (cacheError) {
+      console.warn(`⚠️ Error al buscar en cache: ${cacheError.message}`);
+    }
+    
+    // Si se solicita solo cache y no se encontró, retornar error
+    if (cacheOnly) {
       return NextResponse.json(
         {
           success: false,
           error: "Correo no encontrado en cache",
           fromCache: true,
         },
-        { status: 200 } // Cambiar a 200 para que no sea tratado como error
+        { status: 200 }
       );
     }
 
+    // Si no hay cache, intentar obtener desde IMAP
+    // Pero si falla, intentar obtener desde cache sin contenido completo como fallback
     console.log(`📥 Llamando a obtenerCorreoPorUID con UID: ${uid}, Carpeta: ${carpeta}, Contenido: ${incluirContenido}`);
-    const mensaje = await obtenerCorreoPorUID(uid, carpeta, incluirContenido);
-    console.log(`✅ Correo obtenido exitosamente`);
+    
+    try {
+      const mensaje = await obtenerCorreoPorUID(uid, carpeta, incluirContenido);
+      console.log(`✅ Correo obtenido exitosamente desde IMAP`);
 
-    if (!mensaje) {
+      if (!mensaje) {
+        // Si no se encontró, intentar cache sin contenido completo como fallback
+        const mensajeFallback = await obtenerCorreoDelCache(uid, carpeta, false);
+        if (mensajeFallback) {
+          console.log(`✅ Usando cache sin contenido completo como fallback`);
+          return NextResponse.json(
+            {
+              success: true,
+              mensaje: mensajeFallback,
+              fromCache: true,
+            },
+            { status: 200 }
+          );
+        }
+        
+        return NextResponse.json(
+          { success: false, error: "Correo no encontrado" },
+          { status: 404 }
+        );
+      }
+
       return NextResponse.json(
-        { success: false, error: "Correo no encontrado" },
-        { status: 404 }
+        {
+          success: true,
+          mensaje,
+        },
+        { status: 200 }
       );
+    } catch (imapError) {
+      // Si falla IMAP, intentar obtener desde cache sin contenido completo como fallback
+      console.warn(`⚠️ Error obteniendo desde IMAP, intentando cache como fallback: ${imapError.message}`);
+      
+      try {
+        const mensajeFallback = await obtenerCorreoDelCache(uid, carpeta, false);
+        if (mensajeFallback) {
+          console.log(`✅ Usando cache sin contenido completo como fallback después de error IMAP`);
+          return NextResponse.json(
+            {
+              success: true,
+              mensaje: mensajeFallback,
+              fromCache: true,
+              warning: "Correo obtenido desde cache. El contenido completo no está disponible debido a problemas de conexión.",
+            },
+            { status: 200 }
+          );
+        }
+      } catch (fallbackError) {
+        console.warn(`⚠️ Error en fallback de cache: ${fallbackError.message}`);
+      }
+      
+      // Si también falla el fallback, lanzar el error original
+      throw imapError;
     }
-
-    return NextResponse.json(
-      {
-        success: true,
-        mensaje,
-      },
-      { status: 200 }
-    );
   } catch (error) {
     console.error("❌ Error en API /api/email/message:");
     console.error("  - Tipo:", error.constructor.name);

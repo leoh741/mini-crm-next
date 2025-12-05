@@ -21,6 +21,7 @@ function InboxPageContent() {
   const [refreshing, setRefreshing] = useState(false);
   const [accionando, setAccionando] = useState(false);
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
+  const [sincronizando, setSincronizando] = useState(false);
   
   // Cache local en memoria del cliente para acceso ultra-rápido
   const [localEmailCache, setLocalEmailCache] = useState(new Map());
@@ -35,22 +36,25 @@ function InboxPageContent() {
       }
     } catch (err) {
       console.error("Error cargando carpetas:", err);
+      // Si falla, al menos mostrar las carpetas comunes
+      setCarpetas([]);
     }
   };
 
   // Cargar correos de la carpeta actual
-  const fetchEmails = async () => {
+  const fetchEmails = async (carpeta = null) => {
     try {
       setError("");
+      const carpetaParaUsar = carpeta || carpetaActual;
       
       // OPTIMIZACIÓN: Primero intentar cargar desde cache SIN mostrar loading (ultra-rápido)
       // Si hay emails en cache, mostrarlos inmediatamente sin mostrar "cargando"
       try {
         // Usar AbortController para timeout rápido si el cache tarda mucho
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 500); // Timeout de 500ms para cache
+        const timeoutId = setTimeout(() => controller.abort(), 100); // Timeout muy corto para respuesta instantánea
         
-        const cacheRes = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaActual)}&limit=10&cacheOnly=true`, {
+        const cacheRes = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaParaUsar)}&limit=10&cacheOnly=true`, {
           signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -63,20 +67,18 @@ function InboxPageContent() {
             setLoading(false);
             console.log(`✅ Emails cargados desde cache instantáneamente: ${cacheData.mensajes.length}`);
             
-            // OPTIMIZACIÓN CRÍTICA: Pre-cargar contenido completo INMEDIATAMENTE (no en segundo plano)
-            // Esto asegura que cuando se abra un email, esté instantáneamente disponible
-            // Ejecutar en paralelo para máxima velocidad
+            // Pre-cargar contenido completo en segundo plano (no bloquea la UI)
+            // Esto asegura que cuando se abra un email, esté disponible rápidamente
             Promise.all(
-              cacheData.mensajes.map(async (mail, index) => {
+              cacheData.mensajes.map(async (mail) => {
                 try {
-                  // Pre-cargar contenido completo (incluyendo attachments) - se guarda automáticamente en MongoDB
-                  const res = await fetch(`/api/email/message?uid=${mail.uid}&carpeta=${encodeURIComponent(carpetaActual)}&contenido=true`);
-                  
-                  if (res.ok) {
-                    const emailData = await res.json();
-                    if (emailData.success) {
-                      // Guardar también en cache local para acceso instantáneo
-                      const cacheKey = `${mail.uid}-${carpetaActual}`;
+                  // Intentar cargar desde cache primero (muy rápido)
+                  const cacheMsgRes = await fetch(`/api/email/message?uid=${mail.uid}&carpeta=${encodeURIComponent(carpetaParaUsar)}&contenido=true&cacheOnly=true`);
+                  if (cacheMsgRes.ok) {
+                    const emailData = await cacheMsgRes.json();
+                    if (emailData.success && emailData.mensaje) {
+                      // Guardar en cache local para acceso instantáneo
+                      const cacheKey = `${mail.uid}-${carpetaParaUsar}`;
                       setLocalEmailCache(prev => {
                         const newCache = new Map(prev);
                         newCache.set(cacheKey, {
@@ -90,28 +92,29 @@ function InboxPageContent() {
                         }
                         return newCache;
                       });
-                      console.log(`✅ Contenido completo pre-cargado y guardado: UID ${mail.uid} (${index + 1}/${cacheData.mensajes.length})`);
                     }
                   }
                 } catch (err) {
-                  // Los errores de pre-carga no son críticos, pero loguear para debugging
-                  console.warn(`⚠️ Error pre-cargando contenido UID ${mail.uid}:`, err.message);
+                  // Los errores de pre-carga no son críticos
                 }
               })
-            ).then(() => {
-              console.log(`🎉 Pre-carga de contenido completada para ${cacheData.mensajes.length} correos`);
-            }).catch(err => {
-              console.warn('Error en pre-carga de contenido:', err);
-            });
+            ).catch(() => {});
             
-            // Actualizar lista desde servidor en segundo plano (después de pre-cargar contenido)
+            // Actualizar lista desde servidor en segundo plano (sin bloquear)
+            // Solo actualizar si hay cambios (no hacer polling innecesario)
             setTimeout(async () => {
               try {
-                const res = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaActual)}&limit=10`);
+                const res = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaParaUsar)}&limit=10`);
                 const data = await res.json();
                 if (data.success && data.mensajes) {
-                  setEmails(data.mensajes);
-                  console.log(`✅ Emails actualizados desde servidor: ${data.mensajes.length}`);
+                  // Solo actualizar si hay más emails o si cambió algo
+                  setEmails(prev => {
+                    if (data.mensajes.length !== prev.length || 
+                        data.mensajes.some((m, i) => !prev[i] || m.uid !== prev[i].uid)) {
+                      return data.mensajes;
+                    }
+                    return prev;
+                  });
                 }
               } catch (err) {
                 console.warn('Error actualizando emails en segundo plano:', err);
@@ -122,40 +125,106 @@ function InboxPageContent() {
         }
       } catch (cacheError) {
         // Si falla el cache (incluyendo timeout), continuar con carga normal
-        // No es un error crítico, solo significa que no hay cache disponible
         if (cacheError.name !== 'AbortError') {
           console.warn('Error cargando desde cache:', cacheError);
         }
       }
       
-      // Solo mostrar loading si no hay cache disponible
-      setLoading(true);
-      
-      // Si no hay cache, cargar normalmente
-      const res = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaActual)}&limit=10`);
+      // Si no hay cache, cargar desde API (que ahora siempre retorna inmediatamente)
+      // NO mostrar loading - la API retorna inmediatamente desde DB o vacío
+      const res = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaParaUsar)}&limit=10`);
       const data = await res.json();
 
       if (!data.success) {
         throw new Error(data.error || "Error al cargar correos");
       }
 
+      // Mostrar emails inmediatamente (puede estar vacío si no hay caché)
       setEmails(data.mensajes || []);
+      setLoading(false);
       
-      // OPTIMIZACIÓN CRÍTICA: Pre-cargar contenido completo INMEDIATAMENTE (en paralelo)
-      // Esto asegura que todos los emails visibles tengan su contenido completo guardado en DB
-      if (data.mensajes && data.mensajes.length > 0) {
-        // Ejecutar inmediatamente en paralelo para máxima velocidad
-        Promise.all(
-          data.mensajes.map(async (mail, index) => {
-            try {
-              // Pre-cargar contenido completo (incluyendo attachments) - se guarda automáticamente en MongoDB
-              const res = await fetch(`/api/email/message?uid=${mail.uid}&carpeta=${encodeURIComponent(carpetaActual)}&contenido=true`);
+      // Si hay mensaje de sincronización, mostrar indicador sutil y actualizar cuando termine
+      if (data.sincronizando) {
+        setSincronizando(true);
+        console.log(`🔄 Sincronizando carpeta ${carpetaParaUsar} en segundo plano...`);
+        
+        // Polling optimizado: verificar caché frecuentemente para detectar cuando termina
+        let intentos = 0;
+        const maxIntentos = 30; // Más intentos pero con intervalo más corto
+        const intervalo = setInterval(async () => {
+          intentos++;
+          try {
+            // Verificar caché directamente (ultra-rápido)
+            const cacheRes = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaParaUsar)}&limit=10&cacheOnly=true`);
+            const cacheData = await cacheRes.json();
+            
+            // Si hay datos en caché, la sincronización terminó
+            if (cacheData.success && cacheData.mensajes && cacheData.mensajes.length > 0) {
+              setEmails(cacheData.mensajes);
+              setSincronizando(false);
+              clearInterval(intervalo);
+              console.log(`✅ Emails encontrados en caché: ${cacheData.mensajes.length}`);
+              return;
+            }
+            
+            // Si no hay datos después de varios intentos, verificar estado completo
+            if (intentos >= 5) {
+              const res = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaParaUsar)}&limit=10`);
+              const data = await res.json();
               
+              // Si hay datos, actualizar
+              if (data.success && data.mensajes && data.mensajes.length > 0) {
+                setEmails(data.mensajes);
+                setSincronizando(false);
+                clearInterval(intervalo);
+                console.log(`✅ Emails sincronizados: ${data.mensajes.length}`);
+                return;
+              }
+              
+              // Si ya no está sincronizando después de varios intentos, puede estar vacía
+              if (data.success && !data.sincronizando && intentos >= 10) {
+                setEmails([]);
+                setSincronizando(false);
+                clearInterval(intervalo);
+                console.log(`✅ Sincronización completada: carpeta vacía`);
+                return;
+              }
+            }
+            
+            // Si llegamos al máximo de intentos, hacer verificación final
+            if (intentos >= maxIntentos) {
+              const finalRes = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaParaUsar)}&limit=10`);
+              const finalData = await finalRes.json();
+              if (finalData.success) {
+                setEmails(finalData.mensajes || []);
+                setSincronizando(false);
+                console.log(`✅ Verificación final: ${finalData.mensajes?.length || 0} correos`);
+              }
+              clearInterval(intervalo);
+            }
+          } catch (err) {
+            console.warn(`⚠️ Error en intento ${intentos}:`, err);
+            if (intentos >= maxIntentos) {
+              setSincronizando(false);
+              clearInterval(intervalo);
+            }
+          }
+        }, 800); // Verificar cada 800ms (más frecuente para detección más rápida)
+      } else {
+        setSincronizando(false);
+      }
+      
+      // Pre-cargar contenido completo en segundo plano (no bloquea)
+      if (data.mensajes && data.mensajes.length > 0) {
+        // Ejecutar en segundo plano sin bloquear
+        Promise.all(
+          data.mensajes.map(async (mail) => {
+            try {
+              const res = await fetch(`/api/email/message?uid=${mail.uid}&carpeta=${encodeURIComponent(carpetaParaUsar)}&contenido=true`);
               if (res.ok) {
                 const emailData = await res.json();
-                if (emailData.success) {
-                  // Guardar también en cache local para acceso instantáneo
-                  const cacheKey = `${mail.uid}-${carpetaActual}`;
+                if (emailData.success && emailData.mensaje) {
+                  const cacheKey = `${mail.uid}-${carpetaParaUsar}`;
                   setLocalEmailCache(prev => {
                     const newCache = new Map(prev);
                     newCache.set(cacheKey, {
@@ -169,23 +238,13 @@ function InboxPageContent() {
                     }
                     return newCache;
                   });
-                  console.log(`✅ Pre-cargado y guardado en DB: UID ${mail.uid} (${index + 1}/${data.mensajes.length})`);
-                } else {
-                  console.warn(`⚠️ Error pre-cargando correo UID ${mail.uid}: ${emailData.error}`);
                 }
-              } else {
-                console.warn(`⚠️ Error HTTP ${res.status} pre-cargando correo UID ${mail.uid}`);
               }
             } catch (err) {
-              // Los errores de pre-carga no son críticos, el correo se cargará cuando se abra
-              console.warn(`⚠️ Error pre-cargando correo UID ${mail.uid}:`, err.message);
+              // Los errores de pre-carga no son críticos
             }
           })
-        ).then(() => {
-          console.log(`🎉 Pre-carga completada para ${data.mensajes.length} correos`);
-        }).catch(err => {
-          console.warn('Error en pre-carga:', err);
-        });
+        ).catch(() => {});
       }
     } catch (err) {
       console.error("Error cargando correos:", err);
@@ -202,14 +261,12 @@ function InboxPageContent() {
       setError(""); // Limpiar errores previos
       const carpetaParaBuscar = carpeta || carpetaActual;
       const cacheKey = `${uid}-${carpetaParaBuscar}`;
-      console.log(`📧 Cargando correo UID ${uid} de carpeta: ${carpetaParaBuscar}`);
       
       // OPTIMIZACIÓN 1: Verificar cache local primero (instantáneo, ~0ms)
       const cachedLocal = localEmailCache.get(cacheKey);
       if (cachedLocal && cachedLocal.contenidoCompleto) {
         setEmailSeleccionado(cachedLocal.mensaje);
         setLoading(false);
-        console.log(`✅ Correo cargado desde cache local instantáneamente! UID: ${uid}`);
         
         // Si no estaba leído, marcarlo como leído (en segundo plano)
         if (!cachedLocal.mensaje.leido) {
@@ -219,10 +276,9 @@ function InboxPageContent() {
       }
       
       // OPTIMIZACIÓN 2: Intentar cargar desde cache de DB SIN mostrar loading (ultra-rápido)
-      // Usar timeout corto para no esperar mucho si no hay cache
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 200); // Timeout reducido a 200ms
+        const timeoutId = setTimeout(() => controller.abort(), 200); // Timeout aumentado ligeramente
         
         const cacheRes = await fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}&contenido=true&cacheOnly=true`, {
           signal: controller.signal
@@ -240,7 +296,6 @@ function InboxPageContent() {
                 contenidoCompleto: true,
                 timestamp: Date.now()
               });
-              // Limitar tamaño del cache local (últimos 20 correos)
               if (newCache.size > 20) {
                 const firstKey = newCache.keys().next().value;
                 newCache.delete(firstKey);
@@ -251,9 +306,8 @@ function InboxPageContent() {
             // Mostrar correo del cache inmediatamente SIN mostrar loading
             setEmailSeleccionado(cacheData.mensaje);
             setLoading(false);
-            console.log(`✅ Correo cargado desde cache DB instantáneamente! UID: ${uid}`);
             
-            // Si no estaba leído, marcarlo como leído (en segundo plano, no bloquea)
+            // Si no estaba leído, marcarlo como leído (en segundo plano)
             if (!cacheData.mensaje.leido) {
               marcarComoLeido(uid, true).catch(() => {});
             }
@@ -261,49 +315,159 @@ function InboxPageContent() {
           }
         }
       } catch (cacheError) {
-        // Si falla el cache (incluyendo timeout o 404), continuar con carga normal
-        // No es un error crítico si no hay cache
+        // Si falla el cache, continuar con carga normal
         if (cacheError.name !== 'AbortError') {
-          console.warn('Cache DB no disponible, cargando desde servidor:', cacheError);
+          // No loguear, es normal que no haya cache
         }
       }
       
       // Solo mostrar loading si no hay cache disponible
       setLoading(true);
       
-      // OPTIMIZACIÓN 3: Si no hay cache, cargar desde servidor y guardar en cache local
-      const inicioCarga = Date.now();
-      const res = await fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}&contenido=true`);
-      const data = await res.json();
-      const tiempoCarga = Date.now() - inicioCarga;
-      
-      console.log(`⏱️ Tiempo de carga desde servidor: ${tiempoCarga}ms`);
-
-      if (data.success && data.mensaje) {
-        // Guardar en cache local para acceso instantáneo la próxima vez
-        setLocalEmailCache(prev => {
-          const newCache = new Map(prev);
-          newCache.set(cacheKey, {
-            mensaje: data.mensaje,
-            contenidoCompleto: true,
-            timestamp: Date.now()
-          });
-          // Limitar tamaño del cache local (últimos 20 correos)
-          if (newCache.size > 20) {
-            const firstKey = newCache.keys().next().value;
-            newCache.delete(firstKey);
+      // Intentar primero desde cache del servidor (ultra-rápido)
+      try {
+        const cacheRes = await fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}&contenido=true&cacheOnly=true`);
+        if (cacheRes.ok) {
+          const cacheData = await cacheRes.json();
+          if (cacheData.success && cacheData.mensaje) {
+            // Guardar en cache local
+            setLocalEmailCache(prev => {
+              const newCache = new Map(prev);
+              newCache.set(cacheKey, {
+                mensaje: cacheData.mensaje,
+                contenidoCompleto: true,
+                timestamp: Date.now()
+              });
+              if (newCache.size > 20) {
+                const firstKey = newCache.keys().next().value;
+                newCache.delete(firstKey);
+              }
+              return newCache;
+            });
+            
+            setEmailSeleccionado(cacheData.mensaje);
+            setLoading(false);
+            
+            // Si no estaba leído, marcarlo como leído (en segundo plano)
+            if (!cacheData.mensaje.leido) {
+              marcarComoLeido(uid, true).catch(() => {});
+            }
+            
+            // Actualizar desde servidor en segundo plano (sin bloquear)
+            // Usar cacheOnly primero para evitar errores 500
+            fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}&contenido=true&cacheOnly=true`)
+              .then(res => {
+                if (res.ok) {
+                  return res.json();
+                }
+                return null;
+              })
+              .then(data => {
+                if (data && data.success && data.mensaje) {
+                  setLocalEmailCache(prev => {
+                    const newCache = new Map(prev);
+                    newCache.set(cacheKey, {
+                      mensaje: data.mensaje,
+                      contenidoCompleto: true,
+                      timestamp: Date.now()
+                    });
+                    return newCache;
+                  });
+                  setEmailSeleccionado(data.mensaje);
+                }
+              })
+              .catch(() => {}); // Ignorar errores de actualización en segundo plano
+            
+            return;
           }
-          return newCache;
-        });
-        
-        setEmailSeleccionado(data.mensaje);
-        
-        // Si no estaba leído, marcarlo como leído (en segundo plano, no bloquea)
-        if (!data.mensaje.leido) {
-          marcarComoLeido(uid, true).catch(() => {});
         }
-      } else {
-        throw new Error(data.error || "Error al cargar el correo");
+      } catch (cacheError) {
+        // Continuar con carga normal si falla cache
+      }
+      
+      // Si no hay cache, cargar desde servidor (esto también guarda en DB)
+      try {
+        const res = await fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}&contenido=true`);
+        
+        if (!res.ok) {
+          // Si falla, intentar cache sin contenido completo como fallback
+          console.warn(`⚠️ Error ${res.status} al cargar correo, intentando cache sin contenido completo...`);
+          const fallbackRes = await fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}&contenido=false&cacheOnly=true`);
+          if (fallbackRes.ok) {
+            const fallbackData = await fallbackRes.json();
+            if (fallbackData.success && fallbackData.mensaje) {
+              setLocalEmailCache(prev => {
+                const newCache = new Map(prev);
+                newCache.set(cacheKey, {
+                  mensaje: fallbackData.mensaje,
+                  contenidoCompleto: false,
+                  timestamp: Date.now()
+                });
+                return newCache;
+              });
+              setEmailSeleccionado(fallbackData.mensaje);
+              setLoading(false);
+              setError("Correo cargado desde cache. El contenido completo no está disponible debido a problemas de conexión.");
+              return;
+            }
+          }
+          throw new Error(`Error ${res.status} al cargar el correo`);
+        }
+        
+        const data = await res.json();
+
+        if (data.success && data.mensaje) {
+          // Guardar en cache local para acceso instantáneo la próxima vez
+          setLocalEmailCache(prev => {
+            const newCache = new Map(prev);
+            newCache.set(cacheKey, {
+              mensaje: data.mensaje,
+              contenidoCompleto: true,
+              timestamp: Date.now()
+            });
+            if (newCache.size > 20) {
+              const firstKey = newCache.keys().next().value;
+              newCache.delete(firstKey);
+            }
+            return newCache;
+          });
+          
+          setEmailSeleccionado(data.mensaje);
+          
+          // Si no estaba leído, marcarlo como leído (en segundo plano)
+          if (!data.mensaje.leido) {
+            marcarComoLeido(uid, true).catch(() => {});
+          }
+        } else {
+          throw new Error(data.error || "Error al cargar el correo");
+        }
+      } catch (fetchError) {
+        // Si falla completamente, intentar cache sin contenido como último recurso
+        console.warn(`⚠️ Error al cargar correo, intentando cache sin contenido como último recurso: ${fetchError.message}`);
+        try {
+          const lastResortRes = await fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}&contenido=false&cacheOnly=true`);
+          if (lastResortRes.ok) {
+            const lastResortData = await lastResortRes.json();
+            if (lastResortData.success && lastResortData.mensaje) {
+              setLocalEmailCache(prev => {
+                const newCache = new Map(prev);
+                newCache.set(cacheKey, {
+                  mensaje: lastResortData.mensaje,
+                  contenidoCompleto: false,
+                  timestamp: Date.now()
+                });
+                return newCache;
+              });
+              setEmailSeleccionado(lastResortData.mensaje);
+              setLoading(false);
+              setError("Correo cargado desde cache. El contenido completo no está disponible debido a problemas de conexión.");
+              return;
+            }
+          }
+        } catch (lastResortError) {
+          // Si todo falla, lanzar el error original
+        }
+        throw fetchError;
       }
     } catch (err) {
       console.error("Error cargando correo:", err);
@@ -395,20 +559,94 @@ function InboxPageContent() {
   };
 
   // Cambiar de carpeta
-  const cambiarCarpeta = (nuevaCarpeta) => {
-    setCarpetaActual(nuevaCarpeta);
+  const cambiarCarpeta = async (nuevaCarpeta) => {
+    // Limpiar email seleccionado inmediatamente
     setEmailSeleccionado(null);
+    // Limpiar emails actuales para mostrar transición limpia
+    setEmails([]);
+    setSincronizando(false);
+    setCarpetaActual(nuevaCarpeta);
+    
+    // Actualizar URL
     router.push(`/email/inbox?carpeta=${encodeURIComponent(nuevaCarpeta)}`);
+    
+    // Intentar cargar desde caché inmediatamente (sin mostrar loading)
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 100); // Timeout muy corto
+      
+      const cacheRes = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(nuevaCarpeta)}&limit=10&cacheOnly=true`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      
+      if (cacheRes.ok) {
+        const cacheData = await cacheRes.json();
+        if (cacheData.success && cacheData.mensajes && cacheData.mensajes.length > 0) {
+          // Mostrar emails del caché inmediatamente
+          setEmails(cacheData.mensajes);
+          setLoading(false);
+          console.log(`✅ Emails cargados desde caché al cambiar carpeta: ${cacheData.mensajes.length}`);
+          
+          // Actualizar desde servidor en segundo plano
+          setTimeout(async () => {
+            try {
+              const res = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(nuevaCarpeta)}&limit=10`);
+              const data = await res.json();
+              if (data.success && data.mensajes) {
+                setEmails(data.mensajes);
+              }
+            } catch (err) {
+              console.warn('Error actualizando emails en segundo plano:', err);
+            }
+          }, 50);
+          return;
+        }
+      }
+    } catch (cacheError) {
+      // Si no hay caché, continuar con carga normal
+      if (cacheError.name !== 'AbortError') {
+        // No loguear, es normal
+      }
+    }
+    
+    // Si no hay caché, cargar normalmente (esto mostrará loading)
+    fetchEmails(nuevaCarpeta);
   };
 
   useEffect(() => {
     fetchCarpetas();
+    
+    // Sincronización automática en segundo plano al ingresar al módulo
+    // Solo sincronizar INBOX inicialmente (las otras carpetas se sincronizan cuando se abren)
+    setTimeout(() => {
+      fetch('/api/email/sync?carpeta=INBOX&limit=20')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.sincronizados > 0) {
+            console.log(`✅ ${data.sincronizados} emails sincronizados automáticamente al ingresar al módulo`);
+            // Refrescar la lista si estamos en INBOX
+            if (carpetaActual === 'INBOX') {
+              fetchEmails('INBOX');
+            }
+          }
+        })
+        .catch(err => {
+          console.warn('Error en sincronización automática:', err);
+        });
+    }, 2000); // Esperar 2 segundos para no interferir con la carga inicial
   }, []);
 
   useEffect(() => {
+    // Actualizar carpeta actual cuando cambia el parámetro
     setCarpetaActual(carpetaParam);
-    // Cargar emails sin mostrar loading inicial (se mostrará solo si no hay cache)
-    fetchEmails();
+    // Limpiar emails inmediatamente para transición limpia
+    setEmails([]);
+    setEmailSeleccionado(null);
+    setSincronizando(false);
+    
+    // Cargar emails pasando la carpeta directamente para evitar problemas de sincronización
+    fetchEmails(carpetaParam);
     
     // Sincronizar automáticamente los últimos 10 emails con contenido completo al cambiar de carpeta
     // Esto asegura que siempre estén listos para abrir instantáneamente
@@ -465,13 +703,19 @@ function InboxPageContent() {
     }
   };
 
-  // Carpetas comunes
+  // Carpetas comunes - siempre visibles
   const carpetasComunes = [
     { name: "INBOX", label: "Bandeja de entrada", icon: Icons.Folder },
     { name: "SPAM", label: "Spam", icon: Icons.X },
     { name: "TRASH", label: "Papelera", icon: Icons.Trash },
     { name: "Sent", label: "Enviados", icon: Icons.Document },
     { name: "Drafts", label: "Borradores", icon: Icons.Pencil },
+  ];
+  
+  // Obtener todas las carpetas disponibles (comunes + del servidor)
+  const todasLasCarpetas = [
+    ...carpetasComunes,
+    ...carpetas.filter((c) => !carpetasComunes.find((cc) => cc.name.toUpperCase() === c.name.toUpperCase()))
   ];
 
   return (
@@ -495,6 +739,7 @@ function InboxPageContent() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-2">
+          {/* Carpetas comunes - siempre visibles */}
           {carpetasComunes.map((carpeta) => (
             <button
               key={carpeta.name}
@@ -513,12 +758,17 @@ function InboxPageContent() {
             </button>
           ))}
 
-          {/* Otras carpetas del servidor */}
+          {/* Separador si hay otras carpetas */}
+          {carpetas.length > 0 && carpetas.some((c) => !carpetasComunes.find((cc) => cc.name.toUpperCase() === c.name.toUpperCase())) && (
+            <div className="border-t border-slate-700 my-2"></div>
+          )}
+
+          {/* Otras carpetas del servidor - dinámicas */}
           {carpetas
-            .filter((c) => !carpetasComunes.find((cc) => cc.name === c.name))
+            .filter((c) => !carpetasComunes.find((cc) => cc.name.toUpperCase() === c.name.toUpperCase()))
             .map((carpeta) => (
               <button
-                key={carpeta.path}
+                key={carpeta.path || carpeta.name}
                 onClick={() => {
                   cambiarCarpeta(carpeta.name);
                   setSidebarAbierto(false); // Cerrar sidebar en móvil al seleccionar carpeta
@@ -739,7 +989,16 @@ function InboxPageContent() {
 
             {/* Lista de correos */}
             <div className="flex-1 overflow-y-auto">
-              {loading && emails.length === 0 && (
+              {/* Indicador de sincronización sutil (no bloquea) */}
+              {sincronizando && (
+                <div className="bg-blue-900/20 border-b border-blue-700/30 px-4 py-2 flex items-center gap-2">
+                  <Icons.Refresh className="text-xs text-blue-400 animate-spin" />
+                  <span className="text-xs text-blue-300">Sincronizando correos...</span>
+                </div>
+              )}
+              
+              {/* Solo mostrar loading si realmente no hay datos y no está sincronizando */}
+              {loading && emails.length === 0 && !sincronizando && (
                 <div className="flex items-center justify-center py-12">
                   <div className="text-slate-400">Cargando correos...</div>
                 </div>
@@ -755,7 +1014,7 @@ function InboxPageContent() {
         </div>
       )}
 
-              {!loading && emails.length === 0 && (
+              {!loading && !sincronizando && emails.length === 0 && (
                 <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-8 m-4 text-center">
                   <Icons.Document className="text-4xl text-slate-500 mx-auto mb-3" />
                   <p className="text-slate-400">

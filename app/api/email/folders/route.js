@@ -19,6 +19,38 @@ export async function GET() {
     );
   } catch (error) {
     console.error("❌ Error en API /api/email/folders:", error);
+    
+    // Si hay problemas de conexión, retornar carpetas por defecto en lugar de error 500
+    const carpetasPorDefecto = [
+      { name: 'INBOX', path: 'INBOX', delimiter: '/', flags: [], specialUse: null },
+      { name: 'SPAM', path: 'SPAM', delimiter: '/', flags: [], specialUse: null },
+      { name: 'TRASH', path: 'TRASH', delimiter: '/', flags: [], specialUse: null },
+      { name: 'Sent', path: 'Sent', delimiter: '/', flags: [], specialUse: null },
+      { name: 'Drafts', path: 'Drafts', delimiter: '/', flags: [], specialUse: null },
+    ];
+    
+    // Detectar si es un error de conexión
+    const esErrorConexion = error.message?.includes("ETIMEDOUT") || 
+                           error.message?.includes("ECONNREFUSED") ||
+                           error.message?.includes("timeout") ||
+                           error.message?.includes("Connection") ||
+                           error.code === "ETIMEDOUT" ||
+                           error.code === "ECONNREFUSED" ||
+                           error.code === "NoConnection";
+    
+    if (esErrorConexion) {
+      console.warn("⚠️ Error de conexión IMAP, retornando carpetas por defecto");
+      return NextResponse.json(
+        {
+          success: true,
+          carpetas: carpetasPorDefecto,
+          fromCache: true,
+          warning: "Carpetas cargadas desde configuración por defecto debido a problemas de conexión",
+        },
+        { status: 200 }
+      );
+    }
+    
     return NextResponse.json(
       {
         success: false,

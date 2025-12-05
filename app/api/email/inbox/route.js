@@ -1,9 +1,24 @@
 // API route para obtener correos de una carpeta
 // GET /api/email/inbox?carpeta=INBOX&limit=20
+// SIEMPRE retorna desde la base de datos (ultra-rápido)
+// La sincronización se hace en segundo plano automáticamente
 
 import { NextResponse } from "next/server";
 import { obtenerUltimosCorreos } from "../../../../lib/emailRead.js";
 import { obtenerListaDelCache } from "../../../../lib/emailListCache.js";
+
+// Función para sincronizar carpeta en segundo plano (no bloquea)
+async function sincronizarCarpetaEnSegundoPlano(carpeta, limit) {
+  try {
+    console.log(`🔄 Iniciando sincronización en segundo plano para ${carpeta}...`);
+    const mensajes = await obtenerUltimosCorreos(carpeta, limit);
+    console.log(`✅ Sincronización completada para ${carpeta}: ${mensajes.length} correos en DB`);
+    return mensajes;
+  } catch (err) {
+    console.warn(`⚠️ Error en sincronización en segundo plano: ${err.message}`);
+    throw err;
+  }
+}
 
 // Forzar que esta ruta sea dinámica (no pre-renderizada durante el build)
 export const dynamic = 'force-dynamic';
@@ -67,35 +82,55 @@ export async function GET(request) {
       );
     }
 
-    // Obtener los correos (normalmente desde IMAP, pero usa cache si está disponible)
+    // CRÍTICO: SIEMPRE retornar desde la base de datos (nunca bloquear con IMAP)
+    // La sincronización se hace en segundo plano automáticamente
     try {
-      const mensajes = await obtenerUltimosCorreos(carpeta, limit);
-
-      return NextResponse.json(
-        {
-          success: true,
-          mensajes,
-          carpeta,
-          total: mensajes.length,
-        },
-        { status: 200 }
-      );
-    } catch (error) {
-      // Si la carpeta no existe, retornar array vacío en lugar de error
-      if (error.message && error.message.includes("no existe")) {
+      const mensajesCache = await obtenerListaDelCache(carpeta, limit);
+      
+      if (mensajesCache && mensajesCache.length > 0) {
+        console.log(`✅ Emails desde DB: ${carpeta} - ${mensajesCache.length} correos`);
+        
+        // Sincronizar en segundo plano para actualizar (no bloquea)
+        sincronizarCarpetaEnSegundoPlano(carpeta, limit).catch(err => {
+          console.warn(`⚠️ Error sincronizando en segundo plano: ${err.message}`);
+        });
+        
         return NextResponse.json(
           {
             success: true,
-            mensajes: [],
+            mensajes: mensajesCache,
             carpeta,
-            total: 0,
-            mensaje: `La carpeta "${carpeta}" no existe en el servidor`,
+            total: mensajesCache.length,
+            fromCache: true,
           },
           { status: 200 }
         );
       }
-      throw error;
+    } catch (cacheError) {
+      console.warn(`⚠️ Error al obtener cache: ${cacheError.message}`);
     }
+    
+    // Si no hay caché, retornar vacío inmediatamente e iniciar sincronización en segundo plano
+    console.log(`⚠️ No hay cache para carpeta ${carpeta}, iniciando sincronización en segundo plano`);
+    
+    // Sincronizar en segundo plano (no bloquea)
+    sincronizarCarpetaEnSegundoPlano(carpeta, limit).catch(err => {
+      console.warn(`⚠️ Error sincronizando: ${err.message}`);
+    });
+    
+    // Retornar vacío inmediatamente (nunca bloquear)
+    return NextResponse.json(
+      {
+        success: true,
+        mensajes: [],
+        carpeta,
+        total: 0,
+        fromCache: false,
+        sincronizando: true,
+        mensaje: "Sincronizando correos desde el servidor...",
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("❌ Error en API /api/email/inbox:", error);
     return NextResponse.json(
