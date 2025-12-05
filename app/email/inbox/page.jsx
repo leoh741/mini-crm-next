@@ -63,40 +63,46 @@ function InboxPageContent() {
             setLoading(false);
             console.log(`✅ Emails cargados desde cache instantáneamente: ${cacheData.mensajes.length}`);
             
-            // OPTIMIZACIÓN: Pre-cargar contenido completo de todos los emails visibles en segundo plano
+            // OPTIMIZACIÓN CRÍTICA: Pre-cargar contenido completo INMEDIATAMENTE (no en segundo plano)
             // Esto asegura que cuando se abra un email, esté instantáneamente disponible
-            setTimeout(async () => {
-              try {
-                // Pre-cargar contenido completo de cada email visible
-                for (let index = 0; index < cacheData.mensajes.length; index++) {
-                  const mail = cacheData.mensajes[index];
+            // Ejecutar en paralelo para máxima velocidad
+            Promise.all(
+              cacheData.mensajes.map(async (mail, index) => {
+                try {
+                  // Pre-cargar contenido completo (incluyendo attachments) - se guarda automáticamente en MongoDB
+                  const res = await fetch(`/api/email/message?uid=${mail.uid}&carpeta=${encodeURIComponent(carpetaActual)}&contenido=true`);
                   
-                  try {
-                    // Pre-cargar contenido completo (incluyendo attachments) - se guarda automáticamente en MongoDB
-                    const res = await fetch(`/api/email/message?uid=${mail.uid}&carpeta=${encodeURIComponent(carpetaActual)}&contenido=true`);
-                    
-                    if (res.ok) {
-                      const emailData = await res.json();
-                      if (emailData.success) {
-                        console.log(`✅ Contenido completo pre-cargado: UID ${mail.uid} (${index + 1}/${cacheData.mensajes.length})`);
-                      }
+                  if (res.ok) {
+                    const emailData = await res.json();
+                    if (emailData.success) {
+                      // Guardar también en cache local para acceso instantáneo
+                      const cacheKey = `${mail.uid}-${carpetaActual}`;
+                      setLocalEmailCache(prev => {
+                        const newCache = new Map(prev);
+                        newCache.set(cacheKey, {
+                          mensaje: emailData.mensaje,
+                          contenidoCompleto: true,
+                          timestamp: Date.now()
+                        });
+                        if (newCache.size > 20) {
+                          const firstKey = newCache.keys().next().value;
+                          newCache.delete(firstKey);
+                        }
+                        return newCache;
+                      });
+                      console.log(`✅ Contenido completo pre-cargado y guardado: UID ${mail.uid} (${index + 1}/${cacheData.mensajes.length})`);
                     }
-                  } catch (err) {
-                    // Los errores de pre-carga no son críticos
-                    console.warn(`⚠️ Error pre-cargando contenido UID ${mail.uid}:`, err.message);
                   }
-                  
-                  // Pequeña pausa entre peticiones para no saturar
-                  if (index < cacheData.mensajes.length - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 100)); // 100ms entre peticiones
-                  }
+                } catch (err) {
+                  // Los errores de pre-carga no son críticos, pero loguear para debugging
+                  console.warn(`⚠️ Error pre-cargando contenido UID ${mail.uid}:`, err.message);
                 }
-                
-                console.log(`🎉 Pre-carga de contenido completada para ${cacheData.mensajes.length} correos`);
-              } catch (err) {
-                console.warn('Error en pre-carga de contenido:', err);
-              }
-            }, 100);
+              })
+            ).then(() => {
+              console.log(`🎉 Pre-carga de contenido completada para ${cacheData.mensajes.length} correos`);
+            }).catch(err => {
+              console.warn('Error en pre-carga de contenido:', err);
+            });
             
             // Actualizar lista desde servidor en segundo plano (después de pre-cargar contenido)
             setTimeout(async () => {
@@ -135,21 +141,12 @@ function InboxPageContent() {
 
       setEmails(data.mensajes || []);
       
-      // OPTIMIZACIÓN: Pre-cargar el contenido completo de todos los correos visibles (en segundo plano)
-      // Esto incluye attachments para que cuando se abran sean instantáneos
-      // Los correos se guardan automáticamente en MongoDB para acceso ultra-rápido
+      // OPTIMIZACIÓN CRÍTICA: Pre-cargar contenido completo INMEDIATAMENTE (en paralelo)
+      // Esto asegura que todos los emails visibles tengan su contenido completo guardado en DB
       if (data.mensajes && data.mensajes.length > 0) {
-        // Usar requestIdleCallback para no bloquear el render
-        const preloadEmails = async () => {
-          // Pre-cargar en secuencia para no saturar el servidor y asegurar que se guarden en DB
-          for (let index = 0; index < data.mensajes.length; index++) {
-            const mail = data.mensajes[index];
-            
-            // Esperar antes de cada petición para no saturar
-            if (index > 0) {
-              await new Promise(resolve => setTimeout(resolve, 300)); // 300ms entre peticiones
-            }
-            
+        // Ejecutar inmediatamente en paralelo para máxima velocidad
+        Promise.all(
+          data.mensajes.map(async (mail, index) => {
             try {
               // Pre-cargar contenido completo (incluyendo attachments) - se guarda automáticamente en MongoDB
               const res = await fetch(`/api/email/message?uid=${mail.uid}&carpeta=${encodeURIComponent(carpetaActual)}&contenido=true`);
@@ -157,6 +154,21 @@ function InboxPageContent() {
               if (res.ok) {
                 const emailData = await res.json();
                 if (emailData.success) {
+                  // Guardar también en cache local para acceso instantáneo
+                  const cacheKey = `${mail.uid}-${carpetaActual}`;
+                  setLocalEmailCache(prev => {
+                    const newCache = new Map(prev);
+                    newCache.set(cacheKey, {
+                      mensaje: emailData.mensaje,
+                      contenidoCompleto: true,
+                      timestamp: Date.now()
+                    });
+                    if (newCache.size > 20) {
+                      const firstKey = newCache.keys().next().value;
+                      newCache.delete(firstKey);
+                    }
+                    return newCache;
+                  });
                   console.log(`✅ Pre-cargado y guardado en DB: UID ${mail.uid} (${index + 1}/${data.mensajes.length})`);
                 } else {
                   console.warn(`⚠️ Error pre-cargando correo UID ${mail.uid}: ${emailData.error}`);
@@ -168,21 +180,12 @@ function InboxPageContent() {
               // Los errores de pre-carga no son críticos, el correo se cargará cuando se abra
               console.warn(`⚠️ Error pre-cargando correo UID ${mail.uid}:`, err.message);
             }
-          }
-          
+          })
+        ).then(() => {
           console.log(`🎉 Pre-carga completada para ${data.mensajes.length} correos`);
-        };
-        
-        if (typeof requestIdleCallback !== 'undefined') {
-          requestIdleCallback(() => {
-            // Ejecutar pre-carga en segundo plano sin bloquear
-            preloadEmails().catch(() => {});
-          }, { timeout: 2000 });
-        } else {
-          setTimeout(() => {
-            preloadEmails().catch(() => {});
-          }, 1000); // Fallback: esperar 1s antes de empezar
-        }
+        }).catch(err => {
+          console.warn('Error en pre-carga:', err);
+        });
       }
     } catch (err) {
       console.error("Error cargando correos:", err);
@@ -406,6 +409,21 @@ function InboxPageContent() {
     setCarpetaActual(carpetaParam);
     // Cargar emails sin mostrar loading inicial (se mostrará solo si no hay cache)
     fetchEmails();
+    
+    // Sincronizar automáticamente los últimos 10 emails con contenido completo al cambiar de carpeta
+    // Esto asegura que siempre estén listos para abrir instantáneamente
+    if (carpetaParam === 'INBOX') {
+      fetch('/api/email/sync?carpeta=INBOX&limit=10')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.sincronizados > 0) {
+            console.log(`✅ ${data.sincronizados} emails sincronizados automáticamente con contenido completo`);
+          }
+        })
+        .catch(err => {
+          console.warn('Error en sincronización automática:', err);
+        });
+    }
   }, [carpetaParam]);
 
   useEffect(() => {
@@ -460,8 +478,8 @@ function InboxPageContent() {
     <div className="flex h-[calc(100vh-80px)] w-full relative" style={{ maxWidth: '100vw', margin: '0 auto' }}>
 
       {/* Sidebar con carpetas */}
-      <div className={`${sidebarAbierto ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:relative inset-y-0 left-0 z-40 w-64 bg-slate-800 border-r border-slate-700 flex flex-col flex-shrink-0 transition-transform duration-300 ease-in-out shadow-xl md:shadow-none`}>
-        <div className="p-4 border-b border-slate-700">
+      <div className={`${sidebarAbierto ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:relative top-[56px] md:top-auto bottom-0 md:bottom-auto left-0 z-40 w-64 h-[calc(100vh-56px)] md:h-auto bg-slate-800 border-r border-slate-700 flex flex-col flex-shrink-0 transition-transform duration-300 ease-in-out shadow-xl md:shadow-none`}>
+        <div className="p-4 border-b border-slate-700 flex-shrink-0">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-semibold text-slate-100">Carpetas</h2>
             <button

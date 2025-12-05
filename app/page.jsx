@@ -114,22 +114,18 @@ function HomePageContent() {
       console.log('🔄 Sincronizando emails nuevos con contenido completo...');
       // Sincronizar los últimos 10 correos de INBOX (los que aparecen en pantalla)
       // Esto los guarda automáticamente en la base de datos con contenido completo (text, html, attachments)
-      // Se ejecuta en segundo plano sin bloquear la interfaz
-      fetch('/api/email/sync?carpeta=INBOX&limit=10')
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            console.log(`✅ Emails sincronizados con contenido completo: ${data.sincronizados}/${data.total}`);
-            if (data.fallidos > 0) {
-              console.warn(`⚠️ ${data.fallidos} emails no se pudieron sincronizar`);
-            }
-          } else {
-            console.warn('⚠️ Error al sincronizar emails:', data.error);
-          }
-        })
-        .catch(err => {
-          console.warn('⚠️ Error al sincronizar emails (no crítico):', err.message);
-        });
+      // Se ejecuta inmediatamente para asegurar que estén listos
+      const res = await fetch('/api/email/sync?carpeta=INBOX&limit=10');
+      const data = await res.json();
+      
+      if (data.success) {
+        console.log(`✅ Emails sincronizados con contenido completo: ${data.sincronizados}/${data.total}`);
+        if (data.fallidos > 0) {
+          console.warn(`⚠️ ${data.fallidos} emails no se pudieron sincronizar`);
+        }
+      } else {
+        console.warn('⚠️ Error al sincronizar emails:', data.error);
+      }
     } catch (err) {
       // Los errores de sincronización no son críticos, solo loguear
       console.warn('⚠️ Error al sincronizar emails (no crítico):', err.message);
