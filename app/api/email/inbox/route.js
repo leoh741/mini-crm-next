@@ -19,6 +19,7 @@ export async function GET(request) {
     const carpeta = searchParams.get("carpeta") || "INBOX";
     const limitParam = searchParams.get("limit");
     const limit = limitParam ? Number(limitParam) : 10; // Reducido a 10 para carga más rápida
+    const cacheOnly = searchParams.get("cacheOnly") === "true";
 
     // Validar que limit sea un número válido
     if (isNaN(limit) || limit < 1 || limit > 100) {
@@ -28,7 +29,39 @@ export async function GET(request) {
       );
     }
 
-    // Obtener los correos
+    // Si se solicita solo cache, intentar obtener solo del cache
+    if (cacheOnly) {
+      const { obtenerListaDelCache } = await import("../../../../lib/emailListCache.js");
+      const mensajesCache = await obtenerListaDelCache(carpeta, limit);
+      
+      if (mensajesCache && mensajesCache.length > 0) {
+        return NextResponse.json(
+          {
+            success: true,
+            mensajes: mensajesCache,
+            carpeta,
+            total: mensajesCache.length,
+            fromCache: true,
+          },
+          { status: 200 }
+        );
+      }
+      
+      // Si no hay cache, retornar vacío
+      return NextResponse.json(
+        {
+          success: true,
+          mensajes: [],
+          carpeta,
+          total: 0,
+          fromCache: true,
+          mensaje: "No hay correos en cache",
+        },
+        { status: 200 }
+      );
+    }
+
+    // Obtener los correos (normalmente desde IMAP, pero usa cache si está disponible)
     try {
       const mensajes = await obtenerUltimosCorreos(carpeta, limit);
 

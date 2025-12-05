@@ -40,6 +40,41 @@ function InboxPageContent() {
     try {
       setLoading(true);
       setError("");
+      
+      // OPTIMIZACIÓN: Primero intentar cargar desde cache (ultra-rápido)
+      // Si hay emails en cache, mostrarlos inmediatamente mientras se actualiza en segundo plano
+      try {
+        const cacheRes = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaActual)}&limit=10&cacheOnly=true`);
+        if (cacheRes.ok) {
+          const cacheData = await cacheRes.json();
+          if (cacheData.success && cacheData.mensajes && cacheData.mensajes.length > 0) {
+            // Mostrar emails del cache inmediatamente
+            setEmails(cacheData.mensajes);
+            setLoading(false);
+            console.log(`✅ Emails cargados desde cache: ${cacheData.mensajes.length}`);
+            
+            // Actualizar en segundo plano sin bloquear
+            setTimeout(async () => {
+              try {
+                const res = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaActual)}&limit=10`);
+                const data = await res.json();
+                if (data.success && data.mensajes) {
+                  setEmails(data.mensajes);
+                  console.log(`✅ Emails actualizados desde servidor: ${data.mensajes.length}`);
+                }
+              } catch (err) {
+                console.warn('Error actualizando emails en segundo plano:', err);
+              }
+            }, 100);
+            return;
+          }
+        }
+      } catch (cacheError) {
+        // Si falla el cache, continuar con carga normal
+        console.warn('Error cargando desde cache:', cacheError);
+      }
+      
+      // Si no hay cache, cargar normalmente
       const res = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaActual)}&limit=10`);
       const data = await res.json();
 
@@ -505,9 +540,15 @@ function InboxPageContent() {
                 >
                   <Icons.Folder className="text-slate-300 text-sm" />
                 </button>
-                <h2 className="text-base md:text-lg font-semibold text-slate-100 truncate flex-1">
-                  {carpetasComunes.find((c) => c.name === carpetaActual)?.label || carpetaActual}
-                </h2>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-base md:text-lg font-semibold text-slate-100 truncate">
+                    {carpetasComunes.find((c) => c.name === carpetaActual)?.label || carpetaActual}
+                  </h2>
+                  {/* Mostrar email en mobile cuando sidebar está cerrado */}
+                  <p className="md:hidden text-xs text-slate-400 truncate">
+                    contacto@digitalspace.com.ar
+                  </p>
+                </div>
                 <Link
                   href="/email/send"
                   className="px-3 py-1.5 md:px-4 md:py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs md:text-sm font-medium text-white flex items-center gap-1 flex-shrink-0"
