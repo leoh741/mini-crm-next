@@ -22,6 +22,9 @@ function HomePageContent() {
     cargarReunionesProximas();
     cargarTareasPendientes();
     
+    // Sincronizar emails nuevos automáticamente al abrir el CRM
+    sincronizarEmailsNuevos();
+    
     // Optimización: Actualizar cada 2 minutos en lugar de cada minuto para reducir carga
     const interval = setInterval(() => {
       cargarReunionesProximas();
@@ -102,6 +105,29 @@ function HomePageContent() {
       setTareasPendientes(tareasOrdenadas);
     } catch (err) {
       console.error('Error al cargar tareas pendientes:', err);
+    }
+  };
+
+  // Sincronizar emails nuevos automáticamente al abrir el CRM
+  const sincronizarEmailsNuevos = async () => {
+    try {
+      console.log('🔄 Sincronizando emails nuevos...');
+      // Sincronizar los últimos 10 correos de INBOX (los que aparecen en pantalla)
+      // Esto los guarda automáticamente en la base de datos con contenido completo
+      const res = await fetch('/api/email/sync?carpeta=INBOX&limit=10');
+      const data = await res.json();
+      
+      if (data.success) {
+        console.log(`✅ Emails sincronizados: ${data.sincronizados}/${data.total}`);
+        if (data.fallidos > 0) {
+          console.warn(`⚠️ ${data.fallidos} emails no se pudieron sincronizar`);
+        }
+      } else {
+        console.warn('⚠️ Error al sincronizar emails:', data.error);
+      }
+    } catch (err) {
+      // Los errores de sincronización no son críticos, solo loguear
+      console.warn('⚠️ Error al sincronizar emails (no crítico):', err.message);
     }
   };
 
