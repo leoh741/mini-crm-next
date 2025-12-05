@@ -1,25 +1,73 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import ProtectedRoute from "../../../components/ProtectedRoute";
 import { Icons } from "../../../components/Icons";
 
 function SendEmailPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [attachments, setAttachments] = useState([]);
   const [formData, setFormData] = useState({
     to: "",
     subject: "",
     text: "",
     html: "",
+    replyTo: null,
   });
+
+  // Cargar parámetros de URL cuando el componente se monta (para respuestas)
+  useEffect(() => {
+    if (searchParams) {
+      const to = searchParams.get('to');
+      const subject = searchParams.get('subject');
+      const text = searchParams.get('text');
+      const replyTo = searchParams.get('replyTo');
+      
+      if (to || subject || text) {
+        setFormData({
+          to: to || "",
+          subject: subject || "",
+          text: text || "",
+          html: "",
+          replyTo: replyTo || null,
+        });
+      }
+    }
+  }, [searchParams]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    const newAttachments = files.map(file => ({
+      file,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+    }));
+    setAttachments(prev => [...prev, ...newAttachments]);
+    // Limpiar el input para permitir seleccionar el mismo archivo nuevamente
+    e.target.value = '';
+  };
+
+  const removeAttachment = (index) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
 
   const handleSubmit = async (e) => {
@@ -29,15 +77,26 @@ function SendEmailPageContent() {
     setSuccess(false);
 
     try {
+      // Preparar FormData para enviar archivos
+      const formDataToSend = new FormData();
+      formDataToSend.append('to', formData.to);
+      formDataToSend.append('subject', formData.subject);
+      formDataToSend.append('text', formData.text);
+      if (formData.html) {
+        formDataToSend.append('html', formData.html);
+      }
+      if (formData.replyTo) {
+        formDataToSend.append('replyTo', formData.replyTo);
+      }
+      
+      // Agregar archivos adjuntos
+      attachments.forEach((attachment, index) => {
+        formDataToSend.append(`attachment_${index}`, attachment.file);
+      });
+
       const res = await fetch("/api/email/send", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: formData.to,
-          subject: formData.subject,
-          text: formData.text,
-          html: formData.html || undefined,
-        }),
+        body: formDataToSend, // No establecer Content-Type, el navegador lo hace automáticamente con FormData
       });
 
       const data = await res.json();
@@ -53,7 +112,9 @@ function SendEmailPageContent() {
         subject: "",
         text: "",
         html: "",
+        replyTo: null,
       });
+      setAttachments([]);
 
       // Redirigir después de 2 segundos
       setTimeout(() => {
@@ -154,6 +215,55 @@ function SendEmailPageContent() {
           <p className="text-xs text-slate-500 mt-1">
             Si proporcionas HTML, se usará en lugar del texto plano
           </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">
+            Archivos adjuntos:
+          </label>
+          <div className="space-y-2">
+            <label className="flex items-center justify-center w-full px-4 py-3 bg-slate-800 border-2 border-dashed border-slate-700 rounded-lg cursor-pointer hover:border-blue-500 transition-colors">
+              <div className="flex flex-col items-center gap-2">
+                <Icons.Document className="text-2xl text-slate-400" />
+                <span className="text-sm text-slate-300">Haz clic para seleccionar archivos</span>
+                <span className="text-xs text-slate-500">o arrastra y suelta aquí</span>
+              </div>
+              <input
+                type="file"
+                multiple
+                onChange={handleFileChange}
+                className="hidden"
+                accept="*/*"
+              />
+            </label>
+            
+            {attachments.length > 0 && (
+              <div className="space-y-2">
+                {attachments.map((attachment, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 bg-slate-800 border border-slate-700 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <Icons.Document className="text-blue-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-slate-200 truncate">{attachment.name}</p>
+                        <p className="text-xs text-slate-400">{formatFileSize(attachment.size)}</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(index)}
+                      className="p-1.5 hover:bg-slate-700 rounded transition-colors flex-shrink-0"
+                      title="Eliminar archivo"
+                    >
+                      <Icons.X className="text-sm text-slate-400" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-3">

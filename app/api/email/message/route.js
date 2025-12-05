@@ -15,8 +15,9 @@ export async function GET(request) {
     const uidParam = searchParams.get("uid");
     const carpeta = searchParams.get("carpeta") || "INBOX";
     const incluirContenido = searchParams.get("contenido") === "true";
+    const cacheOnly = searchParams.get("cacheOnly") === "true";
 
-    console.log(`📥 Parámetros recibidos - UID: ${uidParam}, Carpeta: ${carpeta}`);
+    console.log(`📥 Parámetros recibidos - UID: ${uidParam}, Carpeta: ${carpeta}, CacheOnly: ${cacheOnly}`);
 
     if (!uidParam) {
       console.error("❌ Falta el parámetro 'uid'");
@@ -32,6 +33,34 @@ export async function GET(request) {
       return NextResponse.json(
         { success: false, error: "El parámetro 'uid' debe ser un número" },
         { status: 400 }
+      );
+    }
+
+    // Si se solicita solo cache, intentar obtener solo del cache
+    if (cacheOnly) {
+      const { obtenerCorreoDelCache } = await import("../../../../lib/emailCache.js");
+      const mensajeCache = await obtenerCorreoDelCache(uid, carpeta, incluirContenido);
+      
+      if (mensajeCache) {
+        console.log(`✅ Correo encontrado en cache! UID: ${uid}`);
+        return NextResponse.json(
+          {
+            success: true,
+            mensaje: mensajeCache,
+            fromCache: true,
+          },
+          { status: 200 }
+        );
+      }
+      
+      // Si no hay cache, retornar null
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Correo no encontrado en cache",
+          fromCache: true,
+        },
+        { status: 404 }
       );
     }
 

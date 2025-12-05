@@ -38,20 +38,19 @@ function InboxPageContent() {
   // Cargar correos de la carpeta actual
   const fetchEmails = async () => {
     try {
-      setLoading(true);
       setError("");
       
-      // OPTIMIZACIÓN: Primero intentar cargar desde cache (ultra-rápido)
-      // Si hay emails en cache, mostrarlos inmediatamente mientras se actualiza en segundo plano
+      // OPTIMIZACIÓN: Primero intentar cargar desde cache SIN mostrar loading (ultra-rápido)
+      // Si hay emails en cache, mostrarlos inmediatamente sin mostrar "cargando"
       try {
         const cacheRes = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaActual)}&limit=10&cacheOnly=true`);
         if (cacheRes.ok) {
           const cacheData = await cacheRes.json();
           if (cacheData.success && cacheData.mensajes && cacheData.mensajes.length > 0) {
-            // Mostrar emails del cache inmediatamente
+            // Mostrar emails del cache inmediatamente SIN mostrar loading
             setEmails(cacheData.mensajes);
             setLoading(false);
-            console.log(`✅ Emails cargados desde cache: ${cacheData.mensajes.length}`);
+            console.log(`✅ Emails cargados desde cache instantáneamente: ${cacheData.mensajes.length}`);
             
             // Actualizar en segundo plano sin bloquear
             setTimeout(async () => {
@@ -73,6 +72,9 @@ function InboxPageContent() {
         // Si falla el cache, continuar con carga normal
         console.warn('Error cargando desde cache:', cacheError);
       }
+      
+      // Solo mostrar loading si no hay cache disponible
+      setLoading(true);
       
       // Si no hay cache, cargar normalmente
       const res = await fetch(`/api/email/inbox?carpeta=${encodeURIComponent(carpetaActual)}&limit=10`);
@@ -142,17 +144,56 @@ function InboxPageContent() {
     }
   };
 
-  // Cargar correo individual (ultra-optimizado: busca primero en cache con contenido completo)
+  // Cargar correo individual (ultra-optimizado: busca primero en cache sin mostrar loading)
   const fetchEmail = async (uid, carpeta = carpetaActual) => {
     try {
-      setLoading(true);
       setError(""); // Limpiar errores previos
       const carpetaParaBuscar = carpeta || carpetaActual;
       console.log(`📧 Cargando correo UID ${uid} de carpeta: ${carpetaParaBuscar}`);
       
-      // OPTIMIZACIÓN: Buscar directamente con contenido completo
-      // El servidor buscará primero en cache en memoria (~0ms), luego en MongoDB (~10-50ms)
-      // Si está pre-cargado, será instantáneo. Si no, se carga desde IMAP y se guarda en cache.
+      // OPTIMIZACIÓN: Primero intentar cargar desde cache SIN mostrar loading (ultra-rápido)
+      try {
+        const cacheRes = await fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}&contenido=true&cacheOnly=true`);
+        if (cacheRes.ok) {
+          const cacheData = await cacheRes.json();
+          if (cacheData.success && cacheData.mensaje) {
+            // Mostrar correo del cache inmediatamente SIN mostrar loading
+            setEmailSeleccionado(cacheData.mensaje);
+            setLoading(false);
+            console.log(`✅ Correo cargado desde cache instantáneamente! UID: ${uid}`);
+            
+            // Si no estaba leído, marcarlo como leído (en segundo plano, no bloquea)
+            if (!cacheData.mensaje.leido) {
+              marcarComoLeido(uid, true).catch(err => {
+                console.warn("Error marcando como leído:", err);
+              });
+            }
+            
+            // Actualizar desde servidor en segundo plano si es necesario
+            setTimeout(async () => {
+              try {
+                const res = await fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}&contenido=true`);
+                const data = await res.json();
+                if (data.success && data.mensaje) {
+                  setEmailSeleccionado(data.mensaje);
+                  console.log(`✅ Correo actualizado desde servidor: UID ${uid}`);
+                }
+              } catch (err) {
+                console.warn('Error actualizando correo en segundo plano:', err);
+              }
+            }, 100);
+            return;
+          }
+        }
+      } catch (cacheError) {
+        // Si falla el cache, continuar con carga normal
+        console.warn('Error cargando desde cache:', cacheError);
+      }
+      
+      // Solo mostrar loading si no hay cache disponible
+      setLoading(true);
+      
+      // Si no hay cache, cargar normalmente desde servidor
       const inicioCarga = Date.now();
       const res = await fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}&contenido=true`);
       const data = await res.json();
@@ -435,6 +476,25 @@ function InboxPageContent() {
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
+                    onClick={() => {
+                      // Construir URL con parámetros para responder
+                      const replySubject = emailSeleccionado.subject?.startsWith('Re:') 
+                        ? emailSeleccionado.subject 
+                        : `Re: ${emailSeleccionado.subject || ''}`;
+                      const replyText = `\n\n--- Mensaje original ---\nDe: ${emailSeleccionado.from}\nFecha: ${new Date(emailSeleccionado.date).toLocaleString('es-AR')}\nAsunto: ${emailSeleccionado.subject || '(Sin asunto)'}\n\n${emailSeleccionado.text || emailSeleccionado.html?.replace(/<[^>]*>/g, '') || ''}`;
+                      
+                      router.push(
+                        `/email/send?to=${encodeURIComponent(emailSeleccionado.from)}&subject=${encodeURIComponent(replySubject)}&text=${encodeURIComponent(replyText)}&replyTo=${encodeURIComponent(emailSeleccionado.from)}`
+                      );
+                    }}
+                    disabled={accionando}
+                    className="px-2 py-1.5 md:px-3 bg-green-600 hover:bg-green-700 disabled:bg-green-800 rounded text-xs text-white flex items-center gap-1"
+                  >
+                    <Icons.ArrowUturnLeft className="text-xs" />
+                    <span className="hidden sm:inline">Responder</span>
+                    <span className="sm:hidden">Re</span>
+                  </button>
+                  <button
                     onClick={() => marcarComoLeido(emailSeleccionado.uid, !emailSeleccionado.leido)}
                     disabled={accionando}
                     className="px-2 py-1.5 md:px-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 rounded text-xs text-white"
@@ -531,32 +591,41 @@ function InboxPageContent() {
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Header de la lista */}
             <div className="bg-slate-800 border-b border-slate-700 p-3 md:p-4 relative">
-              <div className="flex items-center justify-between gap-2">
-                {/* Botón para abrir sidebar en móvil - dentro del header */}
-                <button
-                  onClick={() => setSidebarAbierto(!sidebarAbierto)}
-                  className="md:hidden p-2 bg-slate-700 hover:bg-slate-600 rounded-lg border border-slate-600 flex-shrink-0"
-                  aria-label="Toggle menu"
-                >
-                  <Icons.Folder className="text-slate-300 text-sm" />
-                </button>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-base md:text-lg font-semibold text-slate-100 truncate">
-                    {carpetasComunes.find((c) => c.name === carpetaActual)?.label || carpetaActual}
-                  </h2>
-                  {/* Mostrar email en mobile cuando sidebar está cerrado */}
-                  <p className="md:hidden text-xs text-slate-400 truncate">
+              <div className="flex flex-col gap-2">
+                {/* Primera fila: título y botones */}
+                <div className="flex items-center justify-between gap-2">
+                  {/* Botón para abrir sidebar en móvil - dentro del header */}
+                  <button
+                    onClick={() => setSidebarAbierto(!sidebarAbierto)}
+                    className="md:hidden p-2 bg-slate-700 hover:bg-slate-600 rounded-lg border border-slate-600 flex-shrink-0"
+                    aria-label="Toggle menu"
+                  >
+                    <Icons.Folder className="text-slate-300 text-sm" />
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    {/* Título "Carpetas" en mobile cuando sidebar está cerrado */}
+                    <h3 className="md:hidden text-xs font-medium text-slate-400 uppercase tracking-wide">
+                      Carpetas
+                    </h3>
+                    <h2 className="text-base md:text-lg font-semibold text-slate-100 truncate">
+                      {carpetasComunes.find((c) => c.name === carpetaActual)?.label || carpetaActual}
+                    </h2>
+                  </div>
+                  <Link
+                    href="/email/send"
+                    className="px-3 py-1.5 md:px-4 md:py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs md:text-sm font-medium text-white flex items-center gap-1 flex-shrink-0"
+                  >
+                    <Icons.Plus className="text-sm" />
+                    <span className="hidden sm:inline">Nuevo correo</span>
+                    <span className="sm:hidden">Nuevo</span>
+                  </Link>
+                </div>
+                {/* Segunda fila: email en mobile cuando sidebar está cerrado */}
+                <div className="md:hidden">
+                  <p className="text-xs text-slate-400 truncate">
                     contacto@digitalspace.com.ar
                   </p>
                 </div>
-                <Link
-                  href="/email/send"
-                  className="px-3 py-1.5 md:px-4 md:py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs md:text-sm font-medium text-white flex items-center gap-1 flex-shrink-0"
-                >
-                  <Icons.Plus className="text-sm" />
-                  <span className="hidden sm:inline">Nuevo correo</span>
-                  <span className="sm:hidden">Nuevo</span>
-                </Link>
               </div>
             </div>
 
