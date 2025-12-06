@@ -25,7 +25,11 @@ import {
   HiTag,             // 🏷️ Etiqueta
   HiX,               // ✕ Cerrar
   HiChat,            // 💬 Chat/WhatsApp
-  HiArrowLeft        // ← Responder/Volver
+  HiArrowLeft,       // ← Responder/Volver
+  HiMenu,            // ☰ Menú hamburguesa
+  HiMail,            // ✉️ Correo cerrado
+  HiMailOpen,        // ✉️ Correo abierto
+  HiPaperClip        // 📎 Adjunto
 } from 'react-icons/hi';
 
 export const Icons = {
@@ -55,6 +59,10 @@ export const Icons = {
   Tag: HiTag,
   X: HiX,
   Chat: HiChat,
-  ArrowUturnLeft: HiArrowLeft  // ← Responder/Volver
+  ArrowUturnLeft: HiArrowLeft,  // ← Responder/Volver
+  Menu: HiMenu,                  // ☰ Menú hamburguesa
+  Mail: HiMail,                  // ✉️ Correo cerrado
+  MailOpen: HiMailOpen,          // ✉️ Correo abierto
+  PaperClip: HiPaperClip         // 📎 Adjunto
 };
 
