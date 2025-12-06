@@ -670,7 +670,7 @@ function InboxContent() {
               >
                 {sidebarAbierto ? <Icons.X className="w-6 h-6" /> : <Icons.Menu className="w-6 h-6" />}
               </button>
-              <h1 className="text-xl md:text-2xl font-bold">Correos</h1>
+              <h1 className="text-2xl font-semibold">Correos</h1>
             </div>
             <div className="flex items-center gap-2">
               <button

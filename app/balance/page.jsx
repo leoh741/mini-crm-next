@@ -280,7 +280,7 @@ function BalancePageContent() {
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <h1 className="text-2xl md:text-3xl font-bold">Balance</h1>
+        <h1 className="text-2xl font-semibold">Balance</h1>
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
           <select
             value={mesSeleccionado}

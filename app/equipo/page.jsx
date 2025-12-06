@@ -120,7 +120,7 @@ function EquipoPageContent() {
     <div style={{ overflow: 'visible' }}>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
         <div>
-          <h2 className="text-2xl font-bold">Equipo</h2>
+          <h2 className="text-2xl font-semibold">Equipo</h2>
           <p className="text-xs md:text-sm text-slate-400 mt-1">
             {busqueda.trim() || filtroActivo !== "todos"
               ? `${miembrosFiltrados.length} de ${miembros.length} ${miembros.length === 1 ? 'miembro' : 'miembros'}`
