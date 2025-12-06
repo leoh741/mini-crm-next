@@ -670,7 +670,7 @@ function InboxContent() {
               >
                 {sidebarAbierto ? <Icons.X className="w-6 h-6" /> : <Icons.Menu className="w-6 h-6" />}
               </button>
-              <h1 className="text-2xl font-bold">Correos</h1>
+              <h1 className="text-xl md:text-2xl font-bold">Correos</h1>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -683,18 +683,18 @@ function InboxContent() {
               </button>
               <Link
                 href="/email/send"
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded flex items-center gap-2"
+                className="px-3 md:px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded flex items-center gap-2 text-sm md:text-base"
               >
-                <Icons.Plus className="w-5 h-5" />
-                Nuevo
+                <Icons.Plus className="w-4 h-4 md:w-5 md:h-5" />
+                <span className="hidden sm:inline">Nuevo</span>
               </Link>
             </div>
           </div>
         </div>
 
         <div className="flex h-[calc(100vh-73px)]">
-          {/* Sidebar - Siempre visible en desktop, colapsable en mobile */}
-          <div className={`${sidebarAbierto ? 'w-64' : 'w-16 md:w-64'} transition-all duration-300 overflow-hidden bg-slate-800 border-r border-slate-700`}>
+          {/* Sidebar - Colapsable en mobile, siempre visible en desktop */}
+          <div className={`${sidebarAbierto ? 'w-64' : 'w-0 md:w-64'} transition-all duration-300 overflow-hidden bg-slate-800 border-r border-slate-700`}>
             <div className="p-4 space-y-2">
               {todasLasCarpetas.map((carpeta) => {
                 const IconComponent = carpeta.icon;
@@ -721,8 +721,8 @@ function InboxContent() {
 
           {/* Contenido principal */}
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-            {/* Lista de correos */}
-            <div className="w-full md:w-1/3 border-r border-slate-700 overflow-y-auto bg-slate-800 flex flex-col">
+            {/* Lista de correos - Ocultar en mobile cuando hay correo seleccionado */}
+            <div className={`${emailSeleccionado ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 border-r border-slate-700 overflow-y-auto bg-slate-800 flex-col`}>
               {/* Header de la lista con nombre de carpeta */}
               <div className="p-4 border-b border-slate-700 bg-slate-800 sticky top-0 z-10">
                 <h2 className="text-lg font-semibold text-white">
@@ -809,14 +809,25 @@ function InboxContent() {
               )}
             </div>
 
-            {/* Vista de correo */}
-            <div className="hidden md:flex md:w-2/3 bg-slate-900 overflow-y-auto">
+            {/* Vista de correo - Mostrar en mobile cuando hay correo seleccionado */}
+            <div className={`${emailSeleccionado ? 'flex' : 'hidden md:flex'} w-full md:w-2/3 bg-slate-900 overflow-y-auto flex-col`}>
               {emailSeleccionado ? (
                 <div className="w-full flex flex-col">
                   {/* Header del correo */}
                   <div className="bg-slate-800 border-b border-slate-700 p-4 sticky top-0 z-10">
-                    <div className="flex items-start justify-between mb-3">
-                      <h2 className="text-xl font-bold text-white flex-1 pr-4">
+                    {/* Botón volver en mobile */}
+                    <button
+                      onClick={() => {
+                        setEmailSeleccionado(null);
+                        router.push(`/email/inbox?carpeta=${encodeURIComponent(carpetaActual)}`);
+                      }}
+                      className="md:hidden mb-3 flex items-center gap-2 text-slate-300 hover:text-white transition-colors"
+                    >
+                      <Icons.ArrowUturnLeft className="w-5 h-5" />
+                      <span>Volver a la lista</span>
+                    </button>
+                    <div className="flex items-start justify-between mb-3 gap-2">
+                      <h2 className="text-lg md:text-xl font-bold text-white flex-1 pr-2 break-words">
                         {emailSeleccionado.subject || "(Sin asunto)"}
                       </h2>
                       <div className="flex gap-2 flex-shrink-0">
@@ -838,12 +849,12 @@ function InboxContent() {
                         </button>
                       </div>
                     </div>
-                    <div className="space-y-1 text-sm">
-                      <p className="text-slate-300">
+                    <div className="space-y-1 text-xs md:text-sm">
+                      <p className="text-slate-300 break-words">
                         <span className="text-slate-500">De:</span> {emailSeleccionado.from}
                       </p>
                       {emailSeleccionado.to && (
-                        <p className="text-slate-300">
+                        <p className="text-slate-300 break-words">
                           <span className="text-slate-500">Para:</span> {emailSeleccionado.to}
                         </p>
                       )}
@@ -927,7 +938,7 @@ function InboxContent() {
                   </div>
                   
                   {/* Contenido del correo */}
-                  <div className="flex-1 overflow-y-auto p-6">
+                  <div className="flex-1 overflow-y-auto p-4 md:p-6">
                     {emailSeleccionado.html ? (
                       <div
                         className="prose prose-invert prose-slate max-w-none"

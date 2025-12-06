@@ -128,7 +128,7 @@ function ClientesPageContent() {
     <div>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
         <div>
-          <h2 className="text-lg md:text-xl">Clientes</h2>
+          <h2 className="text-2xl font-bold">Clientes</h2>
           <p className="text-xs md:text-sm text-slate-400 mt-1">
             {(busqueda.trim() || etiquetaFiltro.trim())
               ? `${clientesFiltrados.length} de ${clientes.length} ${clientes.length === 1 ? 'cliente' : 'clientes'}`
