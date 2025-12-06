@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ProtectedRoute from "../../../components/ProtectedRoute";
 import { Icons } from "../../../components/Icons";
 import Link from "next/link";
 
-function InboxPageContent() {
+// Hacer la página dinámica para evitar pre-renderizado
+export const dynamic = 'force-dynamic';
+
+// Componente interno que usa useSearchParams
+function InboxContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const carpetaParam = searchParams.get("carpeta") || "INBOX";
@@ -951,6 +955,24 @@ function InboxPageContent() {
         </div>
       </div>
     </ProtectedRoute>
+  );
+}
+
+// Componente wrapper con Suspense para cumplir con Next.js 14
+function InboxPageContent() {
+  return (
+    <Suspense fallback={
+      <ProtectedRoute>
+        <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center">
+          <div className="text-center">
+            <Icons.Refresh className="w-8 h-8 animate-spin mx-auto mb-2 text-slate-400" />
+            <p className="text-slate-400">Cargando correos...</p>
+          </div>
+        </div>
+      </ProtectedRoute>
+    }>
+      <InboxContent />
+    </Suspense>
   );
 }
 
