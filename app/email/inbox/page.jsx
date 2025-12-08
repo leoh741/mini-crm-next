@@ -26,7 +26,7 @@ function InboxContent() {
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [accionando, setAccionando] = useState(false);
-  const [sidebarAbierto, setSidebarAbierto] = useState(true); // Abierto por defecto
+  const [sidebarAbierto, setSidebarAbierto] = useState(false); // ✅ Cerrado por defecto (mobile y desktop)
   const [sincronizando, setSincronizando] = useState(false);
   const [showOnlyImportant, setShowOnlyImportant] = useState(false);
   
