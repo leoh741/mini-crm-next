@@ -119,8 +119,15 @@ function InboxContent() {
 
     try {
       // Paso 1: Intentar cargar desde caché (ultra-rápido, solo si no se fuerza refresh)
+      // ✅ OPTIMIZACIÓN: Mostrar datos de caché INMEDIATAMENTE sin esperar respuesta
+      // Esto hace que la UI sea más dinámica, especialmente en mobile
       if (!forzarRefresh) {
         try {
+          // Mostrar estado de carga mínimo para feedback inmediato
+          if (mostrarLoading && emails.length === 0) {
+            setLoading(true);
+          }
+          
           const cacheRes = await fetch(
             `/api/email/inbox?carpeta=${encodeURIComponent(carpeta)}&limit=20&cacheOnly=true`,
             { signal: abortControllerRef.current.signal }
@@ -1100,11 +1107,9 @@ function InboxContent() {
         router.replace(`/email/inbox?carpeta=${encodeURIComponent(carpetaParaCargar)}`);
       }
       
-      // Pequeño delay para asegurar que el componente esté completamente montado
-      setTimeout(() => {
-        console.log(`>>> FRONTEND - Carga inicial: carpeta=${carpetaParaCargar} (carpetaParam=${carpetaParam})`);
-        cargarCarpeta(carpetaParaCargar, { forzarRefresh: false, mostrarLoading: true });
-      }, 100);
+      // Cargar inmediatamente sin delay para respuesta más rápida
+      console.log(`>>> FRONTEND - Carga inicial: carpeta=${carpetaParaCargar} (carpetaParam=${carpetaParam})`);
+      cargarCarpeta(carpetaParaCargar, { forzarRefresh: false, mostrarLoading: true });
     }
   }, []); // Solo al montar
 
@@ -1293,9 +1298,28 @@ function InboxContent() {
           </div>
         </div>
 
-        <div className="flex h-[calc(100vh-73px)]">
+        <div className="flex h-[calc(100vh-73px)] relative">
+          {/* Overlay oscuro en mobile cuando sidebar está abierto */}
+          {sidebarAbierto && (
+            <div
+              className="md:hidden fixed inset-0 bg-black/50 z-40"
+              onClick={() => setSidebarAbierto(false)}
+            />
+          )}
+          
           {/* Sidebar - Colapsable en mobile y desktop */}
-          <div className={`${sidebarAbierto ? 'w-64' : 'w-0'} transition-all duration-300 overflow-hidden bg-slate-800 border-r border-slate-700`}>
+          {/* En mobile: overlay (absolute), en desktop: ocupa espacio del flex */}
+          <div className={`
+            ${sidebarAbierto ? 'w-64' : 'w-0'} 
+            transition-all duration-300 
+            overflow-hidden 
+            bg-slate-800 
+            border-r border-slate-700
+            md:relative
+            absolute md:static
+            z-50 md:z-auto
+            h-full
+          `}>
             <div className="p-4 space-y-2">
               {todasLasCarpetas.map((carpeta) => {
                 const IconComponent = carpeta.icon;
@@ -1321,7 +1345,8 @@ function InboxContent() {
           </div>
 
           {/* Contenido principal */}
-          <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+          {/* En mobile: ocupa todo el ancho siempre, en desktop: se ajusta al sidebar */}
+          <div className="flex-1 flex flex-col md:flex-row overflow-hidden w-full md:w-auto">
             {/* Lista de correos - Ocultar en mobile cuando hay correo seleccionado */}
             <div className={`${emailSeleccionado ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 border-r border-slate-700 overflow-y-auto bg-slate-800 flex-col`}>
               {/* Header de la lista con nombre de carpeta */}
