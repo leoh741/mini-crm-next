@@ -29,7 +29,8 @@ import {
   HiMenu,            // ☰ Menú hamburguesa
   HiMail,            // ✉️ Correo cerrado
   HiMailOpen,        // ✉️ Correo abierto
-  HiPaperClip        // 📎 Adjunto
+  HiPaperClip,       // 📎 Adjunto
+  HiStar             // ⭐ Estrella/Importante
 } from 'react-icons/hi';
 
 export const Icons = {
@@ -63,6 +64,7 @@ export const Icons = {
   Menu: HiMenu,                  // ☰ Menú hamburguesa
   Mail: HiMail,                  // ✉️ Correo cerrado
   MailOpen: HiMailOpen,          // ✉️ Correo abierto
-  PaperClip: HiPaperClip         // 📎 Adjunto
+  PaperClip: HiPaperClip,        // 📎 Adjunto
+  Star: HiStar                   // ⭐ Estrella/Importante
 };
 

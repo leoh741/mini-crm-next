@@ -1,15 +1,21 @@
 // API route para obtener un correo específico
-// GET /api/email/message?uid=123&carpeta=INBOX
+// GET /api/email/message?uid=123&carpeta=INBOX&contenido=true
+// 
+// ESTRATEGIA "CACHE FIRST" - Optimizado para respuesta rápida:
+// 1. Siempre intenta primero desde MongoDB (cache persistente) con contenido completo
+// 2. Solo si NO existe en cache, obtiene SOLO ese UID desde IMAP (sin disparar sync masiva)
+// 3. NO llama a funciones de sync masiva que descargan 20 correos
 
 import { NextResponse } from "next/server";
-import { obtenerCorreoPorUID } from "../../../../lib/emailRead.js";
-import { obtenerCorreoDelCache } from "../../../../lib/emailCache.js";
+import { obtenerCorreoSoloUID } from "../../../../lib/emailRead.js";
+import { obtenerCorreoDelCache, guardarCorreoEnCache } from "../../../../lib/emailCache.js";
 
 // Forzar que esta ruta sea dinámica (no pre-renderizada durante el build)
 export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
-  console.log("📥 API /api/email/message - Request recibido");
+  const inicioTiempo = Date.now();
+  console.log("[/api/email/message] Request recibido");
   
   try {
     const { searchParams } = new URL(request.url);
@@ -18,10 +24,7 @@ export async function GET(request) {
     const incluirContenido = searchParams.get("contenido") === "true";
     const cacheOnly = searchParams.get("cacheOnly") === "true";
 
-    console.log(`📥 Parámetros recibidos - UID: ${uidParam}, Carpeta: ${carpeta}, CacheOnly: ${cacheOnly}`);
-
     if (!uidParam) {
-      console.error("❌ Falta el parámetro 'uid'");
       return NextResponse.json(
         { success: false, error: "Falta el parámetro 'uid'" },
         { status: 400 }
@@ -30,20 +33,22 @@ export async function GET(request) {
 
     const uid = Number(uidParam);
     if (isNaN(uid)) {
-      console.error(`❌ UID inválido: ${uidParam}`);
       return NextResponse.json(
         { success: false, error: "El parámetro 'uid' debe ser un número" },
         { status: 400 }
       );
     }
 
-    // CRÍTICO: SIEMPRE intentar obtener desde cache primero (ultra-rápido)
-    // Esto asegura que después de F5, los correos se abran instantáneamente desde la DB
+    // ============================================
+    // PASO 1: CACHE FIRST - Buscar en MongoDB con contenido completo
+    // ============================================
+    // Esto es ultra-rápido (~10-50ms) y evita llamadas a IMAP innecesarias
     try {
       const mensajeCache = await obtenerCorreoDelCache(uid, carpeta, incluirContenido);
       
       if (mensajeCache) {
-        console.log(`✅ Correo encontrado en cache persistente! UID: ${uid}`);
+        const tiempoTranscurrido = Date.now() - inicioTiempo;
+        console.log(`[/api/email/message] ✅ Devuelto desde cache con contenido. UID: ${uid}, Tiempo: ${tiempoTranscurrido}ms`);
         
         // Si se solicita solo cache, retornar inmediatamente
         if (cacheOnly) {
@@ -57,12 +62,8 @@ export async function GET(request) {
           );
         }
         
-        // Si no es cacheOnly, retornar desde cache pero actualizar en segundo plano
-        // Esto hace que la respuesta sea instantánea pero los datos estén actualizados
-        obtenerCorreoPorUID(uid, carpeta, incluirContenido).catch(err => {
-          console.warn(`⚠️ Error actualizando correo desde IMAP en segundo plano: ${err.message}`);
-        });
-        
+        // Si no es cacheOnly, retornar desde cache inmediatamente
+        // NO actualizar en segundo plano para evitar syncs pesadas
         return NextResponse.json(
           {
             success: true,
@@ -73,7 +74,7 @@ export async function GET(request) {
         );
       }
     } catch (cacheError) {
-      console.warn(`⚠️ Error al buscar en cache: ${cacheError.message}`);
+      console.warn(`[/api/email/message] ⚠️ Error al buscar en cache: ${cacheError.message}`);
     }
     
     // Si se solicita solo cache y no se encontró, retornar error
@@ -88,19 +89,23 @@ export async function GET(request) {
       );
     }
 
-    // Si no hay cache, intentar obtener desde IMAP
-    // Pero si falla, intentar obtener desde cache sin contenido completo como fallback
-    console.log(`📥 Llamando a obtenerCorreoPorUID con UID: ${uid}, Carpeta: ${carpeta}, Contenido: ${incluirContenido}`);
+    // ============================================
+    // PASO 2: Si NO está en cache, obtener SOLO ese UID desde IMAP
+    // ============================================
+    // IMPORTANTE: Usar obtenerCorreoSoloUID que NO dispara sync masiva
+    // Solo obtiene ese UID específico sin descargar 20 correos
+    console.log(`[/api/email/message] 📥 No encontrado en cache, obteniendo SOLO UID ${uid} desde IMAP...`);
     
     try {
-      const mensaje = await obtenerCorreoPorUID(uid, carpeta, incluirContenido);
-      console.log(`✅ Correo obtenido exitosamente desde IMAP`);
-
+      // Esta función solo obtiene UN correo, no dispara sync masiva
+      const mensaje = await obtenerCorreoSoloUID(uid, carpeta, incluirContenido);
+      
       if (!mensaje) {
-        // Si no se encontró, intentar cache sin contenido completo como fallback
+        // Si no se encontró en IMAP, intentar cache sin contenido completo como fallback
         const mensajeFallback = await obtenerCorreoDelCache(uid, carpeta, false);
         if (mensajeFallback) {
-          console.log(`✅ Usando cache sin contenido completo como fallback`);
+          const tiempoTranscurrido = Date.now() - inicioTiempo;
+          console.log(`[/api/email/message] ✅ Usando cache sin contenido como fallback. Tiempo: ${tiempoTranscurrido}ms`);
           return NextResponse.json(
             {
               success: true,
@@ -117,21 +122,33 @@ export async function GET(request) {
         );
       }
 
+      // Guardar en cache para próximas consultas (rápido)
+      if (mensaje) {
+        await guardarCorreoEnCache(uid, carpeta, mensaje, incluirContenido).catch(err => {
+          console.warn(`[/api/email/message] ⚠️ Error guardando en cache (no crítico): ${err.message}`);
+        });
+      }
+
+      const tiempoTranscurrido = Date.now() - inicioTiempo;
+      console.log(`[/api/email/message] ✅ Devuelto desde IMAP solo UID ${uid}. Tiempo: ${tiempoTranscurrido}ms`);
+
       return NextResponse.json(
         {
           success: true,
           mensaje,
+          fromCache: false,
         },
         { status: 200 }
       );
     } catch (imapError) {
       // Si falla IMAP, intentar obtener desde cache sin contenido completo como fallback
-      console.warn(`⚠️ Error obteniendo desde IMAP, intentando cache como fallback: ${imapError.message}`);
+      console.warn(`[/api/email/message] ⚠️ Error obteniendo desde IMAP, intentando cache como fallback: ${imapError.message}`);
       
       try {
         const mensajeFallback = await obtenerCorreoDelCache(uid, carpeta, false);
         if (mensajeFallback) {
-          console.log(`✅ Usando cache sin contenido completo como fallback después de error IMAP`);
+          const tiempoTranscurrido = Date.now() - inicioTiempo;
+          console.log(`[/api/email/message] ✅ Usando cache sin contenido como fallback después de error IMAP. Tiempo: ${tiempoTranscurrido}ms`);
           return NextResponse.json(
             {
               success: true,
@@ -143,18 +160,15 @@ export async function GET(request) {
           );
         }
       } catch (fallbackError) {
-        console.warn(`⚠️ Error en fallback de cache: ${fallbackError.message}`);
+        console.warn(`[/api/email/message] ⚠️ Error en fallback de cache: ${fallbackError.message}`);
       }
       
       // Si también falla el fallback, lanzar el error original
       throw imapError;
     }
   } catch (error) {
-    console.error("❌ Error en API /api/email/message:");
-    console.error("  - Tipo:", error.constructor.name);
-    console.error("  - Código:", error.code);
-    console.error("  - Mensaje:", error.message);
-    console.error("  - Stack:", error.stack);
+    const tiempoTranscurrido = Date.now() - inicioTiempo;
+    console.error(`[/api/email/message] ❌ Error después de ${tiempoTranscurrido}ms:`, error.message);
     
     // Mensaje de error más descriptivo
     let mensajeError = error.message || "Error desconocido al obtener el correo";

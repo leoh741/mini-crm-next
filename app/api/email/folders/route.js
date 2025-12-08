@@ -21,11 +21,11 @@ export async function GET() {
     console.error("❌ Error en API /api/email/folders:", error);
     
     // Si hay problemas de conexión, retornar carpetas por defecto en lugar de error 500
+    // Sin Sent Items ni Promociones
     const carpetasPorDefecto = [
       { name: 'INBOX', path: 'INBOX', delimiter: '/', flags: [], specialUse: null },
       { name: 'SPAM', path: 'SPAM', delimiter: '/', flags: [], specialUse: null },
       { name: 'TRASH', path: 'TRASH', delimiter: '/', flags: [], specialUse: null },
-      { name: 'Sent', path: 'Sent', delimiter: '/', flags: [], specialUse: null },
     ];
     
     // Detectar si es un error de conexión

@@ -2,9 +2,8 @@
 // POST /api/email/move
 
 import { NextResponse } from "next/server";
-import { moverCorreo } from "../../../../lib/emailRead.js";
+import { moveMail } from "../../../../lib/emailSync.js";
 
-// Forzar que esta ruta sea dinámica (no pre-renderizada durante el build)
 export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
@@ -12,19 +11,21 @@ export async function POST(request) {
     const body = await request.json();
     const { uid, carpetaOrigen, carpetaDestino } = body;
 
-    if (!uid || !carpetaOrigen || !carpetaDestino) {
+    console.log(`📥 API /api/email/move - Request recibido: UID=${uid}, Origen=${carpetaOrigen}, Destino=${carpetaDestino}`);
+
+    if (uid === undefined || !carpetaOrigen || !carpetaDestino) {
       return NextResponse.json(
         { success: false, error: "Faltan parámetros: uid, carpetaOrigen y carpetaDestino son obligatorios" },
         { status: 400 }
       );
     }
 
-    await moverCorreo(uid, carpetaOrigen, carpetaDestino);
+    await moveMail(uid, carpetaOrigen, carpetaDestino);
 
     return NextResponse.json(
       {
         success: true,
-        message: "Correo movido exitosamente",
+        message: `Correo movido de ${carpetaOrigen} a ${carpetaDestino}`,
       },
       { status: 200 }
     );
@@ -39,4 +40,3 @@ export async function POST(request) {
     );
   }
 }
-
