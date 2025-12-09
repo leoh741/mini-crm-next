@@ -13,3 +13,69 @@ html, body {
   box-sizing: border-box;
 }
 
+/* Aislar completamente el contenido de correos para que no afecte elementos externos */
+.email-content-isolated {
+  isolation: isolate !important;
+  contain: layout style paint !important;
+  position: relative !important;
+  z-index: 0 !important;
+  transform: translateZ(0) !important;
+  will-change: contents !important;
+}
+
+/* Prevenir que imágenes de correos afecten colores o estilos de elementos externos */
+.email-content-isolated img {
+  max-width: 100% !important;
+  height: auto !important;
+  display: block !important;
+  margin: 0.5rem auto !important;
+  object-fit: contain !important;
+  image-rendering: auto !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+  opacity: 1 !important;
+}
+
+/* Prevenir que cualquier estilo del correo se filtre fuera del contenedor */
+.email-content-isolated * {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  mix-blend-mode: normal !important;
+}
+
+/* Proteger el header principal del CRM de cualquier efecto de imágenes o estilos de correos */
+header.fixed,
+header[class*="fixed"],
+header[style*="fixed"] {
+  isolation: isolate !important;
+  position: fixed !important;
+  z-index: 9999 !important;
+  transform: translateZ(0) !important;
+  will-change: auto !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  mix-blend-mode: normal !important;
+  contain: layout style paint !important;
+}
+
+/* Proteger todos los elementos dentro del header */
+header.fixed *,
+header[class*="fixed"] *,
+header[style*="fixed"] * {
+  filter: none !important;
+  backdrop-filter: none !important;
+  mix-blend-mode: normal !important;
+  isolation: isolate !important;
+  position: relative !important;
+}
+
+/* Asegurar que el header tenga su propio contexto de apilamiento */
+header.fixed,
+header[class*="fixed"],
+header[style*="fixed"] {
+  transform: translateZ(0) !important;
+  will-change: auto !important;
+}
+

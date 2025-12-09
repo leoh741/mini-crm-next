@@ -36,7 +36,22 @@ function Header() {
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 border-b w-full" style={{ maxWidth: '100vw', overflow: 'hidden', backgroundColor: '#142678', borderColor: '#0f1d5a' }}>
+    <header 
+      className="fixed top-0 left-0 right-0 z-50 border-b w-full" 
+      style={{ 
+        maxWidth: '100vw', 
+        overflow: 'hidden', 
+        backgroundColor: '#142678', 
+        borderColor: '#0f1d5a',
+        isolation: 'isolate',
+        position: 'fixed',
+        zIndex: 50,
+        transform: 'translateZ(0)',
+        filter: 'none',
+        mixBlendMode: 'normal',
+        backdropFilter: 'none'
+      }}
+    >
       <div className="flex justify-between items-center gap-2 px-3 py-2.5 md:px-4 md:py-4 min-h-[56px] md:min-h-0 w-full" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
         <div className="flex items-center min-w-0 overflow-hidden flex-1" style={{ minWidth: 0, maxWidth: 'calc(100% - 60px)' }}>
           <Link href="/" onClick={() => setMenuAbierto(false)} className="min-w-0 flex items-center">

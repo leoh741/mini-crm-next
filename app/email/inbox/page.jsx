@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback, Suspense } from "react";
+import { useEffect, useState, useRef, useCallback, Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ProtectedRoute from "../../../components/ProtectedRoute";
 import { Icons } from "../../../components/Icons";
@@ -8,6 +8,152 @@ import Link from "next/link";
 
 // Hacer la página dinámica para evitar pre-renderizado
 export const dynamic = 'force-dynamic';
+
+// Componente para renderizar el contenido del correo en un iframe aislado
+function EmailContentIframe({ html }) {
+  const iframeRef = useRef(null);
+  const [iframeHeight, setIframeHeight] = useState('600px');
+  
+  // Crear un blob URL con el HTML del correo
+  const iframeSrc = useMemo(() => {
+    if (!html) return '';
+    
+    // Sanitizar el HTML: remover estilos inline problemáticos de imágenes
+    const sanitizedHtml = html.replace(
+      /<img([^>]*)>/gi,
+      (match, attrs) => {
+        // Remover estilos inline problemáticos (filter, mix-blend-mode, etc.)
+        const cleanAttrs = attrs
+          .replace(/\s*style\s*=\s*["'][^"']*filter[^"']*["']/gi, '')
+          .replace(/\s*style\s*=\s*["'][^"']*mix-blend-mode[^"']*["']/gi, '')
+          .replace(/\s*style\s*=\s*["'][^"']*backdrop-filter[^"']*["']/gi, '');
+        
+        // Agregar estilos seguros
+        const safeStyle = 'max-width: 100%; height: auto; display: block; margin: 0.5rem auto;';
+        return `<img${cleanAttrs} style="${safeStyle}">`;
+      }
+    );
+    
+    const fullHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            * {
+              box-sizing: border-box;
+              max-width: 100%;
+            }
+            body {
+              margin: 0;
+              padding: 1rem;
+              background: #0f172a;
+              color: #e2e8f0;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            }
+            img {
+              max-width: 100% !important;
+              height: auto !important;
+              display: block !important;
+              margin: 0.5rem auto !important;
+              filter: none !important;
+              mix-blend-mode: normal !important;
+              backdrop-filter: none !important;
+            }
+            table {
+              max-width: 100% !important;
+              table-layout: auto !important;
+              word-wrap: break-word !important;
+            }
+            @media (max-width: 768px) {
+              body {
+                padding: 0.5rem;
+              }
+              img {
+                width: 100% !important;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${sanitizedHtml}
+          <script>
+            // Ajustar altura del iframe al contenido
+            function adjustHeight() {
+              const height = Math.max(
+                document.body.scrollHeight,
+                document.body.offsetHeight,
+                document.documentElement.clientHeight,
+                document.documentElement.scrollHeight,
+                document.documentElement.offsetHeight
+              );
+              window.parent.postMessage({ type: 'email-iframe-height', height: height + 20 }, '*');
+            }
+            
+            // Ajustar altura cuando se cargan las imágenes
+            window.addEventListener('load', adjustHeight);
+            document.addEventListener('DOMContentLoaded', adjustHeight);
+            
+            // Ajustar altura cuando cambia el tamaño
+            window.addEventListener('resize', adjustHeight);
+            
+            // Observar cambios en el DOM
+            const observer = new MutationObserver(adjustHeight);
+            observer.observe(document.body, { childList: true, subtree: true });
+            
+            // Ajustar altura inicial
+            setTimeout(adjustHeight, 100);
+          </script>
+        </body>
+      </html>
+    `;
+    
+    const blob = new Blob([fullHtml], { type: 'text/html' });
+    return URL.createObjectURL(blob);
+  }, [html]);
+  
+  // Escuchar mensajes del iframe para ajustar altura
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.data?.type === 'email-iframe-height') {
+        setIframeHeight(`${event.data.height}px`);
+      }
+    };
+    
+    window.addEventListener('message', handleMessage);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      // Limpiar blob URL
+      if (iframeSrc) {
+        URL.revokeObjectURL(iframeSrc);
+      }
+    };
+  }, [iframeSrc]);
+  
+  if (!html) return null;
+  
+  return (
+    <iframe
+      ref={iframeRef}
+      src={iframeSrc}
+      style={{
+        width: '100%',
+        height: iframeHeight,
+        border: 'none',
+        isolation: 'isolate',
+        contain: 'layout style paint',
+        filter: 'none',
+        mixBlendMode: 'normal',
+        backdropFilter: 'none',
+        overflow: 'hidden',
+      }}
+      sandbox="allow-same-origin"
+      title="Email content"
+      loading="lazy"
+    />
+  );
+}
 
 // Componente interno que usa useSearchParams
 function InboxContent() {
@@ -41,6 +187,69 @@ function InboxContent() {
   const cargaInicialRef = useRef(false);
   const emailCargandoRef = useRef(null); // Para evitar cargar el mismo email múltiples veces
   const updatingImportantUidRef = useRef(null); // Para evitar doble clicks en toggle importante
+  const emailContentRef = useRef(null); // Ref para el contenedor del contenido del correo
+  
+  // Procesar imágenes del correo y envolverlas en contenedores aislados
+  useEffect(() => {
+    if (!emailContentRef.current || !emailSeleccionado?.html) return;
+    
+    const contenedor = emailContentRef.current;
+    const htmlContent = contenedor.querySelector('.email-html-content');
+    if (!htmlContent) return;
+    
+    // Encontrar todas las imágenes que no estén ya en un contenedor
+    const imagenes = htmlContent.querySelectorAll('img:not(.email-image-container img)');
+    
+    imagenes.forEach((img) => {
+      // Si ya está en un contenedor, saltar
+      if (img.closest('.email-image-container')) return;
+      
+      // Crear contenedor aislado para la imagen
+      const contenedorImg = document.createElement('div');
+      contenedorImg.className = 'email-image-container';
+      contenedorImg.style.cssText = `
+        isolation: isolate !important;
+        contain: layout style paint !important;
+        position: relative !important;
+        display: inline-block !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0.5rem 0 !important;
+        padding: 0 !important;
+        filter: none !important;
+        mix-blend-mode: normal !important;
+        backdrop-filter: none !important;
+        transform: translateZ(0) !important;
+        z-index: 0 !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+      `;
+      
+      // Resetear estilos problemáticos de la imagen
+      img.style.cssText = `
+        max-width: 100% !important;
+        width: auto !important;
+        height: auto !important;
+        display: block !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        object-fit: contain !important;
+        image-rendering: auto !important;
+        filter: none !important;
+        mix-blend-mode: normal !important;
+        backdrop-filter: none !important;
+        opacity: 1 !important;
+        isolation: isolate !important;
+        position: relative !important;
+        z-index: 0 !important;
+        box-sizing: border-box !important;
+      `;
+      
+      // Envolver la imagen en el contenedor
+      img.parentNode?.insertBefore(contenedorImg, img);
+      contenedorImg.appendChild(img);
+    });
+  }, [emailSeleccionado?.html, emailSeleccionado?.uid]);
 
   // Cargar carpetas disponibles
   const fetchCarpetas = async () => {
@@ -140,20 +349,17 @@ function InboxContent() {
             if (cacheData.success && carpetaCargandoRef.current === carpeta) {
               setEmails(cacheData.mensajes || []);
               setLoading(false);
+              setSincronizando(false); // ✅ Asegurar que NO muestra "Sincronizando..." si hay caché
               
               if (cacheData.mensajes && cacheData.mensajes.length > 0) {
                 console.log(`✅ Emails cargados desde caché: ${cacheData.mensajes.length} correos`);
+                // Sincronizar en segundo plano para actualizar (sin bloquear, sin mostrar "Sincronizando...")
+                sincronizarEnSegundoPlano(carpeta);
+                return; // ✅ Salir inmediatamente si hay datos en caché
               } else {
-                console.log(`✅ Caché vacío para ${carpeta}, sincronizando...`);
-              }
-              
-              // Sincronizar en segundo plano para actualizar (sin bloquear)
-              sincronizarEnSegundoPlano(carpeta);
-              
-              // Si hay datos en caché, retornar (ya se mostraron)
-              // Si no hay datos, continuar con sincronización inmediata
-              if (cacheData.mensajes && cacheData.mensajes.length > 0) {
-                return;
+                console.log(`⚠️ Caché vacío para ${carpeta}, ejecutando bootstrap (primera vez)`);
+                // Si no hay datos, continuar con sincronización inicial (bootstrap)
+                // setSincronizando(true) se establecerá más abajo
               }
             }
           }
@@ -165,12 +371,19 @@ function InboxContent() {
       }
 
       // Paso 2: Si no hay caché o se fuerza refresh, sincronizar y cargar desde servidor
+      // SOLO mostrar "Sincronizando..." si realmente no hay caché (primera vez)
       if (carpetaCargandoRef.current === carpeta) {
         // Asegurar que siempre hay algo mostrado (incluso si es vacío)
         if (emails.length === 0) {
           setEmails([]);
         }
-        setSincronizando(true);
+        // ✅ Solo mostrar "Sincronizando..." si realmente no hay caché (primera vez)
+        // Si hay caché pero se fuerza refresh, no mostrar "Sincronizando..." (es rápido)
+        if (!forzarRefresh && emails.length === 0) {
+          setSincronizando(true); // Solo primera vez (sin caché)
+        } else if (forzarRefresh) {
+          setSincronizando(false); // Refresh es rápido, no mostrar
+        }
         
         // Limpiar caché si se fuerza refresh
         if (forzarRefresh) {
@@ -1213,6 +1426,75 @@ function InboxContent() {
       }
     };
   }, []);
+  
+  // Procesar imágenes del correo y envolverlas en contenedores aislados
+  useEffect(() => {
+    if (!emailContentRef.current || !emailSeleccionado?.html) return;
+    
+    // Usar setTimeout para asegurar que el DOM esté completamente renderizado
+    const timeoutId = setTimeout(() => {
+      const contenedor = emailContentRef.current;
+      if (!contenedor) return;
+      
+      const htmlContent = contenedor.querySelector('.email-html-content');
+      if (!htmlContent) return;
+      
+      // Encontrar todas las imágenes que no estén ya en un contenedor
+      const imagenes = htmlContent.querySelectorAll('img:not(.email-image-container img)');
+      
+      imagenes.forEach((img) => {
+        // Si ya está en un contenedor, saltar
+        if (img.closest('.email-image-container')) return;
+        
+        // Crear contenedor aislado para la imagen
+        const contenedorImg = document.createElement('div');
+        contenedorImg.className = 'email-image-container';
+        contenedorImg.style.cssText = `
+          isolation: isolate !important;
+          contain: layout style paint !important;
+          position: relative !important;
+          display: inline-block !important;
+          max-width: 100% !important;
+          width: 100% !important;
+          margin: 0.5rem 0 !important;
+          padding: 0 !important;
+          filter: none !important;
+          mix-blend-mode: normal !important;
+          backdrop-filter: none !important;
+          transform: translateZ(0) !important;
+          z-index: 0 !important;
+          overflow: hidden !important;
+          box-sizing: border-box !important;
+        `;
+        
+        // Resetear estilos problemáticos de la imagen
+        img.style.cssText = `
+          max-width: 100% !important;
+          width: auto !important;
+          height: auto !important;
+          display: block !important;
+          margin: 0 auto !important;
+          padding: 0 !important;
+          object-fit: contain !important;
+          image-rendering: auto !important;
+          filter: none !important;
+          mix-blend-mode: normal !important;
+          backdrop-filter: none !important;
+          opacity: 1 !important;
+          isolation: isolate !important;
+          position: relative !important;
+          z-index: 0 !important;
+          box-sizing: border-box !important;
+        `;
+        
+        // Envolver la imagen en el contenedor
+        img.parentNode?.insertBefore(contenedorImg, img);
+        contenedorImg.appendChild(img);
+      });
+    }, 100); // Pequeño delay para asegurar que el DOM esté listo
+    
+    return () => clearTimeout(timeoutId);
+  }, [emailSeleccionado?.html, emailSeleccionado?.uid]);
 
   const formatearFecha = (fecha) => {
     if (!fecha) return "";
@@ -1746,12 +2028,9 @@ function InboxContent() {
                   </div>
                   
                   {/* Contenido del correo */}
-                  <div className="flex-1 overflow-y-auto p-4 md:p-6">
+                  <div className="flex-1 overflow-y-auto p-4 md:p-6" style={{ isolation: 'isolate', zIndex: 1 }}>
                     {emailSeleccionado.html ? (
-                      <div
-                        className="prose prose-invert prose-slate max-w-none"
-                        dangerouslySetInnerHTML={{ __html: emailSeleccionado.html }}
-                      />
+                      <EmailContentIframe html={emailSeleccionado.html} />
                     ) : (
                       <div className="prose prose-invert prose-slate max-w-none">
                         <pre className="whitespace-pre-wrap font-sans text-slate-300">

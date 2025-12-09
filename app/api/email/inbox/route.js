@@ -67,7 +67,7 @@ function deduplicarCorreos(correos) {
 }
 
 // Función para sincronizar carpeta en segundo plano (no bloquea)
-// MEJORADO: Usa syncLockManager para evitar múltiples syncs simultáneas
+// MEJORADO: Usa sync incremental por UID (ultra-rápido)
 async function sincronizarCarpetaEnSegundoPlano(carpeta, limit) {
   try {
     // Verificar si ya hay una sync en curso
@@ -79,14 +79,17 @@ async function sincronizarCarpetaEnSegundoPlano(carpeta, limit) {
       return null;
     }
     
-    console.log(`🔄 Iniciando sincronización en segundo plano para ${carpeta}...`);
+    console.log(`🔄 Iniciando sincronización incremental en segundo plano para ${carpeta}...`);
     
-    // Crear promesa de sync
-    const syncPromise = obtenerUltimosCorreos(carpeta, limit, true)
-      .then(mensajes => {
-        syncLockManager.releaseLock(carpeta, mensajes);
-        console.log(`✅ Sincronización completada para ${carpeta}: ${mensajes.length} correos en DB`);
-        return mensajes;
+    // Importar función de sync incremental
+    const { sincronizarCarpetaIncremental } = await import('../../../../lib/emailSync.js');
+    
+    // Crear promesa de sync incremental
+    const syncPromise = sincronizarCarpetaIncremental(carpeta, limit)
+      .then(resultado => {
+        syncLockManager.releaseLock(carpeta, resultado);
+        console.log(`✅ Sync incremental completada para ${carpeta}: ${resultado.nuevos} nuevos mensajes`);
+        return resultado;
       })
       .catch(err => {
         syncLockManager.releaseLock(carpeta, null);
@@ -97,7 +100,7 @@ async function sincronizarCarpetaEnSegundoPlano(carpeta, limit) {
     
     // Ejecutar en segundo plano (no await)
     syncPromise.catch(err => {
-      console.warn(`⚠️ Error en sincronización en segundo plano: ${err.message}`);
+      console.warn(`⚠️ Error en sincronización incremental en segundo plano: ${err.message}`);
     });
     
     return null; // No retornar nada, se ejecuta en segundo plano
@@ -264,7 +267,7 @@ export async function GET(request) {
       }
     }
     
-    // CRÍTICO: SIEMPRE retornar desde la base de datos (nunca bloquear con IMAP)
+    // CACHE-FIRST TOTAL: Siempre retornar desde cache primero (ultra-rápido)
     // La sincronización se hace en segundo plano automáticamente
     try {
       const mensajesCache = await obtenerListaDelCache(carpeta, limit);
@@ -273,7 +276,7 @@ export async function GET(request) {
         // Deduplicar antes de retornar
         const mensajesDeduplicados = deduplicarCorreos(mensajesCache);
         
-        console.log(`✅ Emails desde DB: ${carpeta} - ${mensajesDeduplicados.length} correos (${mensajesCache.length - mensajesDeduplicados.length} duplicados eliminados)`);
+        console.log(`✅ Emails desde cache: ${carpeta} - ${mensajesDeduplicados.length} correos`);
         
         // Sincronizar en segundo plano para actualizar (no bloquea)
         sincronizarCarpetaEnSegundoPlano(carpeta, limit).catch(err => {
@@ -291,101 +294,45 @@ export async function GET(request) {
           { status: 200 }
         );
       }
+      
+      // Si no hay cache, retornar vacío inmediatamente (nunca bloquear)
+      // La sync se hace en segundo plano
+      console.log(`⚠️ No hay cache para carpeta ${carpeta}, retornando vacío (sync en segundo plano)`);
+      
+      // Sincronizar en segundo plano (no bloquea)
+      sincronizarCarpetaEnSegundoPlano(carpeta, limit).catch(err => {
+        console.warn(`⚠️ Error sincronizando: ${err.message}`);
+      });
+      
+      return NextResponse.json(
+        {
+          success: true,
+          mensajes: [],
+          carpeta,
+          total: 0,
+          fromCache: false,
+          sincronizando: true,
+          mensaje: "Sincronizando correos desde el servidor...",
+        },
+        { status: 200 }
+      );
     } catch (cacheError) {
       console.warn(`⚠️ Error al obtener cache: ${cacheError.message}`);
-    }
-    
-    // Si no hay caché, intentar sincronizar inmediatamente para carpetas importantes (INBOX, Sent, SPAM)
-    // Para otras carpetas, sincronizar en segundo plano
-    const carpetasImportantes = ["INBOX", "Sent", "sent", "SENT", "Enviados", "enviados", "SPAM", "spam", "Spam", "Junk", "JUNK", "junk"];
-    const esCarpetaImportante = carpetasImportantes.includes(carpeta);
-    
-    if (esCarpetaImportante) {
-      console.log(`🔄 No hay cache para carpeta importante ${carpeta}, sincronizando inmediatamente...`);
       
-      // Intentar sincronizar inmediatamente (con timeout para no bloquear demasiado)
-      try {
-        const mensajes = await Promise.race([
-          obtenerUltimosCorreos(carpeta, limit, true), // true = forzar desde servidor
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("Timeout sincronización")), 5000) // Timeout de 5 segundos
-          )
-        ]);
-        
-        if (mensajes && mensajes.length > 0) {
-          // Deduplicar antes de retornar
-          const mensajesDeduplicados = deduplicarCorreos(mensajes);
-          
-          console.log(`✅ Sincronización inmediata completada: ${mensajesDeduplicados.length} correos (${mensajes.length - mensajesDeduplicados.length} duplicados eliminados)`);
-          return NextResponse.json(
-            {
-              success: true,
-              mensajes: mensajesDeduplicados,
-              carpeta,
-              total: mensajesDeduplicados.length,
-              fromCache: false,
-              sincronizado: true,
-            },
-            { status: 200 }
-          );
-        } else {
-          // Si no hay correos, retornar vacío pero sincronizado
-          return NextResponse.json(
-            {
-              success: true,
-              mensajes: [],
-              carpeta,
-              total: 0,
-              fromCache: false,
-              sincronizado: true,
-              mensaje: "No hay correos en esta carpeta",
-            },
-            { status: 200 }
-          );
-        }
-      } catch (syncError) {
-        // Si es error de conexión IMAP, retornar modo offline
-        if (syncError instanceof ConnectionNotAvailableError || syncError.message?.includes("Connection") || syncError.message?.includes("ETIMEDOUT")) {
-          const mensajesCache = await obtenerListaDelCache(carpeta, limit);
-          return NextResponse.json(
-            {
-              success: true,
-              status: 'offline-cache',
-              mensajes: mensajesCache || [],
-              carpeta,
-              total: mensajesCache?.length || 0,
-              fromCache: true,
-              warning: 'No se pudo conectar al servidor IMAP, mostrando datos en modo offline.',
-            },
-            { status: 200 }
-          );
-        }
-        // Si falla la sincronización inmediata, continuar con sincronización en segundo plano
-        console.warn(`⚠️ Error en sincronización inmediata, continuando en segundo plano: ${syncError.message}`);
-      }
+      // Si falla el cache, retornar vacío (nunca bloquear)
+      return NextResponse.json(
+        {
+          success: true,
+          mensajes: [],
+          carpeta,
+          total: 0,
+          fromCache: false,
+          sincronizando: true,
+          mensaje: "Sincronizando correos desde el servidor...",
+        },
+        { status: 200 }
+      );
     }
-    
-    // Para carpetas no importantes o si falló la sincronización inmediata, sincronizar en segundo plano
-    console.log(`⚠️ No hay cache para carpeta ${carpeta}, iniciando sincronización en segundo plano`);
-    
-    // Sincronizar en segundo plano (no bloquea)
-    sincronizarCarpetaEnSegundoPlano(carpeta, limit).catch(err => {
-      console.warn(`⚠️ Error sincronizando: ${err.message}`);
-    });
-    
-    // Retornar vacío inmediatamente (nunca bloquear)
-    return NextResponse.json(
-      {
-        success: true,
-        mensajes: [],
-        carpeta,
-        total: 0,
-        fromCache: false,
-        sincronizando: true,
-        mensaje: "Sincronizando correos desde el servidor...",
-      },
-      { status: 200 }
-    );
   } catch (error) {
     console.error("❌ Error en API /api/email/inbox:", error);
     
