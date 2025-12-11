@@ -13,6 +13,8 @@ import Budget from '../../../../models/Budget';
 import Meeting from '../../../../models/Meeting';
 import Task from '../../../../models/Task';
 import TeamMember from '../../../../models/TeamMember';
+import ActivityList from '../../../../models/ActivityList';
+import Activity from '../../../../models/Activity';
 
 export async function POST(request) {
   // PROTECCIÓN CRÍTICA: Bloquear importaciones desde desarrollo local si se conecta a base remota
@@ -106,7 +108,9 @@ export async function POST(request) {
       Budget,
       Meeting,
       Task,
-      TeamMember
+      TeamMember,
+      ActivityList,
+      Activity
     });
     logDatabaseState('BEFORE_IMPORT', countsBefore);
     logOperation('IMPORT_START', {
@@ -192,6 +196,8 @@ export async function POST(request) {
     let reuniones = [];
     let tareas = [];
     let equipo = []; // Inicializar equipo como array vacío para compatibilidad con backups antiguos
+    let activityLists = []; // Inicializar activityLists como array vacío para compatibilidad con backups antiguos
+    let activities = []; // Inicializar activities como array vacío para compatibilidad con backups antiguos
 
     // Función helper para parsear strings JSON que pueden estar doblemente serializados
     const parseJsonField = (field, fieldName) => {
@@ -222,9 +228,10 @@ export async function POST(request) {
       } catch (parseError) {
         console.error(`[BACKUP IMPORT] [${timestamp}] Error al parsear ${fieldName}:`, parseError.message);
         // Si falla, devolver valor por defecto
-        // Para campos de array (clientes, usuarios, presupuestos, reuniones, tareas, equipo)
+        // Para campos de array (clientes, usuarios, presupuestos, reuniones, tareas, equipo, activityLists, activities)
         if (fieldName.includes('clientes') || fieldName.includes('usuarios') || fieldName.includes('presupuestos') || 
-            fieldName.includes('reuniones') || fieldName.includes('tareas') || fieldName.includes('equipo')) {
+            fieldName.includes('reuniones') || fieldName.includes('tareas') || fieldName.includes('equipo') ||
+            fieldName.includes('activityLists') || fieldName.includes('activities')) {
           return [];
         }
         // Para campos de objeto (pagosMensuales, gastos, ingresos)
@@ -253,6 +260,17 @@ export async function POST(request) {
       } else {
         equipo = []; // Backup antiguo sin equipo
       }
+      // ActivityLists y Activities pueden no existir en backups antiguos (versión < 2.4), usar array vacío por defecto
+      if (body.activityLists !== undefined && body.activityLists !== null) {
+        activityLists = parseJsonField(body.activityLists, 'activityLists');
+      } else {
+        activityLists = []; // Backup antiguo sin activityLists
+      }
+      if (body.activities !== undefined && body.activities !== null) {
+        activities = parseJsonField(body.activities, 'activities');
+      } else {
+        activities = []; // Backup antiguo sin activities
+      }
       
       console.log(`[BACKUP IMPORT] [${timestamp}] Datos parseados:`);
       console.log(`[BACKUP IMPORT] [${timestamp}] - Clientes:`, Array.isArray(clientes) ? `${clientes.length} clientes` : `NO ES ARRAY (tipo: ${typeof clientes})`);
@@ -267,12 +285,20 @@ export async function POST(request) {
       console.log(`[BACKUP IMPORT] [${timestamp}] - Reuniones:`, Array.isArray(reuniones) ? `${reuniones.length} reuniones` : `NO ES ARRAY (tipo: ${typeof reuniones})`);
       console.log(`[BACKUP IMPORT] [${timestamp}] - Tareas:`, Array.isArray(tareas) ? `${tareas.length} tareas` : `NO ES ARRAY (tipo: ${typeof tareas})`);
       console.log(`[BACKUP IMPORT] [${timestamp}] - Equipo:`, Array.isArray(equipo) ? `${equipo.length} miembros` : `NO ES ARRAY (tipo: ${typeof equipo})`);
+      console.log(`[BACKUP IMPORT] [${timestamp}] - ActivityLists:`, Array.isArray(activityLists) ? `${activityLists.length} listas` : `NO ES ARRAY (tipo: ${typeof activityLists})`);
+      console.log(`[BACKUP IMPORT] [${timestamp}] - Activities:`, Array.isArray(activities) ? `${activities.length} actividades` : `NO ES ARRAY (tipo: ${typeof activities})`);
     } catch (parseError) {
       console.error(`[BACKUP IMPORT] [${timestamp}] Error al parsear JSON:`, parseError);
       console.error(`[BACKUP IMPORT] [${timestamp}] Stack:`, parseError.stack);
-      // Asegurar que equipo esté inicializado incluso si hay error
+      // Asegurar que equipo, activityLists y activities estén inicializados incluso si hay error
       if (typeof equipo === 'undefined') {
         equipo = [];
+      }
+      if (typeof activityLists === 'undefined') {
+        activityLists = [];
+      }
+      if (typeof activities === 'undefined') {
+        activities = [];
       }
       return NextResponse.json(
         { success: false, error: 'Error al parsear los datos JSON: ' + parseError.message },
@@ -280,9 +306,15 @@ export async function POST(request) {
       );
     }
 
-    // Asegurar que equipo esté inicializado (por si acaso)
+    // Asegurar que equipo, activityLists y activities estén inicializados (por si acaso)
     if (typeof equipo === 'undefined') {
       equipo = [];
+    }
+    if (typeof activityLists === 'undefined') {
+      activityLists = [];
+    }
+    if (typeof activities === 'undefined') {
+      activities = [];
     }
 
     // VALIDAR que hay datos para importar ANTES de borrar
@@ -294,6 +326,8 @@ export async function POST(request) {
     const tieneReuniones = Array.isArray(reuniones) && reuniones.length > 0;
     const tieneTareas = Array.isArray(tareas) && tareas.length > 0;
     const tieneEquipo = Array.isArray(equipo) && equipo.length > 0;
+    const tieneActivityLists = Array.isArray(activityLists) && activityLists.length > 0;
+    const tieneActivities = Array.isArray(activities) && activities.length > 0;
     
     // Logging detallado para diagnóstico
     console.log(`[BACKUP IMPORT] [${timestamp}] Resumen de datos recibidos:`);
@@ -305,6 +339,8 @@ export async function POST(request) {
     console.log(`[BACKUP IMPORT] [${timestamp}] - tieneReuniones: ${tieneReuniones} (${Array.isArray(reuniones) ? reuniones.length : 'NO ES ARRAY'})`);
     console.log(`[BACKUP IMPORT] [${timestamp}] - tieneTareas: ${tieneTareas} (${Array.isArray(tareas) ? tareas.length : 'NO ES ARRAY'})`);
     console.log(`[BACKUP IMPORT] [${timestamp}] - tieneEquipo: ${tieneEquipo} (${Array.isArray(equipo) ? equipo.length : 'NO ES ARRAY'})`);
+    console.log(`[BACKUP IMPORT] [${timestamp}] - tieneActivityLists: ${tieneActivityLists} (${Array.isArray(activityLists) ? activityLists.length : 'NO ES ARRAY'})`);
+    console.log(`[BACKUP IMPORT] [${timestamp}] - tieneActivities: ${tieneActivities} (${Array.isArray(activities) ? activities.length : 'NO ES ARRAY'})`);
 
     // VALIDACIÓN CRÍTICA: Verificar que los clientes tienen nombre válido ANTES de borrar
     let clientesValidos = [];
@@ -342,7 +378,7 @@ export async function POST(request) {
       console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Validación de clientes: ${clientesValidos.length} válidos de ${clientes.length} totales`);
     }
 
-    if (!tieneClientes && !tienePagos && !tieneGastos && !tieneIngresos && !tienePresupuestos && !tieneReuniones && !tieneTareas && !tieneEquipo) {
+    if (!tieneClientes && !tienePagos && !tieneGastos && !tieneIngresos && !tienePresupuestos && !tieneReuniones && !tieneTareas && !tieneEquipo && !tieneActivityLists && !tieneActivities) {
       console.error(`[BACKUP IMPORT] [${timestamp}] ❌ Error: No hay datos válidos para importar`);
       console.error(`[BACKUP IMPORT] [${timestamp}] User-Agent: ${userAgent}`);
       console.error(`[BACKUP IMPORT] [${timestamp}] Referer: ${referer}`);
@@ -356,7 +392,9 @@ export async function POST(request) {
         presupuestos: typeof body?.presupuestos,
         reuniones: typeof body?.reuniones,
         tareas: typeof body?.tareas,
-        equipo: typeof body?.equipo
+        equipo: typeof body?.equipo,
+        activityLists: typeof body?.activityLists,
+        activities: typeof body?.activities
       });
       return NextResponse.json(
         { 
@@ -371,6 +409,8 @@ export async function POST(request) {
             tieneReuniones,
             tieneTareas,
             tieneEquipo,
+            tieneActivityLists,
+            tieneActivities,
             bodyKeys: Object.keys(body || {})
           }
         },
@@ -387,7 +427,9 @@ export async function POST(request) {
       presupuestos: tienePresupuestos ? await Budget.countDocuments() : 0,
       reuniones: tieneReuniones ? await Meeting.countDocuments() : 0,
       tareas: tieneTareas ? await Task.countDocuments() : 0,
-      equipo: tieneEquipo ? await TeamMember.countDocuments() : 0
+      equipo: tieneEquipo ? await TeamMember.countDocuments() : 0,
+      activityLists: tieneActivityLists ? await ActivityList.countDocuments() : 0,
+      activities: tieneActivities ? await Activity.countDocuments() : 0
     };
     
     console.log(`[BACKUP IMPORT] [${timestamp}] Documentos existentes que se borrarán:`, documentosExistentes);
@@ -402,6 +444,8 @@ export async function POST(request) {
     let reunionesPreparadas = [];
     let tareasPreparadas = [];
     let equipoPreparado = []; // Inicializar como array vacío
+    let activityListsPreparadas = []; // Inicializar como array vacío
+    let activitiesPreparadas = []; // Inicializar como array vacío
     
     // Preparar clientes ANTES de borrar
     if (tieneClientes && clientesValidos.length > 0) {
@@ -639,9 +683,173 @@ export async function POST(request) {
       }).filter(m => m.nombre && m.nombre.trim().length > 0);
       console.log(`[BACKUP IMPORT] [${timestamp}] ✅ ${equipoPreparado.length} miembros del equipo preparados para importar`);
     }
+
+    // Preparar ActivityLists ANTES de borrar
+    if (tieneActivityLists && Array.isArray(activityLists) && activityLists.length > 0) {
+      activityListsPreparadas = activityLists.map(list => {
+        // Buscar el owner por _id, id o crmId
+        let ownerId = null;
+        if (list.owner) {
+          if (typeof list.owner === 'string') {
+            ownerId = list.owner;
+          } else if (list.owner._id) {
+            ownerId = list.owner._id.toString();
+          } else if (list.owner.id) {
+            ownerId = list.owner.id.toString();
+          }
+        }
+        
+        // Preparar members
+        const members = [];
+        if (Array.isArray(list.members)) {
+          for (const member of list.members) {
+            if (typeof member === 'string') {
+              members.push(member);
+            } else if (member?._id) {
+              members.push(member._id.toString());
+            } else if (member?.id) {
+              members.push(member.id.toString());
+            }
+          }
+        }
+
+        return {
+          name: list.name?.trim() || '',
+          description: list.description?.trim() || undefined,
+          color: list.color || '#22c55e',
+          owner: ownerId,
+          members: members,
+          isArchived: list.isArchived !== undefined ? Boolean(list.isArchived) : false
+        };
+      }).filter(l => l.name && l.name.trim().length > 0 && l.owner);
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ ${activityListsPreparadas.length} listas de actividades preparadas para importar`);
+    }
+
+    // Preparar Activities ANTES de borrar (después de preparar ActivityLists)
+    console.log(`[BACKUP IMPORT] [${timestamp}] Preparando actividades: tieneActivities=${tieneActivities}, activities.length=${activities?.length || 0}, esArray=${Array.isArray(activities)}`);
+    
+    if (tieneActivities && Array.isArray(activities) && activities.length > 0) {
+      console.log(`[BACKUP IMPORT] [${timestamp}] Procesando ${activities.length} actividades del backup...`);
+      activitiesPreparadas = activities.map((activity, index) => {
+        // Buscar el list por _id o id - manejar múltiples formatos
+        let listId = null;
+        if (activity.list) {
+          if (typeof activity.list === 'string') {
+            listId = activity.list;
+          } else if (activity.list._id) {
+            listId = activity.list._id.toString();
+          } else if (activity.list.id) {
+            listId = activity.list.id.toString();
+          } else if (activity.list.toString && typeof activity.list.toString === 'function') {
+            // Si es un ObjectId sin poblar
+            try {
+              listId = activity.list.toString();
+            } catch (e) {
+              console.warn(`[BACKUP IMPORT] No se pudo convertir list a string (actividad ${index + 1}):`, e);
+            }
+          }
+        }
+
+        // Buscar el assignee por _id, id o crmId
+        let assigneeId = null;
+        if (activity.assignee) {
+          if (typeof activity.assignee === 'string') {
+            assigneeId = activity.assignee;
+          } else if (activity.assignee._id) {
+            assigneeId = activity.assignee._id.toString();
+          } else if (activity.assignee.id) {
+            assigneeId = activity.assignee.id.toString();
+          } else if (activity.assignee.toString && typeof activity.assignee.toString === 'function') {
+            try {
+              assigneeId = activity.assignee.toString();
+            } catch (e) {
+              // Ignorar error
+            }
+          }
+        }
+
+        // Buscar el createdBy por _id, id o crmId - CRÍTICO: debe existir
+        let createdById = null;
+        if (activity.createdBy) {
+          if (typeof activity.createdBy === 'string') {
+            createdById = activity.createdBy;
+          } else if (activity.createdBy._id) {
+            createdById = activity.createdBy._id.toString();
+          } else if (activity.createdBy.id) {
+            createdById = activity.createdBy.id.toString();
+          } else if (activity.createdBy.toString && typeof activity.createdBy.toString === 'function') {
+            try {
+              createdById = activity.createdBy.toString();
+            } catch (e) {
+              console.warn(`[BACKUP IMPORT] No se pudo convertir createdBy a string (actividad ${index + 1}):`, e);
+            }
+          }
+        }
+
+        // Logging para las primeras 3 actividades
+        if (index < 3) {
+          console.log(`[BACKUP IMPORT] Preparando actividad ${index + 1}/${activities.length}:`, {
+            title: activity.title,
+            listId: listId,
+            createdById: createdById,
+            assigneeId: assigneeId,
+            listOriginal: activity.list,
+            createdByOriginal: activity.createdBy
+          });
+        }
+
+        return {
+          list: listId,
+          title: activity.title?.trim() || '',
+          description: activity.description?.trim() || undefined,
+          status: activity.status || 'pendiente',
+          priority: activity.priority || 'media',
+          assignee: assigneeId || undefined,
+          labels: Array.isArray(activity.labels) ? activity.labels.map(l => String(l).trim()).filter(l => l) : [],
+          dueDate: activity.dueDate ? new Date(activity.dueDate) : null,
+          order: activity.order !== undefined ? Number(activity.order) : 0,
+          createdBy: createdById
+        };
+      }).filter(a => {
+        // Filtrar solo actividades con título válido
+        const tieneTitulo = a.title && a.title.trim().length > 0;
+        if (!tieneTitulo) {
+          console.warn(`[BACKUP IMPORT] Actividad omitida: sin título válido`);
+          return false;
+        }
+        // Advertir si falta list o createdBy, pero no filtrar todavía (se manejará en la importación)
+        if (!a.list) {
+          console.warn(`[BACKUP IMPORT] ⚠️ Actividad "${a.title}" sin lista - se intentará importar usando lista por defecto`);
+        }
+        if (!a.createdBy) {
+          console.warn(`[BACKUP IMPORT] ⚠️ Actividad "${a.title}" sin createdBy - se omitirá (requerido)`);
+          return false;
+        }
+        return true;
+      });
+      
+      const actividadesFiltradas = activities.length - activitiesPreparadas.length;
+      if (actividadesFiltradas > 0) {
+        console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ ${actividadesFiltradas} actividades fueron filtradas (sin título o sin createdBy)`);
+      }
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ ${activitiesPreparadas.length} actividades preparadas para importar (de ${activities.length} en el backup)`);
+      
+      // Logging detallado de las primeras 3 actividades preparadas
+      if (activitiesPreparadas.length > 0) {
+        console.log(`[BACKUP IMPORT] [${timestamp}] Primeras 3 actividades preparadas:`, activitiesPreparadas.slice(0, 3).map((a, i) => ({
+          index: i + 1,
+          title: a.title,
+          list: a.list,
+          createdBy: a.createdBy,
+          status: a.status
+        })));
+      }
+    } else {
+      console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ No se prepararon actividades: tieneActivities=${tieneActivities}, activities.length=${activities?.length || 0}, esArray=${Array.isArray(activities)}`);
+    }
     
     // VALIDACIÓN FINAL ANTES DE BORRAR: Verificar que tenemos al menos algunos datos válidos
-    const totalDatosPreparados = clientesPreparados.length + pagosPreparados.length + gastosPreparados.length + ingresosPreparados.length + presupuestosPreparados.length + reunionesPreparadas.length + tareasPreparadas.length + equipoPreparado.length;
+    const totalDatosPreparados = clientesPreparados.length + pagosPreparados.length + gastosPreparados.length + ingresosPreparados.length + presupuestosPreparados.length + reunionesPreparadas.length + tareasPreparadas.length + equipoPreparado.length + activityListsPreparadas.length + activitiesPreparadas.length;
     if (totalDatosPreparados === 0) {
       console.error(`[BACKUP IMPORT] [${timestamp}] ERROR CRÍTICO: No hay datos válidos preparados. NO se borrará nada.`);
       return NextResponse.json(
@@ -654,7 +862,8 @@ export async function POST(request) {
     const totalDatosExistentes = documentosExistentes.clientes + documentosExistentes.pagos + 
                                  documentosExistentes.gastos + documentosExistentes.ingresos +
                                  documentosExistentes.presupuestos + documentosExistentes.reuniones +
-                                 documentosExistentes.tareas + documentosExistentes.equipo;
+                                 documentosExistentes.tareas + documentosExistentes.equipo +
+                                 documentosExistentes.activityLists + documentosExistentes.activities;
     
     if (totalDatosExistentes > 0 && totalDatosPreparados < totalDatosExistentes) {
       console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ ADVERTENCIA: El backup tiene MENOS datos (${totalDatosPreparados}) que los existentes (${totalDatosExistentes})`);
@@ -676,7 +885,10 @@ export async function POST(request) {
               ingresos: ingresosPreparados.length,
               presupuestos: presupuestosPreparados.length,
               reuniones: reunionesPreparadas.length,
-              tareas: tareasPreparadas.length
+              tareas: tareasPreparadas.length,
+              equipo: equipoPreparado.length,
+              activityLists: activityListsPreparadas.length,
+              activities: activitiesPreparadas.length
             }
           },
           { status: 400 }
@@ -688,7 +900,8 @@ export async function POST(request) {
     const hayDatosExistentes = documentosExistentes.clientes > 0 || documentosExistentes.pagos > 0 || 
                                documentosExistentes.gastos > 0 || documentosExistentes.ingresos > 0 ||
                                documentosExistentes.presupuestos > 0 || documentosExistentes.reuniones > 0 ||
-                               documentosExistentes.tareas > 0;
+                               documentosExistentes.tareas > 0 || documentosExistentes.equipo > 0 ||
+                               documentosExistentes.activityLists > 0 || documentosExistentes.activities > 0;
     
     if (hayDatosExistentes) {
       // Requerir confirmación doble si hay datos existentes
@@ -716,7 +929,10 @@ export async function POST(request) {
       ingresos: ingresosPreparados.length,
       presupuestos: presupuestosPreparados.length,
       reuniones: reunionesPreparadas.length,
-      tareas: tareasPreparadas.length
+      tareas: tareasPreparadas.length,
+      equipo: equipoPreparado.length,
+      activityLists: activityListsPreparadas.length,
+      activities: activitiesPreparadas.length
     };
     
     console.log(`[BACKUP IMPORT] [${timestamp}] Documentos que se importarán:`, documentosAImportar);
@@ -755,6 +971,16 @@ export async function POST(request) {
       advertenciasPerdida.push(`Equipo: Tienes ${documentosExistentes.equipo} pero el backup solo tiene ${documentosAImportar.equipo} (pérdida de ${documentosExistentes.equipo - documentosAImportar.equipo} miembros)`);
     }
     
+    if (documentosExistentes.activityLists > 0 && documentosAImportar.activityLists < documentosExistentes.activityLists) {
+      hayPerdidaPotencial = true;
+      advertenciasPerdida.push(`Listas de Actividades: Tienes ${documentosExistentes.activityLists} pero el backup solo tiene ${documentosAImportar.activityLists} (pérdida de ${documentosExistentes.activityLists - documentosAImportar.activityLists} listas)`);
+    }
+    
+    if (documentosExistentes.activities > 0 && documentosAImportar.activities < documentosExistentes.activities) {
+      hayPerdidaPotencial = true;
+      advertenciasPerdida.push(`Actividades: Tienes ${documentosExistentes.activities} pero el backup solo tiene ${documentosAImportar.activities} (pérdida de ${documentosExistentes.activities - documentosAImportar.activities} actividades)`);
+    }
+    
     // Si hay pérdida potencial significativa, requerir confirmación adicional
     if (hayPerdidaPotencial) {
       console.error(`[BACKUP IMPORT] [${timestamp}] ⚠️ ADVERTENCIA CRÍTICA: El backup tiene MENOS datos que los existentes!`);
@@ -781,7 +1007,7 @@ export async function POST(request) {
     // PROTECCIÓN CRÍTICA: Crear backup automático ANTES de borrar cualquier cosa
     console.log(`[BACKUP IMPORT] [${timestamp}] 🔒 Creando backup automático de seguridad antes de importar...`);
     try {
-      const [clientesExistentes, pagosExistentes, gastosExistentes, ingresosExistentes, presupuestosExistentes, reunionesExistentes, tareasExistentes, equipoExistentes] = await Promise.all([
+      const [clientesExistentes, pagosExistentes, gastosExistentes, ingresosExistentes, presupuestosExistentes, reunionesExistentes, tareasExistentes, equipoExistentes, activityListsExistentes, activitiesExistentes] = await Promise.all([
         Client.find({}).lean(),
         MonthlyPayment.find({}).lean(),
         Expense.find({}).lean(),
@@ -789,7 +1015,9 @@ export async function POST(request) {
         Budget.find({}).lean(),
         Meeting.find({}).lean(),
         Task.find({}).lean(),
-        TeamMember.find({}).lean()
+        TeamMember.find({}).lean(),
+        ActivityList.find({}).lean(),
+        Activity.find({}).populate('assignee', 'nombre email crmId').populate('createdBy', 'nombre email crmId').populate('list', 'name color').lean()
       ]);
       
       // Formatear para backup (igual que en export)
@@ -924,6 +1152,48 @@ export async function POST(request) {
         updatedAt: m.updatedAt || null
       }));
       
+      // Formatear ActivityLists
+      const activityListsBackup = activityListsExistentes.map(list => ({
+        id: list._id.toString(),
+        name: list.name,
+        description: list.description || undefined,
+        color: list.color || '#22c55e',
+        owner: list.owner?.toString() || list.owner,
+        members: (list.members || []).map(m => m?.toString() || m),
+        isArchived: list.isArchived || false,
+        createdAt: list.createdAt || null,
+        updatedAt: list.updatedAt || null
+      }));
+      
+      // Formatear Activities
+      const activitiesBackup = activitiesExistentes.map(activity => ({
+        id: activity._id.toString(),
+        list: activity.list?._id?.toString() || activity.list?.toString() || activity.list,
+        title: activity.title,
+        description: activity.description || undefined,
+        status: activity.status || 'pendiente',
+        priority: activity.priority || 'media',
+        assignee: activity.assignee ? {
+          _id: activity.assignee._id?.toString() || activity.assignee.id?.toString(),
+          id: activity.assignee._id?.toString() || activity.assignee.id?.toString(),
+          crmId: activity.assignee.crmId,
+          nombre: activity.assignee.nombre,
+          email: activity.assignee.email
+        } : undefined,
+        labels: activity.labels || [],
+        dueDate: activity.dueDate || null,
+        order: activity.order || 0,
+        createdBy: activity.createdBy ? {
+          _id: activity.createdBy._id?.toString() || activity.createdBy.id?.toString(),
+          id: activity.createdBy._id?.toString() || activity.createdBy.id?.toString(),
+          crmId: activity.createdBy.crmId,
+          nombre: activity.createdBy.nombre,
+          email: activity.createdBy.email
+        } : activity.createdBy?.toString() || activity.createdBy,
+        createdAt: activity.createdAt || null,
+        updatedAt: activity.updatedAt || null
+      }));
+      
       backupAutomatico = {
         clientes: JSON.stringify(clientesBackup),
         pagosMensuales: JSON.stringify(pagosMensualesBackup),
@@ -933,14 +1203,17 @@ export async function POST(request) {
         reuniones: JSON.stringify(reunionesBackup),
         tareas: JSON.stringify(tareasBackup),
         equipo: JSON.stringify(equipoBackup),
+        activityLists: JSON.stringify(activityListsBackup),
+        activities: JSON.stringify(activitiesBackup),
         fechaExportacion: new Date().toISOString(),
-        version: '2.3',
+        version: '2.4',
         tipo: 'backup_automatico_pre_importacion'
       };
       
       const totalItems = clientesBackup.length + Object.keys(pagosMensualesBackup).length + 
                          Object.keys(gastosBackup).length + Object.keys(ingresosBackup).length + 
-                         presupuestosBackup.length + reunionesBackup.length + tareasBackup.length + equipoBackup.length;
+                         presupuestosBackup.length + reunionesBackup.length + tareasBackup.length + equipoBackup.length +
+                         activityListsBackup.length + activitiesBackup.length;
       
       console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Backup automático creado:`);
       console.log(`[BACKUP IMPORT] [${timestamp}]   - ${clientesBackup.length} clientes`);
@@ -950,6 +1223,9 @@ export async function POST(request) {
       console.log(`[BACKUP IMPORT] [${timestamp}]   - ${presupuestosBackup.length} presupuestos`);
       console.log(`[BACKUP IMPORT] [${timestamp}]   - ${reunionesBackup.length} reuniones`);
       console.log(`[BACKUP IMPORT] [${timestamp}]   - ${tareasBackup.length} tareas`);
+      console.log(`[BACKUP IMPORT] [${timestamp}]   - ${equipoBackup.length} miembros del equipo`);
+      console.log(`[BACKUP IMPORT] [${timestamp}]   - ${activityListsBackup.length} listas de actividades`);
+      console.log(`[BACKUP IMPORT] [${timestamp}]   - ${activitiesBackup.length} actividades`);
       console.log(`[BACKUP IMPORT] [${timestamp}]   Total: ${totalItems} items guardados`);
     } catch (backupError) {
       console.error(`[BACKUP IMPORT] [${timestamp}] ❌ ERROR CRÍTICO: No se pudo crear backup automático:`, backupError);
@@ -1078,6 +1354,24 @@ export async function POST(request) {
       await TeamMember.deleteMany({});
       console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Equipo eliminado: ${countAntes} (se importarán ${equipoPreparado.length})`);
     }
+    if (tieneActivityLists && activityListsPreparadas.length > 0) {
+      const countAntes = documentosExistentes.activityLists;
+      logDeleteOperation('ActivityList', countAntes, 'Importación de backup', {
+        activityListsPreparadas: activityListsPreparadas.length,
+        timestamp
+      });
+      await ActivityList.deleteMany({});
+      console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Listas de actividades eliminadas: ${countAntes} (se importarán ${activityListsPreparadas.length})`);
+    }
+    if (tieneActivities && activitiesPreparadas.length > 0) {
+      const countAntes = documentosExistentes.activities;
+      logDeleteOperation('Activity', countAntes, 'Importación de backup', {
+        activitiesPreparadas: activitiesPreparadas.length,
+        timestamp
+      });
+      await Activity.deleteMany({});
+      console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Actividades eliminadas: ${countAntes} (se importarán ${activitiesPreparadas.length})`);
+    }
     // NO eliminamos usuarios - se mantienen y se hace merge
 
     const resultados = {
@@ -1090,7 +1384,9 @@ export async function POST(request) {
       presupuestos: 0,
       reuniones: 0,
       tareas: 0,
-      equipo: 0
+      equipo: 0,
+      activityLists: 0,
+      activities: 0
     };
 
     // Importar clientes (usar los ya preparados y validados)
@@ -1651,6 +1947,284 @@ export async function POST(request) {
       }
     }
 
+    // Importar ActivityLists (usar las ya preparadas)
+    // IMPORTANTE: Importar ActivityLists ANTES de Activities porque Activities tienen referencia a ActivityLists
+    if (activityListsPreparadas.length > 0) {
+      console.log(`[BACKUP IMPORT] [${timestamp}] Insertando ${activityListsPreparadas.length} listas de actividades usando upsert...`);
+      let insertadas = 0;
+      let actualizadas = 0;
+      let errores = 0;
+      
+      // Crear un mapa de IDs antiguos a nuevos para actualizar referencias en Activities
+      const activityListIdMap = new Map();
+      
+      for (let i = 0; i < activityListsPreparadas.length; i++) {
+        const list = activityListsPreparadas[i];
+        try {
+          // Validar que tenga los campos requeridos
+          if (!list.name || !list.owner) {
+            console.warn(`[BACKUP IMPORT] Lista ${i + 1} omitida: faltan campos requeridos`, list);
+            errores++;
+            continue;
+          }
+          
+          // Convertir owner a ObjectId si es necesario
+          let ownerObjectId;
+          if (mongoose.Types.ObjectId.isValid(list.owner)) {
+            ownerObjectId = new mongoose.Types.ObjectId(list.owner);
+          } else {
+            // Buscar por crmId
+            const ownerUser = await User.findOne({ crmId: list.owner }).select('_id').lean();
+            if (ownerUser) {
+              ownerObjectId = ownerUser._id;
+            } else {
+              console.warn(`[BACKUP IMPORT] Lista ${i + 1} omitida: owner no encontrado`, list.owner);
+              errores++;
+              continue;
+            }
+          }
+          
+          // Convertir members a ObjectIds
+          const membersObjectIds = [];
+          for (const memberId of (list.members || [])) {
+            if (mongoose.Types.ObjectId.isValid(memberId)) {
+              membersObjectIds.push(new mongoose.Types.ObjectId(memberId));
+            } else {
+              const memberUser = await User.findOne({ crmId: memberId }).select('_id').lean();
+              if (memberUser) {
+                membersObjectIds.push(memberUser._id);
+              }
+            }
+          }
+          
+          // Buscar lista existente por nombre y owner (o crear nueva)
+          const listData = {
+            name: list.name,
+            description: list.description,
+            color: list.color,
+            owner: ownerObjectId,
+            members: membersObjectIds,
+            isArchived: list.isArchived
+          };
+          
+          // Buscar si existe una lista con el mismo nombre y owner
+          const listaExistente = await ActivityList.findOne({ 
+            name: list.name,
+            owner: ownerObjectId
+          }).select('_id').lean();
+          
+          let resultado;
+          if (listaExistente) {
+            // Actualizar lista existente
+            resultado = await ActivityList.findByIdAndUpdate(
+              listaExistente._id,
+              { $set: listData },
+              { new: true, runValidators: true }
+            );
+            activityListIdMap.set(i, resultado._id.toString());
+            actualizadas++;
+          } else {
+            // Crear nueva lista
+            resultado = await ActivityList.create(listData);
+            activityListIdMap.set(i, resultado._id.toString());
+            insertadas++;
+          }
+          
+          if ((insertadas + actualizadas) % 50 === 0) {
+            console.log(`[BACKUP IMPORT] [${timestamp}] Procesadas ${insertadas + actualizadas}/${activityListsPreparadas.length} listas...`);
+          }
+        } catch (e) {
+          errores++;
+          if (errores <= 5) {
+            console.error(`[BACKUP IMPORT] Error al insertar lista [${i + 1}]:`, e.message);
+          }
+        }
+      }
+      
+      resultados.activityLists = insertadas + actualizadas;
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ ActivityLists importadas: ${insertadas} insertadas, ${actualizadas} actualizadas, ${errores} errores`);
+      
+      if (errores > 0) {
+        console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ Hubo ${errores} errores al importar listas de actividades`);
+      }
+    }
+
+    // Importar Activities (independientemente de si hay ActivityLists o no)
+    // IMPORTANTE: Las actividades pueden tener referencias a listas que ya existen en la BD
+    console.log(`[BACKUP IMPORT] [${timestamp}] 🔍 Verificando actividades para importar: activitiesPreparadas.length=${activitiesPreparadas.length}, tieneActivities=${tieneActivities}`);
+    
+    if (activitiesPreparadas && activitiesPreparadas.length > 0) {
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Insertando ${activitiesPreparadas.length} actividades usando upsert...`);
+      let insertadas = 0;
+      let actualizadas = 0;
+      let errores = 0;
+      
+      for (let i = 0; i < activitiesPreparadas.length; i++) {
+        const activity = activitiesPreparadas[i];
+        try {
+          // Validar que tenga los campos requeridos
+          if (!activity.title) {
+            console.warn(`[BACKUP IMPORT] Actividad ${i + 1} omitida: falta título`, activity);
+            errores++;
+            continue;
+          }
+          
+          if (!activity.createdBy) {
+            console.warn(`[BACKUP IMPORT] Actividad ${i + 1} (${activity.title}) omitida: falta createdBy`, activity);
+            errores++;
+            continue;
+          }
+          
+          // La lista puede no estar especificada, intentaremos encontrarla o usar una por defecto
+          // Convertir list a ObjectId
+          let listObjectId = null;
+          
+          if (activity.list) {
+            // Intentar convertir directamente si es un ObjectId válido
+            if (mongoose.Types.ObjectId.isValid(activity.list)) {
+              // Verificar que la lista existe
+              const listExists = await ActivityList.findById(activity.list).select('_id name').lean();
+              if (listExists) {
+                listObjectId = new mongoose.Types.ObjectId(activity.list);
+                console.log(`[BACKUP IMPORT] Actividad ${i + 1} (${activity.title}): Lista encontrada "${listExists.name}" (${listObjectId})`);
+              } else {
+                console.warn(`[BACKUP IMPORT] Actividad ${i + 1} (${activity.title}): Lista con ID ${activity.list} no encontrada, buscando alternativa...`);
+              }
+            } else {
+              // Buscar lista - puede ser un string que necesita ser convertido
+              const list = await ActivityList.findById(activity.list).select('_id name').lean();
+              if (list) {
+                listObjectId = list._id;
+                console.log(`[BACKUP IMPORT] Actividad ${i + 1} (${activity.title}): Lista encontrada "${list.name}" (${listObjectId})`);
+              }
+            }
+          }
+          
+          // Si no se encontró la lista, usar la primera lista disponible como fallback
+          if (!listObjectId) {
+            const allLists = await ActivityList.find({}).select('_id name').limit(1).lean();
+            if (allLists.length > 0) {
+              listObjectId = allLists[0]._id;
+              console.warn(`[BACKUP IMPORT] Actividad ${i + 1} (${activity.title}): Lista original no encontrada, usando "${allLists[0].name}" (${listObjectId}) como fallback`);
+            } else {
+              // Si no hay listas, crear una lista por defecto para las actividades
+              console.warn(`[BACKUP IMPORT] Actividad ${i + 1} (${activity.title}): No hay listas disponibles, creando lista por defecto...`);
+              try {
+                // Buscar el usuario actual para crear la lista
+                const firstUser = await User.findOne({}).select('_id').lean();
+                if (firstUser) {
+                  const defaultList = await ActivityList.create({
+                    name: 'Lista Importada',
+                    description: 'Lista creada automáticamente durante la importación',
+                    color: '#22c55e',
+                    owner: firstUser._id,
+                    members: [],
+                    isArchived: false
+                  });
+                  listObjectId = defaultList._id;
+                  console.log(`[BACKUP IMPORT] Lista por defecto creada: ${listObjectId}`);
+                } else {
+                  console.error(`[BACKUP IMPORT] No se puede crear lista por defecto: no hay usuarios en la BD`);
+                  errores++;
+                  continue;
+                }
+              } catch (createError) {
+                console.error(`[BACKUP IMPORT] Error al crear lista por defecto:`, createError);
+                errores++;
+                continue;
+              }
+            }
+          }
+          
+          // Convertir assignee a ObjectId si existe
+          let assigneeObjectId = null;
+          if (activity.assignee) {
+            if (mongoose.Types.ObjectId.isValid(activity.assignee)) {
+              assigneeObjectId = new mongoose.Types.ObjectId(activity.assignee);
+            } else {
+              const assigneeUser = await User.findOne({ crmId: activity.assignee }).select('_id').lean();
+              if (assigneeUser) {
+                assigneeObjectId = assigneeUser._id;
+              }
+            }
+          }
+          
+          // Convertir createdBy a ObjectId
+          let createdByObjectId;
+          if (mongoose.Types.ObjectId.isValid(activity.createdBy)) {
+            createdByObjectId = new mongoose.Types.ObjectId(activity.createdBy);
+          } else {
+            const createdByUser = await User.findOne({ crmId: activity.createdBy }).select('_id').lean();
+            if (createdByUser) {
+              createdByObjectId = createdByUser._id;
+            } else {
+              console.warn(`[BACKUP IMPORT] Actividad ${i + 1} omitida: createdBy no encontrado`, activity.createdBy);
+              errores++;
+              continue;
+            }
+          }
+          
+          const activityData = {
+            list: listObjectId,
+            title: activity.title,
+            description: activity.description,
+            status: activity.status,
+            priority: activity.priority,
+            assignee: assigneeObjectId || undefined,
+            labels: activity.labels,
+            dueDate: activity.dueDate,
+            order: activity.order,
+            createdBy: createdByObjectId
+          };
+          
+          // Usar upsert basado en una combinación única de título, lista y createdBy
+          // Esto evita duplicados pero permite múltiples actividades con el mismo título en la misma lista
+          // si fueron creadas por diferentes usuarios
+          const actividadExistente = await Activity.findOne({
+            title: activity.title,
+            list: listObjectId,
+            createdBy: createdByObjectId
+          }).select('_id').lean();
+          
+          if (actividadExistente) {
+            // Actualizar actividad existente
+            await Activity.findByIdAndUpdate(
+              actividadExistente._id,
+              { $set: activityData },
+              { new: true, runValidators: true }
+            );
+            actualizadas++;
+          } else {
+            // Crear nueva actividad (siempre crear nueva para preservar todas las actividades del backup)
+            await Activity.create(activityData);
+            insertadas++;
+          }
+          
+          if ((insertadas + actualizadas) % 50 === 0) {
+            console.log(`[BACKUP IMPORT] [${timestamp}] Procesadas ${insertadas + actualizadas}/${activitiesPreparadas.length} actividades...`);
+          }
+        } catch (e) {
+          errores++;
+          if (errores <= 5) {
+            console.error(`[BACKUP IMPORT] Error al insertar actividad [${i + 1}]:`, e.message);
+          }
+        }
+      }
+      
+      resultados.activities = insertadas + actualizadas;
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Activities importadas: ${insertadas} insertadas, ${actualizadas} actualizadas, ${errores} errores`);
+      
+      if (errores > 0) {
+        console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ Hubo ${errores} errores al importar actividades`);
+      }
+      
+      if (insertadas === 0 && actualizadas === 0 && errores === 0) {
+        console.error(`[BACKUP IMPORT] [${timestamp}] ❌ ERROR CRÍTICO: No se importó ninguna actividad aunque había ${activitiesPreparadas.length} preparadas`);
+      }
+    } else {
+      console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ No se importaron actividades: activitiesPreparadas.length=${activitiesPreparadas?.length || 0}, tieneActivities=${tieneActivities}`);
+    }
+
     // PROTECCIÓN CRÍTICA: Esperar un momento para que MongoDB persista todos los cambios
     await new Promise(resolve => setTimeout(resolve, 500));
     
@@ -1710,7 +2284,10 @@ export async function POST(request) {
       User,
       Budget,
       Meeting,
-      Task
+      Task,
+      TeamMember,
+      ActivityList,
+      Activity
     });
     logDatabaseState('AFTER_IMPORT', countsAfter);
     
@@ -1768,7 +2345,10 @@ export async function POST(request) {
       User,
       Budget,
       Meeting,
-      Task
+      Task,
+      TeamMember,
+      ActivityList,
+      Activity
     });
     
     // Comparar con countsAfter

@@ -205,6 +205,7 @@ function UsuariosAdminContent() {
                 className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="usuario">Usuario</option>
+                <option value="coordinador">Coordinador</option>
                 <option value="admin">Administrador</option>
               </select>
             </div>
@@ -249,9 +250,11 @@ function UsuariosAdminContent() {
                   <span className={`px-2 py-1 rounded text-xs font-medium ${
                     usuario.rol === 'admin' 
                       ? 'bg-purple-900/50 text-purple-200' 
+                      : usuario.rol === 'coordinador'
+                      ? 'bg-blue-900/50 text-blue-200'
                       : 'bg-slate-700 text-slate-300'
                   }`}>
-                    {usuario.rol === 'admin' ? 'Administrador' : 'Usuario'}
+                    {usuario.rol === 'admin' ? 'Administrador' : usuario.rol === 'coordinador' ? 'Coordinador' : 'Usuario'}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-sm text-slate-400">
@@ -305,9 +308,11 @@ function UsuariosAdminContent() {
                 <span className={`px-3 py-1.5 rounded text-sm font-medium whitespace-nowrap ${
                   usuario.rol === 'admin' 
                     ? 'bg-purple-900/50 text-purple-200' 
+                    : usuario.rol === 'coordinador'
+                    ? 'bg-blue-900/50 text-blue-200'
                     : 'bg-slate-700 text-slate-300'
                 }`}>
-                  {usuario.rol === 'admin' ? 'Administrador' : 'Usuario'}
+                  {usuario.rol === 'admin' ? 'Administrador' : usuario.rol === 'coordinador' ? 'Coordinador' : 'Usuario'}
                 </span>
               </div>
               

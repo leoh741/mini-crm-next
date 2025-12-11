@@ -24,7 +24,46 @@ function Header() {
     setMenuAbierto(false);
   }, [pathname]);
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
+    // Marcar usuario como offline antes de cerrar sesión
+    const currentUser = getUsuarioActual();
+    if (currentUser && currentUser.usuarioId) {
+      try {
+        // Usar sendBeacon o fetch con keepalive para asegurar que se envíe incluso si la página se cierra
+        if (navigator.sendBeacon) {
+          const data = JSON.stringify({});
+          const blob = new Blob([data], { type: 'application/json' });
+          // sendBeacon no soporta headers personalizados, así que usamos fetch con keepalive
+          fetch('/api/users/offline', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-User-Id': String(currentUser.usuarioId)
+            },
+            body: JSON.stringify({}),
+            keepalive: true
+          }).catch(err => {
+            console.debug('[Header] Error al marcar como offline (ignorado):', err);
+          });
+        } else {
+          // Fallback para navegadores que no soportan sendBeacon
+          await fetch('/api/users/offline', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-User-Id': String(currentUser.usuarioId)
+            },
+            body: JSON.stringify({}),
+            keepalive: true
+          }).catch(err => {
+            console.debug('[Header] Error al marcar como offline (ignorado):', err);
+          });
+        }
+      } catch (error) {
+        console.debug('[Header] Error al marcar como offline (ignorado):', error);
+      }
+    }
+    
     logout();
     router.push("/login");
     router.refresh();
@@ -71,37 +110,48 @@ function Header() {
         
         {/* Menú desktop */}
         <nav className="hidden md:flex gap-4 text-sm items-center flex-shrink-0">
-          <Link href="/" prefetch={true} className={pathname === "/" ? "text-blue-300" : "text-slate-300 hover:text-white"}>
-            Inicio
-          </Link>
-          <Link href="/clientes" prefetch={true} className={pathname?.startsWith("/clientes") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
-            Clientes
-          </Link>
-          <Link href="/pagos" prefetch={true} className={pathname === "/pagos" ? "text-blue-300" : "text-slate-300 hover:text-white"}>
-            Pagos
-          </Link>
-          <Link href="/balance" prefetch={true} className={pathname === "/balance" ? "text-blue-300" : "text-slate-300 hover:text-white"}>
-            Balance
-          </Link>
-          <Link href="/presupuestos" prefetch={true} className={pathname?.startsWith("/presupuestos") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
-            Presupuestos
-          </Link>
-          <Link href="/reuniones" prefetch={true} className={pathname?.startsWith("/reuniones") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
-            Reuniones
-          </Link>
-          <Link href="/tareas" prefetch={true} className={pathname?.startsWith("/tareas") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
-            Tareas
-          </Link>
-          <Link href="/equipo" prefetch={true} className={pathname?.startsWith("/equipo") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
-            Equipo
-          </Link>
-          <Link href="/email/inbox" prefetch={true} className={pathname?.startsWith("/email") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
-            Correo
+          {/* Solo mostrar enlaces de admin para administradores */}
+          {esAdminUser && (
+            <>
+              <Link href="/" prefetch={true} className={pathname === "/" ? "text-blue-300" : "text-slate-300 hover:text-white"}>
+                Inicio
+              </Link>
+            </>
+          )}
+          {/* Actividades visible para todos los usuarios autenticados */}
+          <Link href="/activities" prefetch={true} className={pathname?.startsWith("/activities") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
+            Actividades
           </Link>
           {esAdminUser && (
-            <Link href="/admin/usuarios" prefetch={true} className={pathname?.startsWith("/admin") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
-              Usuarios
-            </Link>
+            <>
+              <Link href="/clientes" prefetch={true} className={pathname?.startsWith("/clientes") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
+                Clientes
+              </Link>
+              <Link href="/pagos" prefetch={true} className={pathname === "/pagos" ? "text-blue-300" : "text-slate-300 hover:text-white"}>
+                Pagos
+              </Link>
+              <Link href="/balance" prefetch={true} className={pathname === "/balance" ? "text-blue-300" : "text-slate-300 hover:text-white"}>
+                Balance
+              </Link>
+              <Link href="/presupuestos" prefetch={true} className={pathname?.startsWith("/presupuestos") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
+                Presupuestos
+              </Link>
+              <Link href="/reuniones" prefetch={true} className={pathname?.startsWith("/reuniones") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
+                Reuniones
+              </Link>
+              <Link href="/tareas" prefetch={true} className={pathname?.startsWith("/tareas") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
+                Tareas
+              </Link>
+              <Link href="/equipo" prefetch={true} className={pathname?.startsWith("/equipo") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
+                Equipo
+              </Link>
+              <Link href="/email/inbox" prefetch={true} className={pathname?.startsWith("/email") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
+                Correo
+              </Link>
+              <Link href="/admin/usuarios" prefetch={true} className={pathname?.startsWith("/admin") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
+                Usuarios
+              </Link>
+            </>
           )}
           {usuario && (
             <div className="flex items-center gap-3 ml-4 pl-4 border-l border-blue-800">
@@ -144,78 +194,93 @@ function Header() {
       {menuAbierto && (
         <nav className="md:hidden border-t" style={{ borderColor: '#0f1d5a', backgroundColor: '#142678' }}>
           <div className="flex flex-col">
+            {/* Solo mostrar enlaces de admin para administradores */}
+            {esAdminUser && (
+              <>
+                <Link 
+                  href="/" 
+                  className={`px-4 py-3 ${pathname === "/" ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  Inicio
+                </Link>
+              </>
+            )}
+            {/* Actividades visible para todos los usuarios autenticados */}
             <Link 
-              href="/" 
-              className={`px-4 py-3 ${pathname === "/" ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
+              href="/activities" 
+              className={`px-4 py-3 ${pathname?.startsWith("/activities") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
               onClick={() => setMenuAbierto(false)}
             >
-              Inicio
-            </Link>
-            <Link 
-              href="/clientes" 
-              className={`px-4 py-3 ${pathname?.startsWith("/clientes") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
-              onClick={() => setMenuAbierto(false)}
-            >
-              Clientes
-            </Link>
-            <Link 
-              href="/pagos" 
-              className={`px-4 py-3 ${pathname === "/pagos" ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
-              onClick={() => setMenuAbierto(false)}
-            >
-              Pagos
-            </Link>
-            <Link 
-              href="/balance" 
-              className={`px-4 py-3 ${pathname === "/balance" ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
-              onClick={() => setMenuAbierto(false)}
-            >
-              Balance
-            </Link>
-            <Link 
-              href="/presupuestos" 
-              className={`px-4 py-3 ${pathname?.startsWith("/presupuestos") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
-              onClick={() => setMenuAbierto(false)}
-            >
-              Presupuestos
-            </Link>
-            <Link 
-              href="/reuniones" 
-              className={`px-4 py-3 ${pathname?.startsWith("/reuniones") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
-              onClick={() => setMenuAbierto(false)}
-            >
-              Reuniones
-            </Link>
-            <Link 
-              href="/tareas" 
-              className={`px-4 py-3 ${pathname?.startsWith("/tareas") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
-              onClick={() => setMenuAbierto(false)}
-            >
-              Tareas
-            </Link>
-            <Link 
-              href="/equipo" 
-              className={`px-4 py-3 ${pathname?.startsWith("/equipo") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
-              onClick={() => setMenuAbierto(false)}
-            >
-              Equipo
-            </Link>
-            <Link 
-              href="/email/inbox" 
-              className={`px-4 py-3 ${pathname?.startsWith("/email") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
-              onClick={() => setMenuAbierto(false)}
-            >
-              Correo
+              Actividades
             </Link>
             {esAdminUser && (
-              <Link 
-                href="/admin/usuarios" 
-                prefetch={true}
-                className={`px-4 py-3 ${pathname?.startsWith("/admin") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
-                onClick={() => setMenuAbierto(false)}
-              >
-                Usuarios
-              </Link>
+              <>
+                <Link 
+                  href="/clientes" 
+                  className={`px-4 py-3 ${pathname?.startsWith("/clientes") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  Clientes
+                </Link>
+                <Link 
+                  href="/pagos" 
+                  className={`px-4 py-3 ${pathname === "/pagos" ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  Pagos
+                </Link>
+                <Link 
+                  href="/balance" 
+                  className={`px-4 py-3 ${pathname === "/balance" ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  Balance
+                </Link>
+                <Link 
+                  href="/presupuestos" 
+                  className={`px-4 py-3 ${pathname?.startsWith("/presupuestos") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  Presupuestos
+                </Link>
+                <Link 
+                  href="/reuniones" 
+                  className={`px-4 py-3 ${pathname?.startsWith("/reuniones") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  Reuniones
+                </Link>
+                <Link 
+                  href="/tareas" 
+                  className={`px-4 py-3 ${pathname?.startsWith("/tareas") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  Tareas
+                </Link>
+                <Link 
+                  href="/equipo" 
+                  className={`px-4 py-3 ${pathname?.startsWith("/equipo") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  Equipo
+                </Link>
+                <Link 
+                  href="/email/inbox" 
+                  className={`px-4 py-3 ${pathname?.startsWith("/email") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  Correo
+                </Link>
+                <Link 
+                  href="/admin/usuarios" 
+                  prefetch={true}
+                  className={`px-4 py-3 ${pathname?.startsWith("/admin") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  Usuarios
+                </Link>
+              </>
             )}
             {usuario && (
               <div className="px-4 py-3 border-t border-blue-900">

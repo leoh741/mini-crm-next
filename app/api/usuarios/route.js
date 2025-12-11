@@ -21,7 +21,7 @@ export async function GET(request) {
       let usuario = await User.findOne({ 
         email: { $regex: new RegExp(`^${emailEscapado}$`, 'i') } 
       })
-      .select('crmId nombre email password rol fechaCreacion')
+      .select('crmId nombre email password rol fechaCreacion lastSeen')
       .lean()
       .maxTimeMS(10000); // Timeout optimizado para VPS (10 segundos)
       
@@ -29,7 +29,7 @@ export async function GET(request) {
       if (!usuario) {
         // Buscar todos los usuarios y filtrar en memoria (fallback optimizado)
         const todosUsuarios = await User.find({})
-          .select('crmId nombre email password rol fechaCreacion')
+          .select('crmId nombre email password rol fechaCreacion lastSeen')
           .lean()
           .maxTimeMS(10000); // Timeout optimizado para VPS (10 segundos)
         usuario = todosUsuarios.find(u => 
@@ -50,7 +50,7 @@ export async function GET(request) {
     
     // Si no hay email, devolver todos los usuarios
     const usuarios = await User.find({})
-      .select('crmId nombre email password rol fechaCreacion createdAt')
+      .select('crmId nombre email password rol fechaCreacion lastSeen createdAt')
       .sort({ createdAt: -1 })
       .lean()
       .maxTimeMS(10000); // Timeout optimizado para VPS (10 segundos)

@@ -546,7 +546,7 @@ function HomePageContent() {
                   // PROTECCIÓN MÁXIMA: Requerir triple confirmación antes de importar
                   const confirmacion1 = window.prompt(
                     '⚠️⚠️⚠️ ADVERTENCIA MÁXIMA ⚠️⚠️⚠️\n\n' +
-                    'Esta operación BORRARÁ PERMANENTEMENTE TODOS los datos existentes.\n\n' +
+                    'Esta operación ACTUALIZARÁ PERMANENTEMENTE TODOS los datos existentes.\n\n' +
                     'Esto incluye:\n' +
                     '- Todos los clientes\n' +
                     '- Todos los pagos\n' +
@@ -554,24 +554,24 @@ function HomePageContent() {
                     '- Todos los presupuestos\n' +
                     '- Todas las reuniones\n' +
                     '- Todas las tareas\n\n' +
-                    'Para continuar, escribe exactamente: BORRAR TODO\n\n' +
+                    'Para continuar, escribe exactamente: ACTUALIZAR TODO\n\n' +
                     'Esta acción NO se puede deshacer.'
                   );
                   
-                  if (confirmacion1 !== 'BORRAR TODO') {
-                    alert('Operación cancelada. Debes escribir exactamente "BORRAR TODO" para continuar.');
+                  if (confirmacion1 !== 'ACTUALIZAR TODO') {
+                    alert('Operación cancelada. Debes escribir exactamente "ACTUALIZAR TODO" para continuar.');
                     e.target.value = '';
                     return;
                   }
                   
                   const confirmacion2 = window.prompt(
                     '⚠️ SEGUNDA CONFIRMACIÓN ⚠️\n\n' +
-                    'Estás a punto de ELIMINAR PERMANENTEMENTE todos los datos.\n\n' +
-                    'Escribe exactamente: CONFIRMO BORRAR'
+                    'Estás a punto de ACTUALIZAR PERMANENTEMENTE todos los datos.\n\n' +
+                    'Escribe exactamente: CONFIRMO ACTUALIZAR'
                   );
                   
-                  if (confirmacion2 !== 'CONFIRMO BORRAR') {
-                    alert('Operación cancelada. Debes escribir exactamente "CONFIRMO BORRAR" para continuar.');
+                  if (confirmacion2 !== 'CONFIRMO ACTUALIZAR') {
+                    alert('Operación cancelada. Debes escribir exactamente "CONFIRMO ACTUALIZAR" para continuar.');
                     e.target.value = '';
                     return;
                   }
@@ -579,7 +579,7 @@ function HomePageContent() {
                   const confirmacion3 = window.confirm(
                     '⚠️ ÚLTIMA CONFIRMACIÓN ⚠️\n\n' +
                     'Esta es tu última oportunidad para cancelar.\n\n' +
-                    '¿Estás ABSOLUTAMENTE SEGURO de que quieres BORRAR TODOS los datos?\n\n' +
+                    '¿Estás ABSOLUTAMENTE SEGURO de que quieres ACTUALIZAR TODOS los datos?\n\n' +
                     'Esta acción es IRREVERSIBLE.'
                   );
                   
@@ -593,7 +593,7 @@ function HomePageContent() {
                   try {
                     const resultado = await cargarBackup(archivo);
                     const mensaje = resultado?.resultados 
-                      ? `Datos importados correctamente:\n- Clientes: ${resultado.resultados.clientes}\n- Pagos: ${resultado.resultados.pagosMensuales}\n- Gastos: ${resultado.resultados.gastos}\n- Ingresos: ${resultado.resultados.ingresos}\n- Presupuestos: ${resultado.resultados.presupuestos || 0}\n- Reuniones: ${resultado.resultados.reuniones || 0}\n- Tareas: ${resultado.resultados.tareas || 0}\n- Usuarios: ${resultado.resultados.usuarios} (${resultado.resultados.usuariosMantenidos || 0} mantenidos)\n\nRecarga la página para ver los cambios.`
+                      ? `Datos importados correctamente:\n- Clientes: ${resultado.resultados.clientes}\n- Pagos: ${resultado.resultados.pagosMensuales}\n- Gastos: ${resultado.resultados.gastos}\n- Ingresos: ${resultado.resultados.ingresos}\n- Presupuestos: ${resultado.resultados.presupuestos || 0}\n- Reuniones: ${resultado.resultados.reuniones || 0}\n- Tareas: ${resultado.resultados.tareas || 0}\n- Equipo: ${resultado.resultados.equipo || 0}\n- Listas de Actividades: ${resultado.resultados.activityLists || 0}\n- Actividades: ${resultado.resultados.activities || 0}\n- Usuarios: ${resultado.resultados.usuarios} (${resultado.resultados.usuariosMantenidos || 0} mantenidos)\n\nRecarga la página para ver los cambios.`
                       : 'Datos importados correctamente. Recarga la página para ver los cambios.';
                     alert(mensaje);
                     window.location.reload();

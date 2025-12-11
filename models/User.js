@@ -23,7 +23,12 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: 'usuario'
   },
-  fechaCreacion: Date
+  fechaCreacion: Date,
+  lastSeen: {
+    type: Date,
+    default: Date.now,
+    index: true
+  }
 }, {
   timestamps: true
 });

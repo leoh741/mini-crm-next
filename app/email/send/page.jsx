@@ -152,16 +152,6 @@ function SendEmailPageContent() {
         </div>
       )}
 
-      {success && (
-        <div className="bg-green-900/50 border-2 border-green-600 rounded-lg p-4 mb-4 animate-pulse">
-          <div className="flex items-center gap-2 text-green-300">
-            <Icons.Check className="text-xl" />
-            <span className="font-semibold text-lg">¡Correo enviado exitosamente!</span>
-          </div>
-          <p className="text-green-200 text-sm mt-2">El correo ha sido enviado y guardado en la carpeta Enviados. Redirigiendo a la bandeja de entrada...</p>
-        </div>
-      )}
-
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2">Para:</label>
@@ -284,6 +274,16 @@ function SendEmailPageContent() {
             Cancelar
           </button>
         </div>
+
+        {success && (
+          <div className="bg-green-900/50 border-2 border-green-600 rounded-lg p-4 animate-pulse">
+            <div className="flex items-center gap-2 text-green-300">
+              <Icons.Check className="text-xl" />
+              <span className="font-semibold text-lg">¡Correo enviado exitosamente!</span>
+            </div>
+            <p className="text-green-200 text-sm mt-2">El correo ha sido enviado y guardado en la carpeta Enviados. Redirigiendo a la bandeja de entrada...</p>
+          </div>
+        )}
       </form>
     </div>
   );

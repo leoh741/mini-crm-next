@@ -10,7 +10,7 @@ import ProtectedRoute from "../../components/ProtectedRoute";
 function EquipoPageContent() {
   const [miembros, setMiembros] = useState([]);
   const [busqueda, setBusqueda] = useState("");
-  const [filtroActivo, setFiltroActivo] = useState("todos"); // "todos", "activos", "inactivos"
+  const [filtroActivo, setFiltroActivo] = useState("activos"); // "todos", "activos", "inactivos" - Por defecto mostrar solo activos
   const [filtroHabilidad, setFiltroHabilidad] = useState(null);
   const [todasLasHabilidades, setTodasLasHabilidades] = useState([]);
   const [openPanelIndex, setOpenPanelIndex] = useState(null);

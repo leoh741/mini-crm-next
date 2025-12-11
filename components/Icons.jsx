@@ -13,6 +13,7 @@ import {
   HiDocumentText,    // 📝 Observaciones
   HiCheck,           // ✓ Check
   HiRefresh,         // 🔄 En Proceso
+  HiPlay,            // ▶️ Play/Iniciar
   HiPause,           // ⏸️ Pausa
   HiPencil,          // ✏️ Editar
   HiTrash,           // 🗑️ Eliminar
@@ -48,6 +49,7 @@ export const Icons = {
   DocumentText: HiDocumentText,
   Check: HiCheck,
   Refresh: HiRefresh,
+  Play: HiPlay,
   Pause: HiPause,
   Pencil: HiPencil,
   Trash: HiTrash,

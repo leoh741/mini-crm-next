@@ -9,6 +9,8 @@ import Budget from '../../../../models/Budget';
 import Meeting from '../../../../models/Meeting';
 import Task from '../../../../models/Task';
 import TeamMember from '../../../../models/TeamMember';
+import ActivityList from '../../../../models/ActivityList';
+import Activity from '../../../../models/Activity';
 import { logOperation, logDatabaseState, getDatabaseCounts } from '../../../../lib/auditLogger';
 import mongoose from 'mongoose';
 
@@ -39,7 +41,9 @@ export async function GET() {
       Budget,
       Meeting,
       Task,
-      TeamMember
+      TeamMember,
+      ActivityList,
+      Activity
     });
     
     logDatabaseState('BEFORE_EXPORT', countsBefore);
@@ -66,6 +70,30 @@ export async function GET() {
 
     // Obtener todos los datos - SOLO LECTURA, NUNCA ESCRITURA O BORRADO
     // IMPORTANTE: Estas operaciones SOLO leen datos, no los modifican
+    
+    // Obtener ActivityLists primero para tenerlas disponibles
+    const activityLists = await ActivityList.find({}).lean().maxTimeMS(30000);
+    console.log(`[EXPORT] ActivityLists encontradas: ${activityLists.length}`);
+    
+    // Obtener Activities con populate
+    const activities = await Activity.find({})
+      .populate('assignee', 'nombre email crmId _id')
+      .populate('createdBy', 'nombre email crmId _id')
+      .populate('list', 'name color _id')
+      .lean()
+      .maxTimeMS(60000);
+    
+    console.log(`[EXPORT] Activities encontradas ANTES de formatear: ${activities.length}`);
+    
+    // Verificar que las actividades tengan lista
+    const actividadesConListaBD = activities.filter(a => a.list);
+    const actividadesSinListaBD = activities.filter(a => !a.list);
+    console.log(`[EXPORT] Actividades con lista: ${actividadesConListaBD.length}, sin lista: ${actividadesSinListaBD.length}`);
+    
+    if (actividadesSinListaBD.length > 0) {
+      console.warn(`[EXPORT] ⚠️ ${actividadesSinListaBD.length} actividades sin lista en la BD:`, actividadesSinListaBD.map(a => ({ id: a._id?.toString(), title: a.title })));
+    }
+    
     const [clientes, pagos, gastos, ingresos, usuarios, presupuestos, reuniones, tareas, equipo] = await Promise.all([
       Client.find({}).lean().maxTimeMS(30000), // Timeout de 30 segundos
       MonthlyPayment.find({}).lean().maxTimeMS(30000),
@@ -88,7 +116,9 @@ export async function GET() {
       Budget,
       Meeting,
       Task,
-      TeamMember
+      TeamMember,
+      ActivityList,
+      Activity
     });
     
     const dataLossAfterRead = Object.keys(countsBefore).some(key => {
@@ -263,6 +293,133 @@ export async function GET() {
       updatedAt: miembro.updatedAt || null
     }));
 
+    // Convertir listas de actividades al formato esperado
+    const activityListsFormateadas = activityLists.map(list => ({
+      id: list._id.toString(),
+      name: list.name,
+      description: list.description || undefined,
+      color: list.color || '#22c55e',
+      owner: list.owner?.toString() || list.owner,
+      members: (list.members || []).map(m => m?.toString() || m),
+      isArchived: list.isArchived || false,
+      createdAt: list.createdAt || null,
+      updatedAt: list.updatedAt || null
+    }));
+
+    // Convertir actividades al formato esperado
+    console.log(`[EXPORT] Total de actividades encontradas en BD: ${activities.length}`);
+    
+    // NO FILTRAR actividades - exportar TODAS, incluso si no tienen lista
+    // La lista puede ser un ObjectId sin poblar, y eso está bien
+    console.log(`[EXPORT] Procesando ${activities.length} actividades para exportar`);
+    
+    const activitiesFormateadas = activities.map((activity, index) => {
+      // Obtener el ID de la lista de diferentes formas posibles
+      let listId = null;
+      
+      if (activity.list) {
+        // Si está poblado (objeto con _id)
+        if (activity.list._id) {
+          listId = activity.list._id.toString();
+        } 
+        // Si es un ObjectId de mongoose (tiene método toString)
+        else if (activity.list.toString && typeof activity.list.toString === 'function') {
+          try {
+            listId = activity.list.toString();
+          } catch (e) {
+            console.warn(`[EXPORT] Error al convertir lista a string (actividad ${index + 1}):`, e);
+          }
+        } 
+        // Si es un string directamente
+        else if (typeof activity.list === 'string') {
+          listId = activity.list;
+        } 
+        // Si tiene propiedad id
+        else if (activity.list.id) {
+          listId = activity.list.id.toString();
+        }
+        // Si es un ObjectId de mongoose directamente (verificar por constructor)
+        else if (activity.list.constructor && (activity.list.constructor.name === 'ObjectId' || activity.list.constructor.name === 'Types.ObjectId')) {
+          listId = activity.list.toString();
+        }
+        // Último intento: convertir a string directamente
+        else {
+          try {
+            listId = String(activity.list);
+          } catch (e) {
+            console.warn(`[EXPORT] No se pudo convertir lista a string (actividad ${index + 1}):`, e);
+          }
+        }
+      }
+      
+      // Logging para las primeras 5 actividades para debug
+      if (index < 5) {
+        console.log(`[EXPORT] Actividad ${index + 1}/${activities.length}:`, {
+          id: activity._id?.toString(),
+          title: activity.title,
+          listOriginal: activity.list,
+          listId: listId,
+          listType: typeof activity.list,
+          listConstructor: activity.list?.constructor?.name,
+          hasListId: !!listId,
+          listIsPopulated: activity.list && typeof activity.list === 'object' && activity.list._id
+        });
+      }
+      
+      // Si no se pudo obtener el ID de la lista, registrar un warning
+      if (!listId && activity.list) {
+        console.warn(`[EXPORT] ⚠️ Actividad ${index + 1} (${activity.title}) tiene lista pero no se pudo extraer el ID:`, {
+          list: activity.list,
+          listType: typeof activity.list,
+          listConstructor: activity.list?.constructor?.name
+        });
+      }
+      
+      // Si no se pudo obtener listId pero activity.list existe, intentar obtenerlo directamente
+      if (!listId && activity.list) {
+        // Si es un ObjectId de mongoose sin poblar, convertirlo directamente
+        if (activity.list.toString && typeof activity.list.toString === 'function') {
+          try {
+            listId = activity.list.toString();
+          } catch (e) {
+            // Ignorar error
+          }
+        }
+        // Si es un string, usarlo directamente
+        if (!listId && typeof activity.list === 'string') {
+          listId = activity.list;
+        }
+      }
+      
+      return {
+      id: activity._id ? activity._id.toString() : (activity.id ? activity.id.toString() : `unknown-${index}`),
+      list: listId || (activity.list ? (activity.list.toString ? activity.list.toString() : String(activity.list)) : null),
+      title: activity.title,
+      description: activity.description || undefined,
+      status: activity.status || 'pendiente',
+      priority: activity.priority || 'media',
+      assignee: activity.assignee ? {
+        _id: activity.assignee._id?.toString() || activity.assignee.id?.toString(),
+        id: activity.assignee._id?.toString() || activity.assignee.id?.toString(),
+        crmId: activity.assignee.crmId,
+        nombre: activity.assignee.nombre,
+        email: activity.assignee.email
+      } : undefined,
+      labels: activity.labels || [],
+      dueDate: activity.dueDate || null,
+      order: activity.order || 0,
+      createdBy: activity.createdBy ? {
+        _id: activity.createdBy._id?.toString() || activity.createdBy.id?.toString(),
+        id: activity.createdBy._id?.toString() || activity.createdBy.id?.toString(),
+        crmId: activity.createdBy.crmId,
+        nombre: activity.createdBy.nombre,
+        email: activity.createdBy.email
+      } : activity.createdBy?.toString() || activity.createdBy,
+      createdAt: activity.createdAt || null,
+      updatedAt: activity.updatedAt || null
+      };
+    });
+
     // Formato compatible: devolver como objetos/arrays directamente
     // El frontend los serializará cuando cree el archivo JSON
     const datos = {
@@ -276,9 +433,49 @@ export async function GET() {
       reuniones: reunionesFormateadas, // Array directamente
       tareas: tareasFormateadas, // Array directamente
       equipo: equipoFormateado, // Array directamente
+      activityLists: activityListsFormateadas, // Array directamente
+      activities: activitiesFormateadas, // Array directamente
       fechaExportacion: new Date().toISOString(),
-      version: '2.3'
+      version: '2.4'
     };
+    
+    // Logging para verificar que todas las actividades se exportaron
+    console.log(`[EXPORT] Actividades formateadas: ${activitiesFormateadas.length}`);
+    console.log(`[EXPORT] Listas de actividades formateadas: ${activityListsFormateadas.length}`);
+    
+    // Verificar que todas las actividades tengan una lista válida
+    const actividadesSinLista = activitiesFormateadas.filter(a => !a.list);
+    if (actividadesSinLista.length > 0) {
+      console.warn(`[EXPORT] ⚠️ ${actividadesSinLista.length} actividades sin lista válida:`, actividadesSinLista.map(a => ({ id: a.id, title: a.title })));
+    }
+    
+    // Agrupar actividades por lista para verificar
+    const actividadesPorLista = {};
+    activitiesFormateadas.forEach(activity => {
+      const listId = activity.list || 'sin-lista';
+      if (!actividadesPorLista[listId]) {
+        actividadesPorLista[listId] = [];
+      }
+      actividadesPorLista[listId].push(activity);
+    });
+    
+    console.log(`[EXPORT] Actividades agrupadas por lista:`, Object.keys(actividadesPorLista).map(listId => ({
+      lista: listId,
+      cantidad: actividadesPorLista[listId].length
+    })));
+    
+    // Resumen final de exportación
+    console.log(`[EXPORT] ==========================================`);
+    console.log(`[EXPORT] RESUMEN DE EXPORTACIÓN:`);
+    console.log(`[EXPORT] - Clientes: ${clientesFormateados.length}`);
+    console.log(`[EXPORT] - Usuarios: ${usuariosFormateados.length}`);
+    console.log(`[EXPORT] - Presupuestos: ${presupuestosFormateados.length}`);
+    console.log(`[EXPORT] - Reuniones: ${reunionesFormateadas.length}`);
+    console.log(`[EXPORT] - Tareas: ${tareasFormateadas.length}`);
+    console.log(`[EXPORT] - Equipo: ${equipoFormateado.length}`);
+    console.log(`[EXPORT] - Listas de Actividades: ${activityListsFormateadas.length}`);
+    console.log(`[EXPORT] - Actividades: ${activitiesFormateadas.length}`);
+    console.log(`[EXPORT] ==========================================`);
 
     // PROTECCIÓN: Verificar que no se haya borrado nada durante la exportación
     // Verificar ANTES de formatear los datos
@@ -291,7 +488,9 @@ export async function GET() {
       Budget,
       Meeting,
       Task,
-      TeamMember
+      TeamMember,
+      ActivityList,
+      Activity
     });
     
     // Verificar que los conteos no hayan cambiado después de formatear
@@ -333,7 +532,9 @@ export async function GET() {
       Budget,
       Meeting,
       Task,
-      TeamMember
+      TeamMember,
+      ActivityList,
+      Activity
     });
     
     logDatabaseState('AFTER_EXPORT', countsAfter);
@@ -383,7 +584,9 @@ export async function GET() {
         presupuestos: datos.presupuestos.length,
         reuniones: datos.reuniones.length,
         tareas: datos.tareas.length,
-        equipo: datos.equipo.length
+        equipo: datos.equipo.length,
+        activityLists: datos.activityLists.length,
+        activities: datos.activities.length
       }
     });
     
