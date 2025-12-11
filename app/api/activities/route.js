@@ -192,14 +192,17 @@ export async function POST(request) {
     }
     
     // Check if user has access to this list
-    const isOwner = list.owner.toString() === userObjectId.toString();
-    const isMember = list.members.some(m => m.toString() === userObjectId.toString());
-    
-    if (!isOwner && !isMember) {
-      return NextResponse.json(
-        { success: false, error: 'No tienes acceso a esta lista' },
-        { status: 403 }
-      );
+    // Admin y coordinador pueden crear actividades en cualquier lista
+    if (userRole !== 'admin' && userRole !== 'coordinador') {
+      const isOwner = list.owner.toString() === userObjectId.toString();
+      const isMember = list.members.some(m => m.toString() === userObjectId.toString());
+      
+      if (!isOwner && !isMember) {
+        return NextResponse.json(
+          { success: false, error: 'No tienes acceso a esta lista' },
+          { status: 403 }
+        );
+      }
     }
     
     // Convert assignee if provided
