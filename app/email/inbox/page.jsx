@@ -675,9 +675,9 @@ function InboxContent() {
       setLoading(true);
       
       // Crear AbortController para timeout
-      // Aumentado a 30s para dar más tiempo al servidor (especialmente si IMAP es lento)
+      // Aumentado a 50s para dar más tiempo al servidor cuando descarga contenido completo (puede tener attachments grandes)
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos timeout
+      const timeoutId = setTimeout(() => controller.abort(), 50000); // 50 segundos timeout para contenido completo
       
       try {
         const res = await fetch(`/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpetaParaBuscar)}&contenido=true`, {
@@ -697,6 +697,14 @@ function InboxContent() {
 
         if (data.mensaje) {
           console.log(`>>> FRONTEND - Email cargado desde API, UID: ${uid}, seen=${data.mensaje.seen}, leido=${data.mensaje.leido}`);
+          
+          // Verificar si el correo tiene contenido válido
+          const tieneContenido = data.mensaje.html || data.mensaje.text;
+          if (!tieneContenido) {
+            console.warn(`>>> FRONTEND - ⚠️ Correo cargado pero sin contenido (html/text vacío). UID: ${uid}`);
+            // Mostrar mensaje informativo pero permitir que se muestre el correo
+          }
+          
           setEmailSeleccionado(data.mensaje);
           
           // Guardar en cache local
@@ -2031,11 +2039,19 @@ function InboxContent() {
                   <div className="flex-1 overflow-y-auto p-4 md:p-6" style={{ isolation: 'isolate', zIndex: 1 }}>
                     {emailSeleccionado.html ? (
                       <EmailContentIframe html={emailSeleccionado.html} />
-                    ) : (
+                    ) : emailSeleccionado.text ? (
                       <div className="prose prose-invert prose-slate max-w-none">
                         <pre className="whitespace-pre-wrap font-sans text-slate-300">
-                          {emailSeleccionado.text || "Sin contenido"}
+                          {emailSeleccionado.text}
                         </pre>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center text-slate-400">
+                          <Icons.Mail className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                          <p className="text-lg mb-2">Cargando contenido del correo...</p>
+                          <p className="text-sm">Si el contenido no aparece, intenta recargar el correo</p>
+                        </div>
                       </div>
                     )}
                   </div>

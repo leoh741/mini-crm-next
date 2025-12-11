@@ -73,6 +73,16 @@ export async function GET(request) {
           { status: 200 }
         );
       }
+      
+      // 🔴 CRÍTICO: Si se solicita contenido pero no está en cache con contenido,
+      // verificar si existe sin contenido y forzar descarga desde IMAP
+      if (incluirContenido && !cacheOnly) {
+        const mensajeSinContenido = await obtenerCorreoDelCache(uid, carpeta, false);
+        if (mensajeSinContenido && (!mensajeSinContenido.html || !mensajeSinContenido.text)) {
+          console.log(`[/api/email/message] 📥 Correo encontrado en cache pero sin contenido, descargando desde IMAP...`);
+          // Continuar al paso 2 para descargar desde IMAP
+        }
+      }
     } catch (cacheError) {
       console.warn(`[/api/email/message] ⚠️ Error al buscar en cache: ${cacheError.message}`);
     }
@@ -94,11 +104,18 @@ export async function GET(request) {
     // ============================================
     // IMPORTANTE: Usar obtenerCorreoSoloUID que NO dispara sync masiva
     // Solo obtiene ese UID específico sin descargar 20 correos
-    console.log(`[/api/email/message] 📥 No encontrado en cache, obteniendo SOLO UID ${uid} desde IMAP...`);
+    console.log(`[/api/email/message] 📥 No encontrado en cache o sin contenido, obteniendo SOLO UID ${uid} desde IMAP...`);
     
     try {
       // Esta función solo obtiene UN correo, no dispara sync masiva
-      const mensaje = await obtenerCorreoSoloUID(uid, carpeta, incluirContenido);
+      // Aumentar timeout para correos con contenido completo (puede tener attachments grandes)
+      const timeoutMs = incluirContenido ? 45000 : 15000; // 45s para contenido, 15s para metadata
+      const mensaje = await Promise.race([
+        obtenerCorreoSoloUID(uid, carpeta, incluirContenido),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Timeout obteniendo correo desde IMAP")), timeoutMs)
+        )
+      ]);
       
       if (!mensaje) {
         // Si no se encontró en IMAP, intentar cache sin contenido completo como fallback
