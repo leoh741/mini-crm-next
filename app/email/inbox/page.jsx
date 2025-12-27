@@ -188,6 +188,8 @@ function InboxContent() {
   const emailCargandoRef = useRef(null); // Para evitar cargar el mismo email múltiples veces
   const updatingImportantUidRef = useRef(null); // Para evitar doble clicks en toggle importante
   const emailContentRef = useRef(null); // Ref para el contenedor del contenido del correo
+  const pollingAbortControllerRef = useRef(null); // Para cancelar polling cuando cambia de correo
+  const pollingTimeoutRef = useRef(null); // Para el timeout del polling
   
   // Procesar imágenes del correo y envolverlas en contenedores aislados
   useEffect(() => {
