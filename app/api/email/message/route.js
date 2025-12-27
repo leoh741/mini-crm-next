@@ -65,17 +65,27 @@ export async function GET(request) {
       
       const tiempoTranscurrido = Date.now() - inicioTiempo;
       const tieneBody = mensaje.html || mensaje.text;
-      const bodyStatus = mensaje.bodyStatus || (tieneBody ? "ready" : "loading");
+      
+      // Determinar bodyStatus: usar el del mensaje, o calcularlo
+      let bodyStatus = mensaje.bodyStatus;
+      if (!bodyStatus) {
+        bodyStatus = tieneBody ? "ready" : "loading";
+      }
+      
+      // Asegurar que el mensaje siempre tenga bodyStatus
+      const mensajeConBodyStatus = {
+        ...mensaje,
+        bodyStatus: bodyStatus,
+        // Incluir lastBodyError si existe
+        ...(mensaje.lastBodyError && { lastBodyError: mensaje.lastBodyError }),
+      };
       
       console.log(`[/api/email/message] ✅ Correo devuelto desde cache. UID: ${uid}, bodyStatus: ${bodyStatus}, Tiempo: ${tiempoTranscurrido}ms`);
       
       return NextResponse.json(
         {
           success: true,
-          mensaje: {
-            ...mensaje,
-            bodyStatus: bodyStatus // Asegurar que siempre tenga bodyStatus
-          },
+          mensaje: mensajeConBodyStatus,
           fromCache: true,
         },
         { status: 200 }
