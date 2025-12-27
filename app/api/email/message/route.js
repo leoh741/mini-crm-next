@@ -72,11 +72,12 @@ export async function GET(request) {
         bodyStatus = tieneBody ? "ready" : "loading";
       }
       
-      // Asegurar que el mensaje siempre tenga bodyStatus
+      // Asegurar que el mensaje siempre tenga bodyStatus, lastBodyAttemptAt y lastBodyError
       const mensajeConBodyStatus = {
         ...mensaje,
         bodyStatus: bodyStatus,
-        // Incluir lastBodyError si existe
+        // Incluir lastBodyAttemptAt y lastBodyError si existen
+        ...(mensaje.lastBodyAttemptAt && { lastBodyAttemptAt: mensaje.lastBodyAttemptAt }),
         ...(mensaje.lastBodyError && { lastBodyError: mensaje.lastBodyError }),
       };
       

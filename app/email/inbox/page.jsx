@@ -266,6 +266,126 @@ function InboxContent() {
   };
 
   /**
+   * Inicia polling automático para correos con bodyStatus="loading"
+   * Usa backoff progresivo: 0.8s, 1.2s, 2s, 3s, máx 5s
+   * Se detiene cuando bodyStatus pasa a "ready" o "error", o después de 30-45s
+   */
+  const iniciarPollingBody = useCallback((uid, carpeta) => {
+    // Cancelar polling anterior si existe
+    if (pollingAbortControllerRef.current) {
+      pollingAbortControllerRef.current.abort();
+    }
+    if (pollingTimeoutRef.current) {
+      clearTimeout(pollingTimeoutRef.current);
+    }
+
+    const abortController = new AbortController();
+    pollingAbortControllerRef.current = abortController;
+
+    const backoffDelays = [800, 1200, 2000, 3000, 5000]; // ms
+    let attempt = 0;
+    const maxAttempts = 30; // Máximo ~45s total
+    const startTime = Date.now();
+    const maxPollingTime = 45000; // 45 segundos máximo
+
+    const poll = async () => {
+      // Verificar si fue cancelado
+      if (abortController.signal.aborted) {
+        console.log(`[email-polling] Polling cancelado para UID ${uid}`);
+        return;
+      }
+
+      // Verificar timeout total
+      if (Date.now() - startTime > maxPollingTime) {
+        console.log(`[email-polling] Polling timeout para UID ${uid} después de ${maxPollingTime}ms`);
+        return;
+      }
+
+      // Verificar que el correo sigue siendo el seleccionado
+      if (!emailSeleccionado || emailSeleccionado.uid !== uid) {
+        console.log(`[email-polling] Correo cambió, deteniendo polling para UID ${uid}`);
+        return;
+      }
+
+      try {
+        const res = await fetch(
+          `/api/email/message?uid=${uid}&carpeta=${encodeURIComponent(carpeta)}&contenido=true`,
+          { signal: abortController.signal }
+        );
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        
+        if (data.success && data.mensaje) {
+          const nuevoBodyStatus = data.mensaje.bodyStatus || (data.mensaje.html || data.mensaje.text ? 'ready' : 'loading');
+          
+          // Actualizar estado del correo
+          setEmailSeleccionado(data.mensaje);
+          setLocalEmailCache(prev => {
+            const newCache = new Map(prev);
+            const cacheKey = `${uid}-${carpeta}`;
+            newCache.set(cacheKey, {
+              mensaje: data.mensaje,
+              contenidoCompleto: nuevoBodyStatus === 'ready',
+              timestamp: Date.now()
+            });
+            return newCache;
+          });
+
+          // Si pasó a ready o error, detener polling
+          if (nuevoBodyStatus === 'ready') {
+            console.log(`[email-polling] ✅ Body listo para UID ${uid} después de ${attempt} intentos`);
+            return;
+          } else if (nuevoBodyStatus === 'error') {
+            console.log(`[email-polling] ❌ Body error para UID ${uid}: ${data.mensaje.lastBodyError || 'Error desconocido'}`);
+            return;
+          }
+
+          // Si sigue en loading, continuar polling con backoff
+          attempt++;
+          if (attempt >= maxAttempts) {
+            console.log(`[email-polling] ⚠️ Polling alcanzó máximo de intentos (${maxAttempts}) para UID ${uid}`);
+            return;
+          }
+
+          const delayIndex = Math.min(attempt - 1, backoffDelays.length - 1);
+          const delay = backoffDelays[delayIndex];
+          
+          pollingTimeoutRef.current = setTimeout(() => {
+            poll();
+          }, delay);
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          console.log(`[email-polling] Polling abortado para UID ${uid}`);
+          return;
+        }
+        
+        console.warn(`[email-polling] Error en polling para UID ${uid}: ${err.message}`);
+        
+        // Reintentar con backoff en caso de error
+        attempt++;
+        if (attempt < maxAttempts && Date.now() - startTime < maxPollingTime) {
+          const delayIndex = Math.min(attempt - 1, backoffDelays.length - 1);
+          const delay = backoffDelays[delayIndex];
+          
+          pollingTimeoutRef.current = setTimeout(() => {
+            poll();
+          }, delay);
+        }
+      }
+    };
+
+    // Iniciar polling después de un pequeño delay inicial
+    pollingTimeoutRef.current = setTimeout(() => {
+      poll();
+    }, 800);
+  }, [emailSeleccionado]);
+
+  /**
    * Sincroniza una carpeta en segundo plano sin bloquear la UI
    */
   const sincronizarEnSegundoPlano = useCallback((carpeta) => {
@@ -696,11 +816,13 @@ function InboxContent() {
       }
 
         if (data.mensaje) {
-          console.log(`>>> FRONTEND - Email cargado desde API, UID: ${uid}, seen=${data.mensaje.seen}, leido=${data.mensaje.leido}`);
+          console.log(`>>> FRONTEND - Email cargado desde API, UID: ${uid}, seen=${data.mensaje.seen}, leido=${data.mensaje.leido}, bodyStatus=${data.mensaje.bodyStatus}`);
           
           // Verificar si el correo tiene contenido válido
           const tieneContenido = data.mensaje.html || data.mensaje.text;
-          if (!tieneContenido) {
+          const bodyStatus = data.mensaje.bodyStatus || (tieneContenido ? 'ready' : 'loading');
+          
+          if (!tieneContenido && bodyStatus !== 'loading') {
             console.warn(`>>> FRONTEND - ⚠️ Correo cargado pero sin contenido (html/text vacío). UID: ${uid}`);
             // Mostrar mensaje informativo pero permitir que se muestre el correo
           }
@@ -712,7 +834,7 @@ function InboxContent() {
             const newCache = new Map(prev);
             newCache.set(cacheKey, {
               mensaje: data.mensaje,
-              contenidoCompleto: true,
+              contenidoCompleto: tieneContenido && bodyStatus === 'ready',
               timestamp: Date.now()
             });
             if (newCache.size > 20) {
@@ -721,6 +843,11 @@ function InboxContent() {
             }
             return newCache;
           });
+          
+          // Si bodyStatus="loading", iniciar polling automático
+          if (bodyStatus === 'loading' && tieneContenido === false) {
+            iniciarPollingBody(uid, carpetaParaBuscar);
+          }
           
           // ✅ CRÍTICO: Marcar como leído al abrir SOLO si no está ya marcado como leído
           // Y verificar que realmente se marcó en IMAP antes de actualizar UI
@@ -1423,6 +1550,22 @@ function InboxContent() {
     }
   }, [uidParam, carpetaParam]); // No incluir emailSeleccionado en dependencias para evitar loops
 
+  /**
+   * Detiene el polling cuando cambia de correo
+   */
+  useEffect(() => {
+    return () => {
+      if (pollingAbortControllerRef.current) {
+        pollingAbortControllerRef.current.abort();
+        pollingAbortControllerRef.current = null;
+      }
+      if (pollingTimeoutRef.current) {
+        clearTimeout(pollingTimeoutRef.current);
+        pollingTimeoutRef.current = null;
+      }
+    };
+  }, [emailSeleccionado?.uid]);
+
   // Limpiar al desmontar
   useEffect(() => {
     return () => {
@@ -1431,6 +1574,12 @@ function InboxContent() {
       }
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
+      }
+      if (pollingAbortControllerRef.current) {
+        pollingAbortControllerRef.current.abort();
+      }
+      if (pollingTimeoutRef.current) {
+        clearTimeout(pollingTimeoutRef.current);
       }
     };
   }, []);
@@ -2045,12 +2194,35 @@ function InboxContent() {
                           {emailSeleccionado.text}
                         </pre>
                       </div>
-                    ) : (
+                    ) : emailSeleccionado.bodyStatus === 'error' ? (
                       <div className="flex items-center justify-center h-full">
                         <div className="text-center text-slate-400">
                           <Icons.Mail className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                          <p className="text-lg mb-2">Error al cargar contenido</p>
+                          <p className="text-sm mb-4">{emailSeleccionado.lastBodyError || 'Error desconocido'}</p>
+                          <button
+                            onClick={() => {
+                              fetch(`/api/email/fetch-body`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ uid: emailSeleccionado.uid, carpeta: carpetaActual })
+                              }).then(() => {
+                                // Recargar el correo
+                                fetchEmail(emailSeleccionado.uid, carpetaActual);
+                              });
+                            }}
+                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                          >
+                            Reintentar
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center text-slate-400">
+                          <Icons.Refresh className="w-16 h-16 mx-auto mb-4 opacity-30 animate-spin" />
                           <p className="text-lg mb-2">Cargando contenido del correo...</p>
-                          <p className="text-sm">Si el contenido no aparece, intenta recargar el correo</p>
+                          <p className="text-sm">El contenido se cargará automáticamente</p>
                         </div>
                       </div>
                     )}
