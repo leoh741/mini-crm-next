@@ -289,6 +289,7 @@ function InboxContent() {
     const maxAttempts = 30; // Máximo ~45s total
     const startTime = Date.now();
     const maxPollingTime = 45000; // 45 segundos máximo
+    const maxLoadingTimeForError = 30000; // 30 segundos para mostrar error visual
 
     const poll = async () => {
       // Verificar si fue cancelado
@@ -298,9 +299,32 @@ function InboxContent() {
       }
 
       // Verificar timeout total
-      if (Date.now() - startTime > maxPollingTime) {
+      const tiempoTranscurrido = Date.now() - startTime;
+      if (tiempoTranscurrido > maxPollingTime) {
         console.log(`[email-polling] Polling timeout para UID ${uid} después de ${maxPollingTime}ms`);
+        // Si pasó el tiempo máximo, marcar como error visual
+        if (emailSeleccionado && emailSeleccionado.uid === uid) {
+          setEmailSeleccionado({
+            ...emailSeleccionado,
+            bodyStatus: 'error',
+            lastBodyError: 'Demoró demasiado en cargar (más de 45s). Intenta reintentar.'
+          });
+        }
         return;
+      }
+      
+      // Si lleva más de 30s en loading, mostrar error visual (pero seguir intentando)
+      if (tiempoTranscurrido > maxLoadingTimeForError && emailSeleccionado && emailSeleccionado.uid === uid) {
+        const currentStatus = emailSeleccionado.bodyStatus;
+        if (currentStatus === 'loading') {
+          // Actualizar UI para mostrar error visual, pero seguir polling
+          setEmailSeleccionado({
+            ...emailSeleccionado,
+            bodyStatus: 'error',
+            lastBodyError: `Demoró demasiado (${Math.round(tiempoTranscurrido / 1000)}s). Reintentando automáticamente...`
+          });
+          console.log(`[email-polling] ⚠️ UID ${uid} lleva ${Math.round(tiempoTranscurrido / 1000)}s en loading, mostrando error visual pero continuando polling`);
+        }
       }
 
       // Verificar que el correo sigue siendo el seleccionado
