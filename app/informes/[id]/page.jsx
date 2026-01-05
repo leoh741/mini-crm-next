@@ -215,85 +215,100 @@ function InformeDetallePageContent() {
       doc.text(formatearPeriodo(informe.periodo), 50, yPos);
       yPos += 15;
       
-      // Capturar el contenido del resumen con html2canvas
-      // Usar fondo transparente para que los títulos se vean sobre el fondo azul del PDF
-      const canvas = await html2canvas(resumenElement, {
-        backgroundColor: null, // Fondo transparente
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        logging: false
-      });
-      
-      const imgData = canvas.toDataURL('image/png');
-      const imgWidth = pageWidth - 40; // Margen de 20mm cada lado
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
-      // Altura disponible por página (reservando espacio para footer)
+      // Dividir el contenido en contenedores individuales para evitar cortar elementos
       const footerHeight = 30; // Espacio para logo y número de página
-      const availableHeight = pageHeight - yPos - footerHeight;
+      const imgWidth = pageWidth - 40; // Margen de 20mm cada lado
       
-      // Si la imagen es más alta que el espacio disponible, dividirla manualmente
-      if (imgHeight > availableHeight) {
-        let remainingHeight = imgHeight;
-        let sourceY = 0; // Posición Y en el canvas original (en píxeles)
-        let currentY = yPos; // Posición Y actual en el PDF
-        const canvasHeightPx = canvas.height;
-        const canvasWidthPx = canvas.width;
+      // Función auxiliar para verificar si un elemento cabe en la página actual
+      const getElementHeight = async (element) => {
+        const canvas = await html2canvas(element, {
+          backgroundColor: null,
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          logging: false
+        });
+        return (canvas.height * imgWidth) / canvas.width;
+      };
+      
+      // Función auxiliar para agregar una imagen al PDF con manejo de páginas
+      const addElementToPDF = async (element, addSpace = true) => {
+        const canvas = await html2canvas(element, {
+          backgroundColor: null, // Fondo transparente
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          logging: false
+        });
         
-        // Calcular el factor de escala entre el canvas y el PDF
-        const scaleX = canvasWidthPx / imgWidth; // Píxeles por mm en el PDF
+        const imgData = canvas.toDataURL('image/png');
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
         
-        while (remainingHeight > 0.1) { // Usar 0.1 como tolerancia para evitar bucles infinitos
-          const heightToAdd = Math.min(remainingHeight, availableHeight);
-          
-          // Calcular la altura en píxeles del canvas para esta porción
-          // Usar el mismo factor de escala que se usó para calcular imgHeight
-          const sliceHeightPx = Math.ceil((heightToAdd / imgHeight) * canvasHeightPx);
-          
-          // Asegurar que no excedamos el canvas original
-          const actualSliceHeightPx = Math.min(sliceHeightPx, canvasHeightPx - Math.floor(sourceY));
-          
-          if (actualSliceHeightPx <= 0) break; // Salir si no queda más contenido
-          
-          // Crear un nuevo canvas para esta porción
-          const sliceCanvas = document.createElement('canvas');
-          const sliceCtx = sliceCanvas.getContext('2d');
-          sliceCanvas.width = canvasWidthPx;
-          sliceCanvas.height = actualSliceHeightPx;
-          
-          // Dibujar la porción del canvas original en el nuevo canvas
-          sliceCtx.drawImage(
-            canvas,
-            0, Math.floor(sourceY), canvasWidthPx, actualSliceHeightPx, // Source rectangle (desde el canvas original)
-            0, 0, canvasWidthPx, actualSliceHeightPx // Destination rectangle (en el nuevo canvas)
-          );
-          
-          // Convertir a data URL
-          const sliceData = sliceCanvas.toDataURL('image/png');
-          
-          // Calcular la altura real que ocupará en el PDF (ajustada por la altura real del slice)
-          const actualHeightInPDF = (actualSliceHeightPx / canvasHeightPx) * imgHeight;
-          
-          // Agregar esta porción al PDF
-          doc.addImage(sliceData, 'PNG', 20, currentY, imgWidth, actualHeightInPDF);
-          
-          // Actualizar para la siguiente iteración
-          sourceY += actualSliceHeightPx;
-          remainingHeight -= actualHeightInPDF;
-          
-          // Si aún queda contenido, agregar una nueva página
-          if (remainingHeight > 0.1) {
-            doc.addPage();
-            // Dibujar fondo azul en la nueva página
-            doc.setFillColor(azulMarca[0], azulMarca[1], azulMarca[2]);
-            doc.rect(0, 0, pageWidth, pageHeight, 'F');
-            currentY = 20; // Reiniciar Y para la nueva página
-          }
+        // Calcular la altura disponible en la página actual
+        const availableHeight = pageHeight - yPos - footerHeight;
+        
+        // Si este elemento no cabe en la página actual, crear una nueva página
+        if (yPos > 20 && imgHeight > availableHeight) {
+          doc.addPage();
+          // Dibujar fondo azul en la nueva página
+          doc.setFillColor(azulMarca[0], azulMarca[1], azulMarca[2]);
+          doc.rect(0, 0, pageWidth, pageHeight, 'F');
+          yPos = 20; // Reiniciar Y para la nueva página
         }
-      } else {
-        // Si cabe en una página, agregarla normalmente
+        
+        // Agregar este elemento al PDF
         doc.addImage(imgData, 'PNG', 20, yPos, imgWidth, imgHeight);
+        yPos += imgHeight + (addSpace ? 10 : 0); // Agregar espacio entre elementos si se solicita
+        
+        // Verificar si después de agregar este elemento necesitamos una nueva página
+        if (yPos > pageHeight - footerHeight) {
+          doc.addPage();
+          // Dibujar fondo azul en la nueva página
+          doc.setFillColor(azulMarca[0], azulMarca[1], azulMarca[2]);
+          doc.rect(0, 0, pageWidth, pageHeight, 'F');
+          yPos = 20; // Reiniciar Y para la nueva página
+        }
+      };
+      
+      // Obtener todos los elementos hijos directos del resumen
+      const children = Array.from(resumenElement.children);
+      
+      for (let i = 0; i < children.length; i++) {
+        const childElement = children[i];
+        
+        // Si es el contenedor de "Campañas", agregar cada sección completa con su contenedor
+        const campanasTitle = childElement.querySelector('h3');
+        if (campanasTitle && campanasTitle.textContent.trim() === 'Campañas') {
+          // Este es el contenedor de campañas (incluye el título y las secciones)
+          // Agregar cada sección (plataforma) completa con su contenedor
+          const secciones = childElement.querySelectorAll('.bg-slate-800.border.border-slate-700.rounded-lg');
+          
+          // Agregar cada sección (plataforma) completa con su contenedor
+          // Si una sección no cabe en la página actual, se mueve completa a la siguiente página
+          for (const seccion of secciones) {
+            try {
+              const seccionHeight = await getElementHeight(seccion);
+              const currentAvailableHeight = pageHeight - yPos - footerHeight;
+              
+              // Si la sección no cabe en la página actual, crear nueva página
+              if (seccionHeight > currentAvailableHeight && yPos > 20) {
+                doc.addPage();
+                doc.setFillColor(azulMarca[0], azulMarca[1], azulMarca[2]);
+                doc.rect(0, 0, pageWidth, pageHeight, 'F');
+                yPos = 20;
+              }
+              
+              // Agregar la sección completa (con su contenedor que agrupa todas las campañas de esa plataforma)
+              await addElementToPDF(seccion, true);
+            } catch (sectionError) {
+              console.warn('Error al procesar sección:', sectionError);
+              // Continuar con la siguiente sección
+            }
+          }
+        } else {
+          // Para otros elementos (Importe gastado total, Totales por Plataforma), agregarlos directamente
+          await addElementToPDF(childElement, true);
+        }
       }
       
       // Obtener el número total de páginas después de agregar la imagen
@@ -339,7 +354,8 @@ function InformeDetallePageContent() {
       
     } catch (err) {
       console.error('Error al descargar PDF:', err);
-      alert("Error al descargar el PDF: " + err.message);
+      const errorMessage = err?.message || err?.toString() || 'Error desconocido';
+      alert("Error al descargar el PDF: " + errorMessage);
     } finally {
       setDownloadingPDF(false);
     }
