@@ -206,11 +206,30 @@ function InformeCompartidoPageContent() {
                                 };
                                 return labels[key] || key;
                               };
+                              // Función para formatear números sin decimales innecesarios
+                              const formatNumberSmart = (val) => {
+                                if (val === null || val === undefined || isNaN(val)) return '-';
+                                const num = Number(val);
+                                // Si es un número entero, no mostrar decimales
+                                const isInteger = num % 1 === 0;
+                                if (isInteger) {
+                                  return num.toLocaleString('es-AR', {
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: 0
+                                  });
+                                }
+                                // Para números con decimales, mostrar solo los decimales necesarios (hasta 2)
+                                return num.toLocaleString('es-AR', {
+                                  minimumFractionDigits: 0,
+                                  maximumFractionDigits: 2
+                                });
+                              };
+                              
                               return (
                                 <div key={key}>
                                   <div className="text-xs text-slate-400">{getMetricLabel(key)}</div>
                                   <div className="text-sm font-medium text-slate-200">
-                                    {typeof value === 'number' ? formatNumber(value, 2) : value}
+                                    {typeof value === 'number' ? formatNumberSmart(value) : value}
                                   </div>
                                 </div>
                               );

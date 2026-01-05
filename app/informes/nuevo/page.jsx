@@ -102,8 +102,8 @@ function NuevoInformePageContent() {
       setError("El período (fecha desde y hasta) es requerido");
       return false;
     }
-    const from = new Date(formData.periodo.from);
-    const to = new Date(formData.periodo.to);
+    const from = new Date(formData.periodo.from + 'T00:00:00');
+    const to = new Date(formData.periodo.to + 'T23:59:59');
     if (isNaN(from.getTime()) || isNaN(to.getTime())) {
       setError("Las fechas deben ser válidas");
       return false;
@@ -189,8 +189,9 @@ function NuevoInformePageContent() {
       }
 
       // Validar y convertir fechas
-      const fechaFrom = new Date(formData.periodo.from);
-      const fechaTo = new Date(formData.periodo.to);
+      // Crear fechas en hora local para evitar problemas de zona horaria
+      const fechaFrom = new Date(formData.periodo.from + 'T00:00:00');
+      const fechaTo = new Date(formData.periodo.to + 'T23:59:59');
       
       if (isNaN(fechaFrom.getTime()) || isNaN(fechaTo.getTime())) {
         setError("Las fechas deben ser válidas");

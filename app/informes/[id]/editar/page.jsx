@@ -29,8 +29,20 @@ function EditarInformePageContent() {
             clienteEmail: datos.clienteEmail || "",
             titulo: datos.titulo || "",
             periodo: {
-              from: datos.periodo?.from ? new Date(datos.periodo.from).toISOString().split('T')[0] : "",
-              to: datos.periodo?.to ? new Date(datos.periodo.to).toISOString().split('T')[0] : ""
+              from: datos.periodo?.from ? (() => {
+                const date = new Date(datos.periodo.from);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+              })() : "",
+              to: datos.periodo?.to ? (() => {
+                const date = new Date(datos.periodo.to);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+              })() : ""
             },
             moneda: datos.moneda || "ARS",
             porcentajeImpuestos: datos.porcentajeImpuestos || 0,
@@ -125,8 +137,8 @@ function EditarInformePageContent() {
       setError("El período (fecha desde y hasta) es requerido");
       return false;
     }
-    const from = new Date(formData.periodo.from);
-    const to = new Date(formData.periodo.to);
+    const from = new Date(formData.periodo.from + 'T00:00:00');
+    const to = new Date(formData.periodo.to + 'T23:59:59');
     if (isNaN(from.getTime()) || isNaN(to.getTime())) {
       setError("Las fechas deben ser válidas");
       return false;
@@ -194,8 +206,8 @@ function EditarInformePageContent() {
       const reportData = {
         ...formData,
         periodo: {
-          from: new Date(formData.periodo.from).toISOString(),
-          to: new Date(formData.periodo.to).toISOString()
+          from: new Date(formData.periodo.from + 'T00:00:00').toISOString(),
+          to: new Date(formData.periodo.to + 'T23:59:59').toISOString()
         }
       };
 

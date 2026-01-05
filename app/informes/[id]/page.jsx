@@ -229,12 +229,63 @@ function InformeDetallePageContent() {
       const imgWidth = pageWidth - 40; // Margen de 20mm cada lado
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
-      // Agregar la imagen del contenido al PDF
-      doc.addImage(imgData, 'PNG', 20, yPos, imgWidth, imgHeight);
-      yPos += imgHeight + 10;
+      // Altura disponible por página (reservando espacio para footer)
+      const footerHeight = 30; // Espacio para logo y número de página
+      const availableHeight = pageHeight - yPos - footerHeight;
       
-      // Si la imagen es muy larga, puede necesitar múltiples páginas
-      // jsPDF maneja esto automáticamente, pero necesitamos agregar el footer en cada página
+      // Si la imagen es más alta que el espacio disponible, dividirla manualmente
+      if (imgHeight > availableHeight) {
+        let remainingHeight = imgHeight;
+        let sourceY = 0; // Posición Y en el canvas original (en píxeles)
+        let currentY = yPos; // Posición Y actual en el PDF
+        const scale = 2; // Escala usada en html2canvas
+        const canvasHeightPx = canvas.height;
+        const imgHeightToPx = (imgHeight / imgWidth) * (canvas.width / scale); // Altura en píxeles de la imagen renderizada
+        
+        while (remainingHeight > 0) {
+          const heightToAdd = Math.min(remainingHeight, availableHeight);
+          
+          // Calcular la altura en píxeles del canvas para esta porción
+          const sliceHeightPx = (heightToAdd / imgHeight) * canvasHeightPx;
+          
+          // Crear un nuevo canvas para esta porción
+          const sliceCanvas = document.createElement('canvas');
+          const sliceCtx = sliceCanvas.getContext('2d');
+          sliceCanvas.width = canvas.width;
+          sliceCanvas.height = sliceHeightPx;
+          
+          // Dibujar la porción del canvas original en el nuevo canvas
+          sliceCtx.drawImage(
+            canvas,
+            0, sourceY, canvas.width, sliceHeightPx, // Source rectangle
+            0, 0, canvas.width, sliceHeightPx // Destination rectangle
+          );
+          
+          // Convertir a data URL
+          const sliceData = sliceCanvas.toDataURL('image/png');
+          
+          // Agregar esta porción al PDF
+          doc.addImage(sliceData, 'PNG', 20, currentY, imgWidth, heightToAdd);
+          
+          // Actualizar para la siguiente iteración
+          sourceY += sliceHeightPx;
+          remainingHeight -= heightToAdd;
+          
+          // Si aún queda contenido, agregar una nueva página
+          if (remainingHeight > 0) {
+            doc.addPage();
+            // Dibujar fondo azul en la nueva página
+            doc.setFillColor(azulMarca[0], azulMarca[1], azulMarca[2]);
+            doc.rect(0, 0, pageWidth, pageHeight, 'F');
+            currentY = 20; // Reiniciar Y para la nueva página
+          }
+        }
+      } else {
+        // Si cabe en una página, agregarla normalmente
+        doc.addImage(imgData, 'PNG', 20, yPos, imgWidth, imgHeight);
+      }
+      
+      // Obtener el número total de páginas después de agregar la imagen
       const totalPages = doc.internal.pages.length - 1;
       
       // Agregar logo y número de página en cada página
