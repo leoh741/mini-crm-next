@@ -285,6 +285,36 @@ function InformeDetallePageContent() {
           // Este es el contenedor de campañas
           const secciones = childElement.querySelectorAll('.bg-slate-800.border.border-slate-700.rounded-lg');
           
+          // Agregar el título "Campañas" solo en la primera página (antes de las secciones)
+          const titleWrapper = document.createElement('div');
+          titleWrapper.style.position = 'absolute';
+          titleWrapper.style.left = '-9999px';
+          titleWrapper.style.width = resumenElement.offsetWidth + 'px';
+          titleWrapper.style.padding = '15px 0 15px 0';
+          titleWrapper.style.margin = '0';
+          titleWrapper.style.overflow = 'visible';
+          titleWrapper.style.height = 'auto';
+          titleWrapper.className = '';
+          const clonedTitle = campanasTitle.cloneNode(true);
+          // Asegurar que el título tenga suficiente espacio y no se corte
+          clonedTitle.style.margin = '0';
+          clonedTitle.style.padding = '0';
+          clonedTitle.style.overflow = 'visible';
+          clonedTitle.style.lineHeight = '1.5';
+          clonedTitle.style.height = 'auto';
+          titleWrapper.appendChild(clonedTitle);
+          document.body.appendChild(titleWrapper);
+          
+          try {
+            await addElementToPDF(titleWrapper, false);
+          } catch (titleError) {
+            console.warn('Error al agregar título de campañas:', titleError);
+          } finally {
+            if (document.body.contains(titleWrapper)) {
+              document.body.removeChild(titleWrapper);
+            }
+          }
+          
           // Procesar cada sección (plataforma)
           for (const seccion of secciones) {
             try {
@@ -327,7 +357,7 @@ function InformeDetallePageContent() {
                 
                 try {
                   // Agregar campañas mientras quepan en la página actual
-                  const currentAvailableHeight = pageHeight - yPos - footerHeight;
+                  let currentAvailableHeight = pageHeight - yPos - footerHeight;
                   
                   while (campanaIndex < campanasItems.length) {
                     const campana = campanasItems[campanaIndex];
@@ -358,9 +388,11 @@ function InformeDetallePageContent() {
                         campanaIndex++;
                         break;
                       }
+                      // Si cabe en la nueva página, actualizar la altura disponible
+                      currentAvailableHeight = newAvailableHeight;
                     }
                     
-                    // Solo incrementar el índice si la campaña se agregó exitosamente
+                    // Incrementar el índice solo si la campaña se agregó exitosamente
                     campanaIndex++;
                   }
                   
