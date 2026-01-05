@@ -65,10 +65,13 @@ function InformeDetallePageContent() {
 
   const handleDuplicate = async () => {
     try {
-      const duplicated = await duplicateReport(informe._id || informe.reportId);
-      if (duplicated) {
-        router.push(`/informes/${duplicated._id || duplicated.reportId}`);
-      }
+      // Redirigir inmediatamente al hacer click, sin esperar la respuesta
+      router.push('/informes');
+      
+      // Duplicar el informe en segundo plano (sin await para no bloquear la redirección)
+      duplicateReport(informe._id || informe.reportId).catch(err => {
+        console.error('Error al duplicar informe en segundo plano:', err);
+      });
     } catch (err) {
       console.error('Error al duplicar:', err);
       alert("Error al duplicar el informe: " + err.message);
@@ -276,7 +279,7 @@ function InformeDetallePageContent() {
       for (let i = 0; i < children.length; i++) {
         const childElement = children[i];
         
-        // Si es el contenedor de "Campañas", dividir cada sección (plataforma) por páginas
+        // Si es el contenedor de "Campañas", dividir cada sección por páginas manteniendo el contenedor
         const campanasTitle = childElement.querySelector('h3');
         if (campanasTitle && campanasTitle.textContent.trim() === 'Campañas') {
           // Este es el contenedor de campañas
@@ -297,27 +300,6 @@ function InformeDetallePageContent() {
               // Obtener todas las campañas de esta sección
               const campanasItems = Array.from(campanasContainer.children);
               
-              // Calcular la altura del header de la sección
-              const headerWrapper = document.createElement('div');
-              headerWrapper.style.position = 'absolute';
-              headerWrapper.style.left = '-9999px';
-              headerWrapper.style.width = resumenElement.offsetWidth + 'px';
-              headerWrapper.className = 'bg-slate-800 border border-slate-700 rounded-lg p-6';
-              if (seccionHeader) {
-                const clonedHeader = seccionHeader.cloneNode(true);
-                headerWrapper.appendChild(clonedHeader);
-              }
-              document.body.appendChild(headerWrapper);
-              
-              let headerHeight = 0;
-              try {
-                headerHeight = await getElementHeight(headerWrapper);
-              } finally {
-                if (document.body.contains(headerWrapper)) {
-                  document.body.removeChild(headerWrapper);
-                }
-              }
-              
               // Dividir las campañas en grupos que quepan en cada página
               let campanaIndex = 0;
               
@@ -329,62 +311,69 @@ function InformeDetallePageContent() {
                 sectionWrapper.style.width = resumenElement.offsetWidth + 'px';
                 sectionWrapper.className = 'bg-slate-800 border border-slate-700 rounded-lg p-6';
                 
-                // Agregar el header de la sección
+                // Agregar el header de la sección (plataforma)
                 if (seccionHeader) {
                   const clonedHeader = seccionHeader.cloneNode(true);
                   sectionWrapper.appendChild(clonedHeader);
                 }
                 
-                // Crear contenedor para las campañas
+                // Crear contenedor para las campañas de este grupo
                 const campanasGroup = document.createElement('div');
                 campanasGroup.className = 'space-y-4 mt-4';
                 sectionWrapper.appendChild(campanasGroup);
                 
-                // Agregar campañas mientras quepan en la página
-                let currentHeight = headerHeight + 24; // header + padding inicial
-                const currentAvailableHeight = pageHeight - yPos - footerHeight;
-                const spacingBetweenCampanas = 16; // espacio-y-4
+                // Agregar el contenedor al DOM antes de trabajar con él
+                document.body.appendChild(sectionWrapper);
                 
-                while (campanaIndex < campanasItems.length) {
-                  const campana = campanasItems[campanaIndex];
-                  const clonedCampana = campana.cloneNode(true);
-                  campanasGroup.appendChild(clonedCampana);
+                try {
+                  // Agregar campañas mientras quepan en la página actual
+                  const currentAvailableHeight = pageHeight - yPos - footerHeight;
                   
-                  // Calcular altura de esta campaña
-                  const campanaHeight = await getElementHeight(clonedCampana);
-                  const newTotalHeight = currentHeight + campanaHeight + spacingBetweenCampanas;
-                  
-                  // Si agregar esta campaña excede el espacio disponible, detener
-                  if (newTotalHeight > currentAvailableHeight && campanasGroup.children.length > 0) {
-                    campanasGroup.removeChild(clonedCampana);
-                    break;
-                  }
-                  
-                  currentHeight = newTotalHeight;
-                  campanaIndex++;
-                }
-                
-                // Si hay campañas en este grupo, agregarlo al PDF
-                if (campanasGroup.children.length > 0) {
-                  document.body.appendChild(sectionWrapper);
-                  
-                  try {
-                    const sectionHeight = await getElementHeight(sectionWrapper);
-                    const availableHeight = pageHeight - yPos - footerHeight;
+                  while (campanaIndex < campanasItems.length) {
+                    const campana = campanasItems[campanaIndex];
+                    const clonedCampana = campana.cloneNode(true);
+                    campanasGroup.appendChild(clonedCampana);
                     
-                    // Si este grupo no cabe en la página actual, crear nueva página
-                    if (sectionHeight > availableHeight && yPos > 20) {
+                    // Calcular altura de este contenedor con las campañas agregadas hasta ahora
+                    const sectionHeight = await getElementHeight(sectionWrapper);
+                    
+                    // Si este contenedor no cabe en la página actual y ya hay al menos una campaña, remover la última y terminar
+                    if (sectionHeight > currentAvailableHeight && campanasGroup.children.length > 1) {
+                      campanasGroup.removeChild(clonedCampana);
+                      break;
+                    }
+                    
+                    // Si este contenedor no cabe incluso con una sola campaña, crear nueva página primero
+                    if (sectionHeight > currentAvailableHeight && campanasGroup.children.length === 1) {
                       doc.addPage();
                       doc.setFillColor(azulMarca[0], azulMarca[1], azulMarca[2]);
                       doc.rect(0, 0, pageWidth, pageHeight, 'F');
                       yPos = 20;
+                      const newAvailableHeight = pageHeight - yPos - footerHeight;
+                      // Recalcular altura con la nueva página
+                      const newSectionHeight = await getElementHeight(sectionWrapper);
+                      if (newSectionHeight > newAvailableHeight) {
+                        // Si aún no cabe, remover la campaña y continuar con la siguiente
+                        campanasGroup.removeChild(clonedCampana);
+                        campanaIndex++;
+                        break;
+                      }
                     }
                     
+                    // Solo incrementar el índice si la campaña se agregó exitosamente
+                    campanaIndex++;
+                  }
+                  
+                  // Si hay campañas en este grupo, agregarlo al PDF
+                  if (campanasGroup.children.length > 0) {
                     await addElementToPDF(sectionWrapper, true);
-                  } finally {
-                    if (document.body.contains(sectionWrapper)) {
-                      document.body.removeChild(sectionWrapper);
-                    }
+                  } else {
+                    // Si no hay campañas en el grupo, detener
+                    break;
+                  }
+                } finally {
+                  if (document.body.contains(sectionWrapper)) {
+                    document.body.removeChild(sectionWrapper);
                   }
                 }
               }
