@@ -31,7 +31,12 @@ import {
   HiMail,            // ✉️ Correo cerrado
   HiMailOpen,        // ✉️ Correo abierto
   HiPaperClip,       // 📎 Adjunto
-  HiStar             // ⭐ Estrella/Importante
+  HiStar,            // ⭐ Estrella/Importante
+  HiDocumentReport,  // 📊 Reporte/Informe
+  HiShare,           // 🔗 Compartir
+  HiDuplicate,       // 📋 Duplicar
+  HiChevronDown,     // ⬇️ Chevron abajo
+  HiChevronRight     // ▶️ Chevron derecha
 } from 'react-icons/hi';
 
 export const Icons = {
@@ -67,6 +72,11 @@ export const Icons = {
   Mail: HiMail,                  // ✉️ Correo cerrado
   MailOpen: HiMailOpen,          // ✉️ Correo abierto
   PaperClip: HiPaperClip,        // 📎 Adjunto
-  Star: HiStar                   // ⭐ Estrella/Importante
+  Star: HiStar,                  // ⭐ Estrella/Importante
+  DocumentReport: HiDocumentReport, // 📊 Reporte/Informe
+  Share: HiShare,                // 🔗 Compartir
+  Duplicate: HiDuplicate,        // 📋 Duplicar
+  ChevronDown: HiChevronDown,    // ⬇️ Chevron abajo
+  ChevronRight: HiChevronRight   // ▶️ Chevron derecha
 };
 

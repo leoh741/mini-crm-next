@@ -11,6 +11,7 @@ import Task from '../../../../models/Task';
 import TeamMember from '../../../../models/TeamMember';
 import ActivityList from '../../../../models/ActivityList';
 import Activity from '../../../../models/Activity';
+import Report from '../../../../models/Report';
 import { logOperation, logDatabaseState, getDatabaseCounts } from '../../../../lib/auditLogger';
 import mongoose from 'mongoose';
 
@@ -43,7 +44,8 @@ export async function GET() {
       Task,
       TeamMember,
       ActivityList,
-      Activity
+      Activity,
+      Report
     });
     
     logDatabaseState('BEFORE_EXPORT', countsBefore);
@@ -94,7 +96,7 @@ export async function GET() {
       console.warn(`[EXPORT] ⚠️ ${actividadesSinListaBD.length} actividades sin lista en la BD:`, actividadesSinListaBD.map(a => ({ id: a._id?.toString(), title: a.title })));
     }
     
-    const [clientes, pagos, gastos, ingresos, usuarios, presupuestos, reuniones, tareas, equipo] = await Promise.all([
+    const [clientes, pagos, gastos, ingresos, usuarios, presupuestos, reuniones, tareas, equipo, informes] = await Promise.all([
       Client.find({}).lean().maxTimeMS(30000), // Timeout de 30 segundos
       MonthlyPayment.find({}).lean().maxTimeMS(30000),
       Expense.find({}).lean().maxTimeMS(30000),
@@ -103,7 +105,8 @@ export async function GET() {
       Budget.find({}).lean().maxTimeMS(30000),
       Meeting.find({}).lean().maxTimeMS(30000),
       Task.find({}).lean().maxTimeMS(30000),
-      TeamMember.find({}).lean().maxTimeMS(30000)
+      TeamMember.find({}).lean().maxTimeMS(30000),
+      Report.find({}).lean().maxTimeMS(30000)
     ]);
     
     // PROTECCIÓN: Verificar inmediatamente después de leer que no se haya borrado nada
@@ -118,7 +121,8 @@ export async function GET() {
       Task,
       TeamMember,
       ActivityList,
-      Activity
+      Activity,
+      Report
     });
     
     const dataLossAfterRead = Object.keys(countsBefore).some(key => {
@@ -420,6 +424,29 @@ export async function GET() {
       };
     });
 
+    // Convertir informes al formato esperado
+    console.log(`[EXPORT] Informes encontrados ANTES de formatear: ${informes.length}`);
+    const informesFormateados = informes.map(informe => ({
+      reportId: informe.reportId || informe._id.toString(),
+      clienteNombre: informe.clienteNombre,
+      clienteEmail: informe.clienteEmail || undefined,
+      titulo: informe.titulo,
+      periodo: {
+        from: informe.periodo?.from || null,
+        to: informe.periodo?.to || null
+      },
+      moneda: informe.moneda || 'ARS',
+      porcentajeImpuestos: informe.porcentajeImpuestos || 0,
+      estado: informe.estado || 'borrador',
+      createdBy: informe.createdBy,
+      sections: informe.sections || [],
+      reportNotes: informe.reportNotes || {},
+      share: informe.share || { enabled: false },
+      createdAt: informe.createdAt || null,
+      updatedAt: informe.updatedAt || null
+    }));
+    console.log(`[EXPORT] Informes formateados: ${informesFormateados.length}`);
+
     // Formato compatible: devolver como objetos/arrays directamente
     // El frontend los serializará cuando cree el archivo JSON
     const datos = {
@@ -435,8 +462,9 @@ export async function GET() {
       equipo: equipoFormateado, // Array directamente
       activityLists: activityListsFormateadas, // Array directamente
       activities: activitiesFormateadas, // Array directamente
+      informes: informesFormateados, // Array directamente
       fechaExportacion: new Date().toISOString(),
-      version: '2.4'
+      version: '2.5'
     };
     
     // Logging para verificar que todas las actividades se exportaron
@@ -475,6 +503,7 @@ export async function GET() {
     console.log(`[EXPORT] - Equipo: ${equipoFormateado.length}`);
     console.log(`[EXPORT] - Listas de Actividades: ${activityListsFormateadas.length}`);
     console.log(`[EXPORT] - Actividades: ${activitiesFormateadas.length}`);
+    console.log(`[EXPORT] - Informes: ${informesFormateados.length}`);
     console.log(`[EXPORT] ==========================================`);
 
     // PROTECCIÓN: Verificar que no se haya borrado nada durante la exportación
@@ -490,7 +519,8 @@ export async function GET() {
       Task,
       TeamMember,
       ActivityList,
-      Activity
+      Activity,
+      Report
     });
     
     // Verificar que los conteos no hayan cambiado después de formatear
@@ -534,7 +564,8 @@ export async function GET() {
       Task,
       TeamMember,
       ActivityList,
-      Activity
+      Activity,
+      Report
     });
     
     logDatabaseState('AFTER_EXPORT', countsAfter);
@@ -586,7 +617,8 @@ export async function GET() {
         tareas: datos.tareas.length,
         equipo: datos.equipo.length,
         activityLists: datos.activityLists.length,
-        activities: datos.activities.length
+        activities: datos.activities.length,
+        informes: datos.informes.length
       }
     });
     

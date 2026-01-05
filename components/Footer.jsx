@@ -6,8 +6,8 @@ import { memo } from "react";
 function Footer() {
   const pathname = usePathname();
 
-  // No mostrar footer en la página de login
-  if (pathname === "/login") {
+  // No mostrar footer en la página de login ni en páginas compartidas
+  if (pathname === "/login" || pathname?.startsWith('/informes/compartido')) {
     return null;
   }
 

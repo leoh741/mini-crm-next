@@ -12,6 +12,11 @@ function Header() {
   const [usuario, setUsuario] = useState(null);
   const [esAdminUser, setEsAdminUser] = useState(false);
   const [menuAbierto, setMenuAbierto] = useState(false);
+  
+  // No mostrar header en páginas compartidas
+  if (pathname?.startsWith('/informes/compartido')) {
+    return null;
+  }
 
   useEffect(() => {
     const usuarioActual = getUsuarioActual();
@@ -136,6 +141,9 @@ function Header() {
               <Link href="/presupuestos" prefetch={true} className={pathname?.startsWith("/presupuestos") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
                 Presupuestos
               </Link>
+              <Link href="/informes" prefetch={true} className={pathname?.startsWith("/informes") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
+                Informes
+              </Link>
               <Link href="/reuniones" prefetch={true} className={pathname?.startsWith("/reuniones") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
                 Reuniones
               </Link>
@@ -243,6 +251,13 @@ function Header() {
                   onClick={() => setMenuAbierto(false)}
                 >
                   Presupuestos
+                </Link>
+                <Link 
+                  href="/informes" 
+                  className={`px-4 py-3 ${pathname?.startsWith("/informes") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  Informes
                 </Link>
                 <Link 
                   href="/reuniones" 

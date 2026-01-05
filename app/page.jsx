@@ -234,17 +234,6 @@ function HomePageContent() {
               <Icons.Folder className="text-sm" />
               <span>Drive</span>
             </a>
-            <a 
-              href="https://quire.io/w/Lista_de_Tareas_27_11_25" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-50 rounded-lg text-xs font-medium transition-colors duration-200 border border-gray-200 shadow-sm hover:shadow-md"
-              style={{ color: '#10b981' }}
-              title="Abrir Quire - Lista de Tareas"
-            >
-              <Icons.Clipboard className="text-sm" style={{ color: '#10b981' }} />
-              <span>Quire</span>
-            </a>
           </div>
           <div className="px-3 py-1.5 bg-slate-800 rounded-lg border border-slate-700 w-full sm:w-auto">
             <p className="text-xs text-slate-300 font-medium text-center sm:text-left" suppressHydrationWarning>
@@ -468,14 +457,14 @@ function HomePageContent() {
         </Link>
 
         <Link href="/presupuestos" className="group" prefetch={true}>
-          <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-emerald-500/20 flex flex-col justify-between">
+          <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-sky-700 via-sky-800 to-sky-900 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-sky-600/20 flex flex-col justify-between">
             <div className="flex items-start justify-between mb-2">
               <Icons.Clipboard className="text-3xl group-hover:scale-110 transition-transform duration-300" />
-              <div className="w-1.5 h-1.5 bg-emerald-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="w-1.5 h-1.5 bg-sky-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
             <div>
               <h3 className="text-lg font-bold text-white mb-1">Presupuestos</h3>
-              <p className="text-xs text-emerald-100/90">Crear y gestionar</p>
+              <p className="text-xs text-sky-100/90">Crear y gestionar</p>
             </div>
             <div className="absolute bottom-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mb-12 group-hover:scale-150 transition-transform duration-500"></div>
           </div>
@@ -490,6 +479,34 @@ function HomePageContent() {
             <div>
               <h3 className="text-lg font-bold text-white mb-1">Equipo</h3>
               <p className="text-xs text-red-100/90">Gestionar miembros</p>
+            </div>
+            <div className="absolute bottom-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mb-12 group-hover:scale-150 transition-transform duration-500"></div>
+          </div>
+        </Link>
+
+        <Link href="/activities" className="group" prefetch={true}>
+          <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-teal-600 via-teal-700 to-teal-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-teal-500/20 flex flex-col justify-between">
+            <div className="flex items-start justify-between mb-2">
+              <Icons.Tag className="text-3xl group-hover:scale-110 transition-transform duration-300" />
+              <div className="w-1.5 h-1.5 bg-teal-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">Actividades</h3>
+              <p className="text-xs text-teal-100/90">Gestionar actividades</p>
+            </div>
+            <div className="absolute bottom-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mb-12 group-hover:scale-150 transition-transform duration-500"></div>
+          </div>
+        </Link>
+
+        <Link href="/informes" className="group" prefetch={true}>
+          <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-indigo-500/20 flex flex-col justify-between">
+            <div className="flex items-start justify-between mb-2">
+              <Icons.DocumentReport className="text-3xl group-hover:scale-110 transition-transform duration-300" />
+              <div className="w-1.5 h-1.5 bg-indigo-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">Informes</h3>
+              <p className="text-xs text-indigo-100/90">Crear y gestionar</p>
             </div>
             <div className="absolute bottom-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mb-12 group-hover:scale-150 transition-transform duration-500"></div>
           </div>
@@ -593,7 +610,7 @@ function HomePageContent() {
                   try {
                     const resultado = await cargarBackup(archivo);
                     const mensaje = resultado?.resultados 
-                      ? `Datos importados correctamente:\n- Clientes: ${resultado.resultados.clientes}\n- Pagos: ${resultado.resultados.pagosMensuales}\n- Gastos: ${resultado.resultados.gastos}\n- Ingresos: ${resultado.resultados.ingresos}\n- Presupuestos: ${resultado.resultados.presupuestos || 0}\n- Reuniones: ${resultado.resultados.reuniones || 0}\n- Tareas: ${resultado.resultados.tareas || 0}\n- Equipo: ${resultado.resultados.equipo || 0}\n- Listas de Actividades: ${resultado.resultados.activityLists || 0}\n- Actividades: ${resultado.resultados.activities || 0}\n- Usuarios: ${resultado.resultados.usuarios} (${resultado.resultados.usuariosMantenidos || 0} mantenidos)\n\nRecarga la página para ver los cambios.`
+                      ? `Datos importados correctamente:\n- Clientes: ${resultado.resultados.clientes}\n- Pagos: ${resultado.resultados.pagosMensuales}\n- Gastos: ${resultado.resultados.gastos}\n- Ingresos: ${resultado.resultados.ingresos}\n- Presupuestos: ${resultado.resultados.presupuestos || 0}\n- Reuniones: ${resultado.resultados.reuniones || 0}\n- Tareas: ${resultado.resultados.tareas || 0}\n- Equipo: ${resultado.resultados.equipo || 0}\n- Listas de Actividades: ${resultado.resultados.activityLists || 0}\n- Actividades: ${resultado.resultados.activities || 0}\n- Informes: ${resultado.resultados.informes || 0}\n- Usuarios: ${resultado.resultados.usuarios} (${resultado.resultados.usuariosMantenidos || 0} mantenidos)\n\nRecarga la página para ver los cambios.`
                       : 'Datos importados correctamente. Recarga la página para ver los cambios.';
                     alert(mensaje);
                     window.location.reload();

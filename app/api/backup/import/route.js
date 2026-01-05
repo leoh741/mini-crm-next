@@ -15,6 +15,7 @@ import Task from '../../../../models/Task';
 import TeamMember from '../../../../models/TeamMember';
 import ActivityList from '../../../../models/ActivityList';
 import Activity from '../../../../models/Activity';
+import Report from '../../../../models/Report';
 
 export async function POST(request) {
   // PROTECCIÓN CRÍTICA: Bloquear importaciones desde desarrollo local si se conecta a base remota
@@ -110,7 +111,8 @@ export async function POST(request) {
       Task,
       TeamMember,
       ActivityList,
-      Activity
+      Activity,
+      Report
     });
     logDatabaseState('BEFORE_IMPORT', countsBefore);
     logOperation('IMPORT_START', {
@@ -198,6 +200,7 @@ export async function POST(request) {
     let equipo = []; // Inicializar equipo como array vacío para compatibilidad con backups antiguos
     let activityLists = []; // Inicializar activityLists como array vacío para compatibilidad con backups antiguos
     let activities = []; // Inicializar activities como array vacío para compatibilidad con backups antiguos
+    let informes = []; // Inicializar informes como array vacío para compatibilidad con backups antiguos
 
     // Función helper para parsear strings JSON que pueden estar doblemente serializados
     const parseJsonField = (field, fieldName) => {
@@ -228,10 +231,10 @@ export async function POST(request) {
       } catch (parseError) {
         console.error(`[BACKUP IMPORT] [${timestamp}] Error al parsear ${fieldName}:`, parseError.message);
         // Si falla, devolver valor por defecto
-        // Para campos de array (clientes, usuarios, presupuestos, reuniones, tareas, equipo, activityLists, activities)
+        // Para campos de array (clientes, usuarios, presupuestos, reuniones, tareas, equipo, activityLists, activities, informes)
         if (fieldName.includes('clientes') || fieldName.includes('usuarios') || fieldName.includes('presupuestos') || 
             fieldName.includes('reuniones') || fieldName.includes('tareas') || fieldName.includes('equipo') ||
-            fieldName.includes('activityLists') || fieldName.includes('activities')) {
+            fieldName.includes('activityLists') || fieldName.includes('activities') || fieldName.includes('informes')) {
           return [];
         }
         // Para campos de objeto (pagosMensuales, gastos, ingresos)
@@ -271,6 +274,12 @@ export async function POST(request) {
       } else {
         activities = []; // Backup antiguo sin activities
       }
+      // Informes pueden no existir en backups antiguos (versión < 2.5), usar array vacío por defecto
+      if (body.informes !== undefined && body.informes !== null) {
+        informes = parseJsonField(body.informes, 'informes');
+      } else {
+        informes = []; // Backup antiguo sin informes
+      }
       
       console.log(`[BACKUP IMPORT] [${timestamp}] Datos parseados:`);
       console.log(`[BACKUP IMPORT] [${timestamp}] - Clientes:`, Array.isArray(clientes) ? `${clientes.length} clientes` : `NO ES ARRAY (tipo: ${typeof clientes})`);
@@ -287,6 +296,7 @@ export async function POST(request) {
       console.log(`[BACKUP IMPORT] [${timestamp}] - Equipo:`, Array.isArray(equipo) ? `${equipo.length} miembros` : `NO ES ARRAY (tipo: ${typeof equipo})`);
       console.log(`[BACKUP IMPORT] [${timestamp}] - ActivityLists:`, Array.isArray(activityLists) ? `${activityLists.length} listas` : `NO ES ARRAY (tipo: ${typeof activityLists})`);
       console.log(`[BACKUP IMPORT] [${timestamp}] - Activities:`, Array.isArray(activities) ? `${activities.length} actividades` : `NO ES ARRAY (tipo: ${typeof activities})`);
+      console.log(`[BACKUP IMPORT] [${timestamp}] - Informes:`, Array.isArray(informes) ? `${informes.length} informes` : `NO ES ARRAY (tipo: ${typeof informes})`);
     } catch (parseError) {
       console.error(`[BACKUP IMPORT] [${timestamp}] Error al parsear JSON:`, parseError);
       console.error(`[BACKUP IMPORT] [${timestamp}] Stack:`, parseError.stack);
@@ -300,13 +310,16 @@ export async function POST(request) {
       if (typeof activities === 'undefined') {
         activities = [];
       }
+      if (typeof informes === 'undefined') {
+        informes = [];
+      }
       return NextResponse.json(
         { success: false, error: 'Error al parsear los datos JSON: ' + parseError.message },
         { status: 400 }
       );
     }
 
-    // Asegurar que equipo, activityLists y activities estén inicializados (por si acaso)
+    // Asegurar que equipo, activityLists, activities e informes estén inicializados (por si acaso)
     if (typeof equipo === 'undefined') {
       equipo = [];
     }
@@ -315,6 +328,9 @@ export async function POST(request) {
     }
     if (typeof activities === 'undefined') {
       activities = [];
+    }
+    if (typeof informes === 'undefined') {
+      informes = [];
     }
 
     // VALIDAR que hay datos para importar ANTES de borrar
@@ -328,6 +344,7 @@ export async function POST(request) {
     const tieneEquipo = Array.isArray(equipo) && equipo.length > 0;
     const tieneActivityLists = Array.isArray(activityLists) && activityLists.length > 0;
     const tieneActivities = Array.isArray(activities) && activities.length > 0;
+    const tieneInformes = Array.isArray(informes) && informes.length > 0;
     
     // Logging detallado para diagnóstico
     console.log(`[BACKUP IMPORT] [${timestamp}] Resumen de datos recibidos:`);
@@ -338,9 +355,10 @@ export async function POST(request) {
     console.log(`[BACKUP IMPORT] [${timestamp}] - tienePresupuestos: ${tienePresupuestos} (${Array.isArray(presupuestos) ? presupuestos.length : 'NO ES ARRAY'})`);
     console.log(`[BACKUP IMPORT] [${timestamp}] - tieneReuniones: ${tieneReuniones} (${Array.isArray(reuniones) ? reuniones.length : 'NO ES ARRAY'})`);
     console.log(`[BACKUP IMPORT] [${timestamp}] - tieneTareas: ${tieneTareas} (${Array.isArray(tareas) ? tareas.length : 'NO ES ARRAY'})`);
-    console.log(`[BACKUP IMPORT] [${timestamp}] - tieneEquipo: ${tieneEquipo} (${Array.isArray(equipo) ? equipo.length : 'NO ES ARRAY'})`);
-    console.log(`[BACKUP IMPORT] [${timestamp}] - tieneActivityLists: ${tieneActivityLists} (${Array.isArray(activityLists) ? activityLists.length : 'NO ES ARRAY'})`);
-    console.log(`[BACKUP IMPORT] [${timestamp}] - tieneActivities: ${tieneActivities} (${Array.isArray(activities) ? activities.length : 'NO ES ARRAY'})`);
+      console.log(`[BACKUP IMPORT] [${timestamp}] - tieneEquipo: ${tieneEquipo} (${Array.isArray(equipo) ? equipo.length : 'NO ES ARRAY'})`);
+      console.log(`[BACKUP IMPORT] [${timestamp}] - tieneActivityLists: ${tieneActivityLists} (${Array.isArray(activityLists) ? activityLists.length : 'NO ES ARRAY'})`);
+      console.log(`[BACKUP IMPORT] [${timestamp}] - tieneActivities: ${tieneActivities} (${Array.isArray(activities) ? activities.length : 'NO ES ARRAY'})`);
+      console.log(`[BACKUP IMPORT] [${timestamp}] - tieneInformes: ${tieneInformes} (${Array.isArray(informes) ? informes.length : 'NO ES ARRAY'})`);
 
     // VALIDACIÓN CRÍTICA: Verificar que los clientes tienen nombre válido ANTES de borrar
     let clientesValidos = [];
@@ -378,7 +396,7 @@ export async function POST(request) {
       console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Validación de clientes: ${clientesValidos.length} válidos de ${clientes.length} totales`);
     }
 
-    if (!tieneClientes && !tienePagos && !tieneGastos && !tieneIngresos && !tienePresupuestos && !tieneReuniones && !tieneTareas && !tieneEquipo && !tieneActivityLists && !tieneActivities) {
+    if (!tieneClientes && !tienePagos && !tieneGastos && !tieneIngresos && !tienePresupuestos && !tieneReuniones && !tieneTareas && !tieneEquipo && !tieneActivityLists && !tieneActivities && !tieneInformes) {
       console.error(`[BACKUP IMPORT] [${timestamp}] ❌ Error: No hay datos válidos para importar`);
       console.error(`[BACKUP IMPORT] [${timestamp}] User-Agent: ${userAgent}`);
       console.error(`[BACKUP IMPORT] [${timestamp}] Referer: ${referer}`);
@@ -429,7 +447,8 @@ export async function POST(request) {
       tareas: tieneTareas ? await Task.countDocuments() : 0,
       equipo: tieneEquipo ? await TeamMember.countDocuments() : 0,
       activityLists: tieneActivityLists ? await ActivityList.countDocuments() : 0,
-      activities: tieneActivities ? await Activity.countDocuments() : 0
+      activities: tieneActivities ? await Activity.countDocuments() : 0,
+      informes: tieneInformes ? await Report.countDocuments() : 0
     };
     
     console.log(`[BACKUP IMPORT] [${timestamp}] Documentos existentes que se borrarán:`, documentosExistentes);
@@ -446,6 +465,7 @@ export async function POST(request) {
     let equipoPreparado = []; // Inicializar como array vacío
     let activityListsPreparadas = []; // Inicializar como array vacío
     let activitiesPreparadas = []; // Inicializar como array vacío
+    let informesPreparados = []; // Inicializar como array vacío
     
     // Preparar clientes ANTES de borrar
     if (tieneClientes && clientesValidos.length > 0) {
@@ -848,8 +868,34 @@ export async function POST(request) {
       console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ No se prepararon actividades: tieneActivities=${tieneActivities}, activities.length=${activities?.length || 0}, esArray=${Array.isArray(activities)}`);
     }
     
+    // Preparar Informes ANTES de borrar (después de actividades)
+    console.log(`[BACKUP IMPORT] [${timestamp}] Preparando informes: tieneInformes=${tieneInformes}, informes.length=${informes?.length || 0}, esArray=${Array.isArray(informes)}`);
+    
+    if (tieneInformes && Array.isArray(informes) && informes.length > 0) {
+      informesPreparados = informes.map(informe => ({
+        reportId: informe.reportId || `report-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+        clienteNombre: informe.clienteNombre?.trim() || '',
+        clienteEmail: informe.clienteEmail?.trim() || undefined,
+        titulo: informe.titulo?.trim() || '',
+        periodo: {
+          from: informe.periodo?.from ? new Date(informe.periodo.from) : new Date(),
+          to: informe.periodo?.to ? new Date(informe.periodo.to) : new Date()
+        },
+        moneda: informe.moneda || 'ARS',
+        porcentajeImpuestos: informe.porcentajeImpuestos ? Number(informe.porcentajeImpuestos) : 0,
+        estado: informe.estado || 'borrador',
+        createdBy: informe.createdBy || '',
+        sections: Array.isArray(informe.sections) ? informe.sections : [],
+        reportNotes: informe.reportNotes || {},
+        share: informe.share || { enabled: false }
+      })).filter(r => r.clienteNombre && r.clienteNombre.trim().length > 0 && r.titulo && r.titulo.trim().length > 0);
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ ${informesPreparados.length} informes preparados para importar (de ${informes.length} en el backup)`);
+    } else {
+      console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ No se prepararon informes: tieneInformes=${tieneInformes}, informes.length=${informes?.length || 0}, esArray=${Array.isArray(informes)}`);
+    }
+    
     // VALIDACIÓN FINAL ANTES DE BORRAR: Verificar que tenemos al menos algunos datos válidos
-    const totalDatosPreparados = clientesPreparados.length + pagosPreparados.length + gastosPreparados.length + ingresosPreparados.length + presupuestosPreparados.length + reunionesPreparadas.length + tareasPreparadas.length + equipoPreparado.length + activityListsPreparadas.length + activitiesPreparadas.length;
+    const totalDatosPreparados = clientesPreparados.length + pagosPreparados.length + gastosPreparados.length + ingresosPreparados.length + presupuestosPreparados.length + reunionesPreparadas.length + tareasPreparadas.length + equipoPreparado.length + activityListsPreparadas.length + activitiesPreparadas.length + informesPreparados.length;
     if (totalDatosPreparados === 0) {
       console.error(`[BACKUP IMPORT] [${timestamp}] ERROR CRÍTICO: No hay datos válidos preparados. NO se borrará nada.`);
       return NextResponse.json(
@@ -863,7 +909,7 @@ export async function POST(request) {
                                  documentosExistentes.gastos + documentosExistentes.ingresos +
                                  documentosExistentes.presupuestos + documentosExistentes.reuniones +
                                  documentosExistentes.tareas + documentosExistentes.equipo +
-                                 documentosExistentes.activityLists + documentosExistentes.activities;
+                                 documentosExistentes.activityLists + documentosExistentes.activities + documentosExistentes.informes;
     
     if (totalDatosExistentes > 0 && totalDatosPreparados < totalDatosExistentes) {
       console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ ADVERTENCIA: El backup tiene MENOS datos (${totalDatosPreparados}) que los existentes (${totalDatosExistentes})`);
@@ -888,7 +934,8 @@ export async function POST(request) {
               tareas: tareasPreparadas.length,
               equipo: equipoPreparado.length,
               activityLists: activityListsPreparadas.length,
-              activities: activitiesPreparadas.length
+              activities: activitiesPreparadas.length,
+              informes: informesPreparados.length
             }
           },
           { status: 400 }
@@ -901,7 +948,8 @@ export async function POST(request) {
                                documentosExistentes.gastos > 0 || documentosExistentes.ingresos > 0 ||
                                documentosExistentes.presupuestos > 0 || documentosExistentes.reuniones > 0 ||
                                documentosExistentes.tareas > 0 || documentosExistentes.equipo > 0 ||
-                               documentosExistentes.activityLists > 0 || documentosExistentes.activities > 0;
+                               documentosExistentes.activityLists > 0 || documentosExistentes.activities > 0 ||
+                               documentosExistentes.informes > 0;
     
     if (hayDatosExistentes) {
       // Requerir confirmación doble si hay datos existentes
@@ -932,7 +980,8 @@ export async function POST(request) {
       tareas: tareasPreparadas.length,
       equipo: equipoPreparado.length,
       activityLists: activityListsPreparadas.length,
-      activities: activitiesPreparadas.length
+      activities: activitiesPreparadas.length,
+      informes: informesPreparados.length
     };
     
     console.log(`[BACKUP IMPORT] [${timestamp}] Documentos que se importarán:`, documentosAImportar);
@@ -1372,6 +1421,15 @@ export async function POST(request) {
       await Activity.deleteMany({});
       console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Actividades eliminadas: ${countAntes} (se importarán ${activitiesPreparadas.length})`);
     }
+    if (tieneInformes && informesPreparados.length > 0) {
+      const countAntes = documentosExistentes.informes;
+      logDeleteOperation('Report', countAntes, 'Importación de backup', {
+        informesPreparados: informesPreparados.length,
+        timestamp
+      });
+      await Report.deleteMany({});
+      console.log(`[BACKUP IMPORT] [${timestamp}] ⚠️ Informes eliminados: ${countAntes} (se importarán ${informesPreparados.length})`);
+    }
     // NO eliminamos usuarios - se mantienen y se hace merge
 
     const resultados = {
@@ -1386,7 +1444,8 @@ export async function POST(request) {
       tareas: 0,
       equipo: 0,
       activityLists: 0,
-      activities: 0
+      activities: 0,
+      informes: 0
     };
 
     // Importar clientes (usar los ya preparados y validados)
@@ -2225,6 +2284,89 @@ export async function POST(request) {
       console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ No se importaron actividades: activitiesPreparadas.length=${activitiesPreparadas?.length || 0}, tieneActivities=${tieneActivities}`);
     }
 
+    // Importar informes (usar los ya preparados)
+    if (informesPreparados.length > 0) {
+      console.log(`[BACKUP IMPORT] [${timestamp}] Importando ${informesPreparados.length} informes...`);
+      let insertadas = 0;
+      let actualizadas = 0;
+      let errores = 0;
+      
+      for (let i = 0; i < informesPreparados.length; i++) {
+        const informe = informesPreparados[i];
+        try {
+          // Normalizar reportNotes
+          const reportNotesNormalizado = {
+            observaciones: informe.reportNotes?.observaciones || informe.reportNotes?.observaciones || '',
+            recomendaciones: informe.reportNotes?.recomendaciones || informe.reportNotes?.recomendaciones || ''
+          };
+          
+          // Normalizar share
+          const shareNormalizado = {
+            enabled: Boolean(informe.share?.enabled),
+            token: informe.share?.token || undefined,
+            expiresAt: informe.share?.expiresAt ? new Date(informe.share.expiresAt) : undefined
+          };
+          
+          const informeData = {
+            reportId: informe.reportId,
+            clienteNombre: informe.clienteNombre.trim(),
+            clienteEmail: informe.clienteEmail?.trim() || undefined,
+            titulo: informe.titulo.trim(),
+            periodo: {
+              from: informe.periodo.from,
+              to: informe.periodo.to
+            },
+            moneda: informe.moneda || 'ARS',
+            porcentajeImpuestos: Number(informe.porcentajeImpuestos) || 0,
+            estado: informe.estado || 'borrador',
+            createdBy: informe.createdBy.trim(),
+            sections: Array.isArray(informe.sections) ? informe.sections : [],
+            reportNotes: reportNotesNormalizado,
+            share: shareNormalizado
+          };
+          
+          // Verificar si el informe ya existe
+          const informeExistente = await Report.findOne({ reportId: informe.reportId }).select('_id').lean();
+          
+          if (informeExistente) {
+            // Actualizar informe existente
+            await Report.findByIdAndUpdate(
+              informeExistente._id,
+              { $set: informeData },
+              { new: true, runValidators: true }
+            );
+            actualizadas++;
+          } else {
+            // Crear nuevo informe
+            await Report.create(informeData);
+            insertadas++;
+          }
+          
+          if ((insertadas + actualizadas) % 50 === 0) {
+            console.log(`[BACKUP IMPORT] [${timestamp}] Procesados ${insertadas + actualizadas}/${informesPreparados.length} informes...`);
+          }
+        } catch (e) {
+          errores++;
+          if (errores <= 5) {
+            console.error(`[BACKUP IMPORT] Error al insertar informe [${i + 1}] (${informe.titulo}):`, e.message);
+          }
+        }
+      }
+      
+      resultados.informes = insertadas + actualizadas;
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ Informes importados: ${insertadas} insertados, ${actualizadas} actualizados, ${errores} errores`);
+      
+      if (errores > 0) {
+        console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ Hubo ${errores} errores al importar informes`);
+      }
+      
+      if (insertadas === 0 && actualizadas === 0 && errores === 0) {
+        console.error(`[BACKUP IMPORT] [${timestamp}] ❌ ERROR CRÍTICO: No se importó ningún informe aunque había ${informesPreparados.length} preparados`);
+      }
+    } else {
+      console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ No se importaron informes: informesPreparados.length=${informesPreparados?.length || 0}, tieneInformes=${tieneInformes}`);
+    }
+
     // PROTECCIÓN CRÍTICA: Esperar un momento para que MongoDB persista todos los cambios
     await new Promise(resolve => setTimeout(resolve, 500));
     
@@ -2287,7 +2429,8 @@ export async function POST(request) {
       Task,
       TeamMember,
       ActivityList,
-      Activity
+      Activity,
+      Report
     });
     logDatabaseState('AFTER_IMPORT', countsAfter);
     
