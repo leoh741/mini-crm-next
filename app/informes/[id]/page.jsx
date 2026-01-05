@@ -276,30 +276,118 @@ function InformeDetallePageContent() {
       for (let i = 0; i < children.length; i++) {
         const childElement = children[i];
         
-        // Si es el contenedor de "Campañas", agregar cada sección completa con su contenedor
+        // Si es el contenedor de "Campañas", dividir cada sección (plataforma) por páginas
         const campanasTitle = childElement.querySelector('h3');
         if (campanasTitle && campanasTitle.textContent.trim() === 'Campañas') {
-          // Este es el contenedor de campañas (incluye el título y las secciones)
-          // Agregar cada sección (plataforma) completa con su contenedor
+          // Este es el contenedor de campañas
           const secciones = childElement.querySelectorAll('.bg-slate-800.border.border-slate-700.rounded-lg');
           
-          // Agregar cada sección (plataforma) completa con su contenedor
-          // Si una sección no cabe en la página actual, se mueve completa a la siguiente página
+          // Procesar cada sección (plataforma)
           for (const seccion of secciones) {
             try {
-              const seccionHeight = await getElementHeight(seccion);
-              const currentAvailableHeight = pageHeight - yPos - footerHeight;
+              const seccionHeader = seccion.querySelector('h4');
+              const campanasContainer = seccion.querySelector('.space-y-4');
               
-              // Si la sección no cabe en la página actual, crear nueva página
-              if (seccionHeight > currentAvailableHeight && yPos > 20) {
-                doc.addPage();
-                doc.setFillColor(azulMarca[0], azulMarca[1], azulMarca[2]);
-                doc.rect(0, 0, pageWidth, pageHeight, 'F');
-                yPos = 20;
+              if (!campanasContainer || campanasContainer.children.length === 0) {
+                // Si no hay campañas, agregar la sección completa
+                await addElementToPDF(seccion, true);
+                continue;
               }
               
-              // Agregar la sección completa (con su contenedor que agrupa todas las campañas de esa plataforma)
-              await addElementToPDF(seccion, true);
+              // Obtener todas las campañas de esta sección
+              const campanasItems = Array.from(campanasContainer.children);
+              
+              // Calcular la altura del header de la sección
+              const headerWrapper = document.createElement('div');
+              headerWrapper.style.position = 'absolute';
+              headerWrapper.style.left = '-9999px';
+              headerWrapper.style.width = resumenElement.offsetWidth + 'px';
+              headerWrapper.className = 'bg-slate-800 border border-slate-700 rounded-lg p-6';
+              if (seccionHeader) {
+                const clonedHeader = seccionHeader.cloneNode(true);
+                headerWrapper.appendChild(clonedHeader);
+              }
+              document.body.appendChild(headerWrapper);
+              
+              let headerHeight = 0;
+              try {
+                headerHeight = await getElementHeight(headerWrapper);
+              } finally {
+                if (document.body.contains(headerWrapper)) {
+                  document.body.removeChild(headerWrapper);
+                }
+              }
+              
+              // Dividir las campañas en grupos que quepan en cada página
+              let campanaIndex = 0;
+              
+              while (campanaIndex < campanasItems.length) {
+                // Crear un contenedor temporal para este grupo de campañas
+                const sectionWrapper = document.createElement('div');
+                sectionWrapper.style.position = 'absolute';
+                sectionWrapper.style.left = '-9999px';
+                sectionWrapper.style.width = resumenElement.offsetWidth + 'px';
+                sectionWrapper.className = 'bg-slate-800 border border-slate-700 rounded-lg p-6';
+                
+                // Agregar el header de la sección
+                if (seccionHeader) {
+                  const clonedHeader = seccionHeader.cloneNode(true);
+                  sectionWrapper.appendChild(clonedHeader);
+                }
+                
+                // Crear contenedor para las campañas
+                const campanasGroup = document.createElement('div');
+                campanasGroup.className = 'space-y-4 mt-4';
+                sectionWrapper.appendChild(campanasGroup);
+                
+                // Agregar campañas mientras quepan en la página
+                let currentHeight = headerHeight + 24; // header + padding inicial
+                const currentAvailableHeight = pageHeight - yPos - footerHeight;
+                const spacingBetweenCampanas = 16; // espacio-y-4
+                
+                while (campanaIndex < campanasItems.length) {
+                  const campana = campanasItems[campanaIndex];
+                  const clonedCampana = campana.cloneNode(true);
+                  campanasGroup.appendChild(clonedCampana);
+                  
+                  // Calcular altura de esta campaña
+                  const campanaHeight = await getElementHeight(clonedCampana);
+                  const newTotalHeight = currentHeight + campanaHeight + spacingBetweenCampanas;
+                  
+                  // Si agregar esta campaña excede el espacio disponible, detener
+                  if (newTotalHeight > currentAvailableHeight && campanasGroup.children.length > 0) {
+                    campanasGroup.removeChild(clonedCampana);
+                    break;
+                  }
+                  
+                  currentHeight = newTotalHeight;
+                  campanaIndex++;
+                }
+                
+                // Si hay campañas en este grupo, agregarlo al PDF
+                if (campanasGroup.children.length > 0) {
+                  document.body.appendChild(sectionWrapper);
+                  
+                  try {
+                    const sectionHeight = await getElementHeight(sectionWrapper);
+                    const availableHeight = pageHeight - yPos - footerHeight;
+                    
+                    // Si este grupo no cabe en la página actual, crear nueva página
+                    if (sectionHeight > availableHeight && yPos > 20) {
+                      doc.addPage();
+                      doc.setFillColor(azulMarca[0], azulMarca[1], azulMarca[2]);
+                      doc.rect(0, 0, pageWidth, pageHeight, 'F');
+                      yPos = 20;
+                    }
+                    
+                    await addElementToPDF(sectionWrapper, true);
+                  } finally {
+                    if (document.body.contains(sectionWrapper)) {
+                      document.body.removeChild(sectionWrapper);
+                    }
+                  }
+                }
+              }
             } catch (sectionError) {
               console.warn('Error al procesar sección:', sectionError);
               // Continuar con la siguiente sección
@@ -596,9 +684,9 @@ function InformeDetallePageContent() {
         <div ref={resumenRef} className="space-y-6">
           {/* Importe gastado total */}
           {informe.computed?.totalsGlobal?.spend && (
-            <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+              <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
               <div className="text-sm text-slate-400 mb-1">Importe gastado total</div>
-              <div className="text-2xl font-semibold text-slate-100">
+                <div className="text-2xl font-semibold text-slate-100">
                 {formatearMoneda(
                   informe.computed.totalsGlobal.spendConImpuestos || informe.computed.totalsGlobal.spend, 
                   informe.moneda
