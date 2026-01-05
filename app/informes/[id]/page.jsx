@@ -238,41 +238,52 @@ function InformeDetallePageContent() {
         let remainingHeight = imgHeight;
         let sourceY = 0; // Posición Y en el canvas original (en píxeles)
         let currentY = yPos; // Posición Y actual en el PDF
-        const scale = 2; // Escala usada en html2canvas
         const canvasHeightPx = canvas.height;
-        const imgHeightToPx = (imgHeight / imgWidth) * (canvas.width / scale); // Altura en píxeles de la imagen renderizada
+        const canvasWidthPx = canvas.width;
         
-        while (remainingHeight > 0) {
+        // Calcular el factor de escala entre el canvas y el PDF
+        const scaleX = canvasWidthPx / imgWidth; // Píxeles por mm en el PDF
+        
+        while (remainingHeight > 0.1) { // Usar 0.1 como tolerancia para evitar bucles infinitos
           const heightToAdd = Math.min(remainingHeight, availableHeight);
           
           // Calcular la altura en píxeles del canvas para esta porción
-          const sliceHeightPx = (heightToAdd / imgHeight) * canvasHeightPx;
+          // Usar el mismo factor de escala que se usó para calcular imgHeight
+          const sliceHeightPx = Math.ceil((heightToAdd / imgHeight) * canvasHeightPx);
+          
+          // Asegurar que no excedamos el canvas original
+          const actualSliceHeightPx = Math.min(sliceHeightPx, canvasHeightPx - Math.floor(sourceY));
+          
+          if (actualSliceHeightPx <= 0) break; // Salir si no queda más contenido
           
           // Crear un nuevo canvas para esta porción
           const sliceCanvas = document.createElement('canvas');
           const sliceCtx = sliceCanvas.getContext('2d');
-          sliceCanvas.width = canvas.width;
-          sliceCanvas.height = sliceHeightPx;
+          sliceCanvas.width = canvasWidthPx;
+          sliceCanvas.height = actualSliceHeightPx;
           
           // Dibujar la porción del canvas original en el nuevo canvas
           sliceCtx.drawImage(
             canvas,
-            0, sourceY, canvas.width, sliceHeightPx, // Source rectangle
-            0, 0, canvas.width, sliceHeightPx // Destination rectangle
+            0, Math.floor(sourceY), canvasWidthPx, actualSliceHeightPx, // Source rectangle (desde el canvas original)
+            0, 0, canvasWidthPx, actualSliceHeightPx // Destination rectangle (en el nuevo canvas)
           );
           
           // Convertir a data URL
           const sliceData = sliceCanvas.toDataURL('image/png');
           
+          // Calcular la altura real que ocupará en el PDF (ajustada por la altura real del slice)
+          const actualHeightInPDF = (actualSliceHeightPx / canvasHeightPx) * imgHeight;
+          
           // Agregar esta porción al PDF
-          doc.addImage(sliceData, 'PNG', 20, currentY, imgWidth, heightToAdd);
+          doc.addImage(sliceData, 'PNG', 20, currentY, imgWidth, actualHeightInPDF);
           
           // Actualizar para la siguiente iteración
-          sourceY += sliceHeightPx;
-          remainingHeight -= heightToAdd;
+          sourceY += actualSliceHeightPx;
+          remainingHeight -= actualHeightInPDF;
           
           // Si aún queda contenido, agregar una nueva página
-          if (remainingHeight > 0) {
+          if (remainingHeight > 0.1) {
             doc.addPage();
             // Dibujar fondo azul en la nueva página
             doc.setFillColor(azulMarca[0], azulMarca[1], azulMarca[2]);
