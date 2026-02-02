@@ -448,10 +448,19 @@ function InboxContent() {
   const cargarCarpeta = useCallback(async (carpeta, opciones = {}) => {
     const { forzarRefresh = false, mostrarLoading = true } = opciones;
     
-    // Prevenir múltiples cargas simultáneas de la misma carpeta
+    // Prevenir múltiples cargas simultáneas de la misma carpeta (solo si no se fuerza refresh)
+    // Si se fuerza refresh, siempre permitir la carga para asegurar datos frescos
     if (cargaEnProgresoRef.current && carpetaCargandoRef.current === carpeta && !forzarRefresh) {
       console.log(`⚠️ Carga ya en progreso para ${carpeta}, ignorando llamada duplicada`);
       return;
+    }
+    
+    // Si se fuerza refresh, cancelar cualquier carga anterior de la misma carpeta
+    if (forzarRefresh && carpetaCargandoRef.current === carpeta && cargaEnProgresoRef.current) {
+      console.log(`>>> FRONTEND - Forzando refresh de ${carpeta}, cancelando carga anterior`);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     }
 
     // Cancelar cualquier carga anterior
@@ -713,10 +722,11 @@ function InboxContent() {
       
       // ✅ MEJORADO: Actualizar UI si realmente se marcó en IMAP
       // Actualizar estado local con los datos del servidor
+      const seenValue = openData.seen === true;
       setEmails(prev => {
         const actualizada = prev.map((e) => 
           e.uid === uid 
-            ? { ...e, leido: openData.seen, seen: openData.seen, flags: openData.flags || e.flags || [] }
+            ? { ...e, leido: seenValue, seen: seenValue, flags: openData.flags || e.flags || [] }
             : e
         );
         return actualizada;
@@ -727,8 +737,8 @@ function InboxContent() {
         if (prev && prev.uid === uid) {
           return {
             ...prev,
-            leido: openData.seen,
-            seen: openData.seen,
+            leido: seenValue,
+            seen: seenValue,
             flags: openData.flags || prev.flags || []
           };
         }
@@ -746,8 +756,8 @@ function InboxContent() {
             ...cached,
             mensaje: {
               ...cached.mensaje,
-              leido: openData.seen,
-              seen: openData.seen,
+              leido: seenValue,
+              seen: seenValue,
               flags: openData.flags || cached.mensaje.flags || []
             }
           });
@@ -755,7 +765,7 @@ function InboxContent() {
         return newCache;
       });
       
-      console.log(`>>> FRONTEND - ✅ Correo UID ${uid} marcado como leído exitosamente`);
+      console.log(`>>> FRONTEND - ✅ Correo UID ${uid} marcado como leído exitosamente (seen=${seenValue})`);
       
       return openData;
     } catch (err) {
@@ -807,16 +817,17 @@ function InboxContent() {
         setEmailSeleccionado(cachedLocal.mensaje);
         setLoading(false);
         
-        // ✅ MEJORADO: Siempre intentar marcar como leído si no está leído
+        // ✅ CRÍTICO: Siempre intentar marcar como leído si no está leído
         // Verificar estado real desde el cache, pero intentar marcar siempre que sea necesario
-        const estaLeido = cachedLocal.mensaje.seen || cachedLocal.mensaje.leido;
+        const estaLeido = cachedLocal.mensaje.seen === true || cachedLocal.mensaje.leido === true;
         if (!estaLeido) {
-          console.log(`>>> FRONTEND - Correo no leído detectado en cache, marcando como leído...`);
-          const resultado = await marcarComoLeidoAlAbrir(uid, carpetaParaBuscar);
-          // Si falla, NO actualizar UI - el correo debe seguir como no leído
-          if (!resultado || !resultado.success) {
-            console.warn(`>>> FRONTEND - No se pudo marcar como leído en IMAP, manteniendo estado original`);
-          }
+          console.log(`>>> FRONTEND - Correo no leído detectado en cache (seen=${cachedLocal.mensaje.seen}, leido=${cachedLocal.mensaje.leido}), marcando como leído...`);
+          // No esperar el resultado para no bloquear la UI, pero ejecutarlo
+          marcarComoLeidoAlAbrir(uid, carpetaParaBuscar).catch(err => {
+            console.warn(`>>> FRONTEND - Error marcando como leído desde cache:`, err);
+          });
+        } else {
+          console.log(`>>> FRONTEND - Correo ya está leído (seen=${cachedLocal.mensaje.seen}, leido=${cachedLocal.mensaje.leido}), no marcar`);
         }
         return;
       }
@@ -880,15 +891,17 @@ function InboxContent() {
             iniciarPollingBody(uid, carpetaParaBuscar);
           }
           
-          // ✅ MEJORADO: Siempre intentar marcar como leído si no está leído
+          // ✅ CRÍTICO: Siempre intentar marcar como leído si no está leído
           // Verificar estado real desde el servidor antes de decidir
-          const estaLeido = data.mensaje.seen || data.mensaje.leido;
+          const estaLeido = data.mensaje.seen === true || data.mensaje.leido === true;
           if (!estaLeido) {
-            console.log(`>>> FRONTEND - Correo no leído detectado desde API, marcando como leído...`);
+            console.log(`>>> FRONTEND - Correo no leído detectado desde API (seen=${data.mensaje.seen}, leido=${data.mensaje.leido}), marcando como leído...`);
+            // Ejecutar en background sin bloquear
             marcarComoLeidoAlAbrir(uid, carpetaParaBuscar).then(resultado => {
-              // Si falla, revertir el cambio optimista
+              // Si falla, NO revertir - el correo debe seguir como no leído visualmente
               if (!resultado || !resultado.success) {
-                console.warn(`>>> FRONTEND - No se pudo marcar como leído en IMAP, revirtiendo estado`);
+                console.warn(`>>> FRONTEND - No se pudo marcar como leído en IMAP, manteniendo estado no leído`);
+                // Actualizar UI para reflejar que sigue sin leer
                 setEmails(prev => prev.map((e) => 
                   e.uid === uid ? { ...e, leido: false, seen: false } : e
                 ));
@@ -898,10 +911,12 @@ function InboxContent() {
                   }
                   return prev;
                 });
+              } else {
+                console.log(`>>> FRONTEND - ✅ Correo marcado como leído exitosamente`);
               }
             }).catch(err => {
               console.warn(`>>> FRONTEND - Error marcando como leído: ${err.message}`);
-              // Revertir cambio optimista si falla
+              // Mantener estado no leído si falla
               setEmails(prev => prev.map((e) => 
                 e.uid === uid ? { ...e, leido: false, seen: false } : e
               ));
@@ -914,6 +929,7 @@ function InboxContent() {
             });
           } else {
             // Si ya está leído, asegurar que la lista esté actualizada
+            console.log(`>>> FRONTEND - Correo ya está leído (seen=${data.mensaje.seen}, leido=${data.mensaje.leido}), no marcar`);
             setEmails(prev => {
               const actualizada = prev.map((e) => 
                 e.uid === uid 
@@ -1060,7 +1076,7 @@ function InboxContent() {
           });
         }
         
-        // ✅ CRÍTICO: Actualizar lista después de operación IMAP para reflejar cambios
+        // ✅ MEJORADO: Actualizar lista después de operación IMAP para reflejar cambios
         // El servidor ya hizo: IMAP → espera → relectura → cache → verificación
         // Forzar refresh para asegurar que se vea el cambio (especialmente al marcar como no leído)
         setTimeout(() => {
@@ -1068,9 +1084,11 @@ function InboxContent() {
             // ✅ IMPORTANTE: Forzar refresh para asegurar que el cambio se refleje
             // Especialmente crítico cuando se marca como no leído (debe aparecer el indicador azul)
             console.log(`>>> FRONTEND - Actualizando lista después de marcar como ${leido ? 'leído' : 'no leído'}`);
-            cargarCarpeta(carpetaActual, { forzarRefresh: true, mostrarLoading: false });
+            cargarCarpeta(carpetaActual, { forzarRefresh: true, mostrarLoading: false }).catch(err => {
+              console.warn(`>>> FRONTEND - Error actualizando lista después de marcar:`, err);
+            });
           }
-        }, 300); // Reducido a 300ms para respuesta más rápida
+        }, 500); // Aumentado a 500ms para dar tiempo al servidor
       } else {
         // Si falla realmente, revertir el cambio optimista
         const revertedSeen = !leido;
@@ -1212,11 +1230,14 @@ function InboxContent() {
         // Limpiar error si había uno
         setError("");
         
-        // ✅ Sincronización mejorada: Actualizar lista después de operación IMAP
-        // Solo actualizar en background sin bloquear la UI
+        // ✅ MEJORADO: Actualizar lista después de operación IMAP para reflejar cambios
+        // Forzar refresh para asegurar que el cambio se refleje correctamente
         setTimeout(() => {
           if (carpetaCargandoRef.current === carpetaActual) {
-            cargarCarpeta(carpetaActual, { forzarRefresh: false, mostrarLoading: false });
+            console.log(`>>> FRONTEND - Actualizando lista después de marcar como ${data.important ? 'importante' : 'no importante'}`);
+            cargarCarpeta(carpetaActual, { forzarRefresh: true, mostrarLoading: false }).catch(err => {
+              console.warn(`>>> FRONTEND - Error actualizando lista después de toggle importante:`, err);
+            });
           }
         }, 500); // Actualizar lista después de 500ms
       } else {
@@ -1413,10 +1434,15 @@ function InboxContent() {
 
   // Cambiar de carpeta
   const cambiarCarpeta = async (nuevaCarpeta) => {
+    console.log(`>>> FRONTEND - cambiarCarpeta: ${carpetaCargandoRef.current} -> ${nuevaCarpeta}`);
+    
     // Cancelar cualquier carga en progreso
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
+    
+    // Limpiar cache local de emails para evitar estados inconsistentes
+    setLocalEmailCache(new Map());
     
     // Actualizar refs y estado inmediatamente
     carpetaCargandoRef.current = nuevaCarpeta;
@@ -1425,12 +1451,16 @@ function InboxContent() {
     setEmails([]);
     setSincronizando(false);
     setError("");
+    setLoading(true);
     
-    // Actualizar URL
-    router.push(`/email/inbox?carpeta=${encodeURIComponent(nuevaCarpeta)}`);
+    // Actualizar URL si es diferente
+    const urlCarpeta = searchParams.get("carpeta") || "INBOX";
+    if (urlCarpeta !== nuevaCarpeta) {
+      router.push(`/email/inbox?carpeta=${encodeURIComponent(nuevaCarpeta)}`, { scroll: false });
+    }
     
-    // Cargar la nueva carpeta
-    cargarCarpeta(nuevaCarpeta, { forzarRefresh: false, mostrarLoading: true });
+    // Cargar la nueva carpeta - SIEMPRE forzar refresh para asegurar datos frescos
+    await cargarCarpeta(nuevaCarpeta, { forzarRefresh: true, mostrarLoading: true });
   };
 
   // Refresh manual - Optimizado para ser rápido y sincronizar flags desde IMAP
@@ -1513,10 +1543,20 @@ function InboxContent() {
   // Efecto para cambiar de carpeta cuando cambia el parámetro de URL
   useEffect(() => {
     // Solo cargar si la carpeta realmente cambió y ya se hizo la carga inicial
-    // Y asegurarse de que no sea la carga inicial (ya manejada arriba)
-    if (cargaInicialRef.current && carpetaParam !== carpetaActual && carpetaParam) {
-      console.log(`>>> FRONTEND - Cambio de carpeta desde URL: ${carpetaActual} -> ${carpetaParam}`);
-      cambiarCarpeta(carpetaParam);
+    if (cargaInicialRef.current && carpetaParam) {
+      const carpetaActualRef = carpetaCargandoRef.current;
+      if (carpetaParam !== carpetaActualRef) {
+        console.log(`>>> FRONTEND - Cambio de carpeta desde URL: ${carpetaActualRef} -> ${carpetaParam}`);
+        // Limpiar estado anterior completamente
+        setEmailSeleccionado(null);
+        setEmails([]);
+        setError("");
+        setLoading(true);
+        // Limpiar cache local para evitar estados inconsistentes
+        setLocalEmailCache(new Map());
+        // Cambiar carpeta - esto actualizará carpetaCargandoRef.current
+        cambiarCarpeta(carpetaParam);
+      }
     }
   }, [carpetaParam]); // Solo dependencia de carpetaParam
 
