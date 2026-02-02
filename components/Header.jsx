@@ -153,9 +153,9 @@ function Header() {
               <Link href="/equipo" prefetch={true} className={pathname?.startsWith("/equipo") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
                 Equipo
               </Link>
-              <Link href="/email/inbox" prefetch={true} className={pathname?.startsWith("/email") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
+              <a href="https://ferozo.email/" target="_blank" rel="noopener noreferrer" className="text-slate-300 hover:text-white">
                 Correo
-              </Link>
+              </a>
               <Link href="/admin/usuarios" prefetch={true} className={pathname?.startsWith("/admin") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
                 Usuarios
               </Link>
@@ -280,13 +280,15 @@ function Header() {
                 >
                   Equipo
                 </Link>
-                <Link 
-                  href="/email/inbox" 
-                  className={`px-4 py-3 ${pathname?.startsWith("/email") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
+                <a 
+                  href="https://ferozo.email/" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`px-4 py-3 text-slate-300 hover:bg-blue-900/30`}
                   onClick={() => setMenuAbierto(false)}
                 >
                   Correo
-                </Link>
+                </a>
                 <Link 
                   href="/admin/usuarios" 
                   prefetch={true}
