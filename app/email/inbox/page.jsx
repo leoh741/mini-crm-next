@@ -711,7 +711,7 @@ function InboxContent() {
         return { success: false, error: openData.error || openData.warning };
       }
       
-      // ✅ Solo actualizar UI si realmente se marcó en IMAP
+      // ✅ MEJORADO: Actualizar UI si realmente se marcó en IMAP
       // Actualizar estado local con los datos del servidor
       setEmails(prev => {
         const actualizada = prev.map((e) => 
@@ -722,7 +722,7 @@ function InboxContent() {
         return actualizada;
       });
       
-      // Actualizar email seleccionado si es el mismo
+      // Actualizar email seleccionado si es el mismo (usar función de actualización más robusta)
       setEmailSeleccionado(prev => {
         if (prev && prev.uid === uid) {
           return {
@@ -732,10 +732,11 @@ function InboxContent() {
             flags: openData.flags || prev.flags || []
           };
         }
+        // Si no hay email seleccionado o es diferente, mantener el estado actual
         return prev;
       });
       
-      // Actualizar cache local
+      // Actualizar cache local para mantener consistencia
       const cacheKey = `${uid}-${carpetaParaBuscar}`;
       setLocalEmailCache(prev => {
         const newCache = new Map(prev);
@@ -753,6 +754,8 @@ function InboxContent() {
         }
         return newCache;
       });
+      
+      console.log(`>>> FRONTEND - ✅ Correo UID ${uid} marcado como leído exitosamente`);
       
       return openData;
     } catch (err) {
@@ -804,9 +807,11 @@ function InboxContent() {
         setEmailSeleccionado(cachedLocal.mensaje);
         setLoading(false);
         
-        // ✅ CRÍTICO: Marcar como leído al abrir SOLO si no está ya marcado como leído
-        // Y verificar que realmente se marcó en IMAP antes de actualizar UI
-        if (!cachedLocal.mensaje.seen && !cachedLocal.mensaje.leido) {
+        // ✅ MEJORADO: Siempre intentar marcar como leído si no está leído
+        // Verificar estado real desde el cache, pero intentar marcar siempre que sea necesario
+        const estaLeido = cachedLocal.mensaje.seen || cachedLocal.mensaje.leido;
+        if (!estaLeido) {
+          console.log(`>>> FRONTEND - Correo no leído detectado en cache, marcando como leído...`);
           const resultado = await marcarComoLeidoAlAbrir(uid, carpetaParaBuscar);
           // Si falla, NO actualizar UI - el correo debe seguir como no leído
           if (!resultado || !resultado.success) {
@@ -875,9 +880,11 @@ function InboxContent() {
             iniciarPollingBody(uid, carpetaParaBuscar);
           }
           
-          // ✅ CRÍTICO: Marcar como leído al abrir SOLO si no está ya marcado como leído
-          // Y verificar que realmente se marcó en IMAP antes de actualizar UI
-          if (!data.mensaje.seen && !data.mensaje.leido) {
+          // ✅ MEJORADO: Siempre intentar marcar como leído si no está leído
+          // Verificar estado real desde el servidor antes de decidir
+          const estaLeido = data.mensaje.seen || data.mensaje.leido;
+          if (!estaLeido) {
+            console.log(`>>> FRONTEND - Correo no leído detectado desde API, marcando como leído...`);
             marcarComoLeidoAlAbrir(uid, carpetaParaBuscar).then(resultado => {
               // Si falla, revertir el cambio optimista
               if (!resultado || !resultado.success) {
@@ -885,9 +892,12 @@ function InboxContent() {
                 setEmails(prev => prev.map((e) => 
                   e.uid === uid ? { ...e, leido: false, seen: false } : e
                 ));
-                if (emailSeleccionado && emailSeleccionado.uid === uid) {
-                  setEmailSeleccionado({ ...emailSeleccionado, leido: false, seen: false });
-                }
+                setEmailSeleccionado(prev => {
+                  if (prev && prev.uid === uid) {
+                    return { ...prev, leido: false, seen: false };
+                  }
+                  return prev;
+                });
               }
             }).catch(err => {
               console.warn(`>>> FRONTEND - Error marcando como leído: ${err.message}`);
@@ -895,9 +905,22 @@ function InboxContent() {
               setEmails(prev => prev.map((e) => 
                 e.uid === uid ? { ...e, leido: false, seen: false } : e
               ));
-              if (emailSeleccionado && emailSeleccionado.uid === uid) {
-                setEmailSeleccionado({ ...emailSeleccionado, leido: false, seen: false });
-              }
+              setEmailSeleccionado(prev => {
+                if (prev && prev.uid === uid) {
+                  return { ...prev, leido: false, seen: false };
+                }
+                return prev;
+              });
+            });
+          } else {
+            // Si ya está leído, asegurar que la lista esté actualizada
+            setEmails(prev => {
+              const actualizada = prev.map((e) => 
+                e.uid === uid 
+                  ? { ...e, leido: true, seen: true, flags: data.mensaje.flags || e.flags || [] }
+                  : e
+              );
+              return actualizada;
             });
           }
         }
@@ -1971,6 +1994,11 @@ function InboxContent() {
                                 e.stopPropagation();
                                 console.log(`>>> FRONTEND - Click en email UID ${email.uid}`);
                                 
+                                // ✅ MEJORADO: Limpiar estado del correo anterior si es diferente
+                                if (emailSeleccionado && emailSeleccionado.uid !== email.uid) {
+                                  console.log(`>>> FRONTEND - Cambiando de correo ${emailSeleccionado.uid} a ${email.uid}`);
+                                }
+                                
                                 // ✅ CRÍTICO: Limpiar ref y estados ANTES de cargar para evitar bloqueos
                                 const cacheKey = `${email.uid}-${carpetaActual}`;
                                 if (emailCargandoRef.current === cacheKey) {
@@ -1995,6 +2023,13 @@ function InboxContent() {
                                     if (cachedLocal && cachedLocal.mensaje) {
                                       console.log(`>>> FRONTEND - Usando cache local como fallback para UID ${email.uid}`);
                                       setEmailSeleccionado(cachedLocal.mensaje);
+                                      // Intentar marcar como leído incluso desde cache
+                                      const estaLeido = cachedLocal.mensaje.seen || cachedLocal.mensaje.leido;
+                                      if (!estaLeido) {
+                                        marcarComoLeidoAlAbrir(email.uid, carpetaActual).catch(markErr => {
+                                          console.warn(`>>> FRONTEND - Error marcando como leído desde fallback:`, markErr);
+                                        });
+                                      }
                                     } else {
                                       setError(`Error al cargar el correo: ${err.message}`);
                                     }

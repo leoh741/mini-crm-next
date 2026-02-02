@@ -195,20 +195,70 @@ function InformesPageContent() {
           </select>
         </div>
         <div className="flex flex-col sm:flex-row gap-4">
-          <input
-            type="date"
-            value={filtroFechaDesde}
-            onChange={(e) => setFiltroFechaDesde(e.target.value)}
-            placeholder="Fecha desde"
-            className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-blue-500"
-          />
-          <input
-            type="date"
-            value={filtroFechaHasta}
-            onChange={(e) => setFiltroFechaHasta(e.target.value)}
-            placeholder="Fecha hasta"
-            className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-blue-500"
-          />
+          <div className="flex-1">
+            <label htmlFor="filtro-fecha-desde" className="block text-sm font-medium text-slate-300 mb-1">
+              Fecha desde
+            </label>
+            <div className="relative">
+              <input
+                id="filtro-fecha-desde"
+                type="date"
+                value={filtroFechaDesde}
+                onChange={(e) => setFiltroFechaDesde(e.target.value)}
+                className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 text-sm w-full focus:outline-none focus:border-blue-500"
+                style={{ 
+                  color: filtroFechaDesde ? '#f1f5f9' : 'transparent',
+                  fontSize: '14px',
+                  fontWeight: '400',
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'textfield'
+                }}
+              />
+              {!filtroFechaDesde && (
+                <div 
+                  className="absolute inset-0 px-4 py-2 pointer-events-none flex items-center text-slate-400 text-sm"
+                  style={{ 
+                    color: '#94a3b8',
+                    fontSize: '14px'
+                  }}
+                >
+                  dd/mm/aaaa
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex-1">
+            <label htmlFor="filtro-fecha-hasta" className="block text-sm font-medium text-slate-300 mb-1">
+              Fecha hasta
+            </label>
+            <div className="relative">
+              <input
+                id="filtro-fecha-hasta"
+                type="date"
+                value={filtroFechaHasta}
+                onChange={(e) => setFiltroFechaHasta(e.target.value)}
+                className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 text-sm w-full focus:outline-none focus:border-blue-500"
+                style={{ 
+                  color: filtroFechaHasta ? '#f1f5f9' : 'transparent',
+                  fontSize: '14px',
+                  fontWeight: '400',
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'textfield'
+                }}
+              />
+              {!filtroFechaHasta && (
+                <div 
+                  className="absolute inset-0 px-4 py-2 pointer-events-none flex items-center text-slate-400 text-sm"
+                  style={{ 
+                    color: '#94a3b8',
+                    fontSize: '14px'
+                  }}
+                >
+                  dd/mm/aaaa
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
