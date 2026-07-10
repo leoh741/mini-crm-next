@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { getClientes, getEstadosPagoMes } from "../../lib/clientesUtils";
+import { getClientes, getEstadosPagoMes, getIngresosAutomaticosMes } from "../../lib/clientesUtils";
 import { getTotalCliente, getTotalPagadoCliente } from "../../lib/clienteHelpers";
 import { getGastosMes, agregarGasto, eliminarGasto, getMesesConGastos } from "../../lib/gastosUtils";
 import { getIngresosMes, agregarIngreso, eliminarIngreso } from "../../lib/ingresosUtils";
@@ -37,6 +37,7 @@ function BalancePageContent() {
   const mesIndex = mesSeleccionadoNum - 1;
 
   const [clientesConEstado, setClientesConEstado] = useState([]);
+  const [ingresosAutomaticosCongelados, setIngresosAutomaticosCongelados] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [opcionesMeses, setOpcionesMeses] = useState([]);
@@ -115,21 +116,48 @@ function BalancePageContent() {
         
         // Cargar estados de pago (optimizado: una sola llamada con caché)
         const esMesActual = año === fechaActual.getFullYear() && mesIndex === fechaActual.getMonth();
-        const clientesIds = (clientesData || []).map(c => c._id || c.id);
-        const estadosMap = clientesIds.length > 0
-          ? await getEstadosPagoMes(clientesIds, mesIndex, año, true) // usar caché
-          : {};
-        
-        const clientesConEstados = (clientesData || []).map(cliente => {
-          const clienteId = cliente._id || cliente.id || cliente.crmId;
-          const estadoMes = estadosMap[clienteId];
-          return {
-            ...cliente,
-            pagado: estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false),
-            serviciosPagados: estadoMes ? (estadoMes.serviciosPagados || {}) : {}
-          };
-        });
-        setClientesConEstado(clientesConEstados);
+        const clientesIds = (clientesData || []).map(c => c._id || c.id || c.crmId);
+
+        if (esMesActual) {
+          // Mes actual: estados vivos; sin MonthlyPayment = impago (no heredar Client.pagado)
+          const estadosMap = clientesIds.length > 0
+            ? await getEstadosPagoMes(clientesIds, mesIndex, año, false)
+            : {};
+
+          const clientesConEstados = (clientesData || []).map(cliente => {
+            const clienteId = cliente._id || cliente.id || cliente.crmId;
+            const estadoMes = estadosMap[clienteId] || estadosMap[String(clienteId)];
+            return {
+              ...cliente,
+              pagado: estadoMes ? !!estadoMes.pagado : false,
+              serviciosPagados: estadoMes ? (estadoMes.serviciosPagados || {}) : {},
+              montoPagado: estadoMes ? (estadoMes.montoPagado || 0) : 0
+            };
+          });
+          setClientesConEstado(clientesConEstados);
+          setIngresosAutomaticosCongelados(null);
+        } else {
+          // Mes pasado: ingresos congelados por snapshot (sobrevive a borrado de clientes)
+          const [estadosMap, ingresosAuto] = await Promise.all([
+            clientesIds.length > 0
+              ? getEstadosPagoMes(clientesIds, mesIndex, año, false)
+              : Promise.resolve({}),
+            getIngresosAutomaticosMes(mesIndex, año)
+          ]);
+
+          const clientesConEstados = (clientesData || []).map(cliente => {
+            const clienteId = cliente._id || cliente.id || cliente.crmId;
+            const estadoMes = estadosMap[clienteId] || estadosMap[String(clienteId)];
+            return {
+              ...cliente,
+              pagado: estadoMes ? !!estadoMes.pagado : false,
+              serviciosPagados: estadoMes ? (estadoMes.serviciosPagados || {}) : {},
+              montoPagado: estadoMes ? (estadoMes.montoPagado || 0) : 0
+            };
+          });
+          setClientesConEstado(clientesConEstados);
+          setIngresosAutomaticosCongelados(ingresosAuto);
+        }
       } catch (err) {
         console.error('Error al cargar datos de balance:', err);
         setError('Error al cargar los datos. Por favor, recarga la página.');
@@ -150,13 +178,23 @@ function BalancePageContent() {
     return () => clearInterval(timer);
   }, [mesSeleccionado]);
 
-  // Ingresos calculados automáticamente (clientes pagados) - memoizado
+  // Ingresos: mes actual = cálculo vivo; mes pasado = snapshot congelado
   const { ingresosAutomaticos, ingresosManuales, totalIngresos, totalGastos, utilidadNeta, porcentajeUtilidad } = useMemo(() => {
-    // Calcular ingresos sumando solo los servicios pagados de cada cliente
-    const ingresosAuto = clientesConEstado.reduce((sum, cliente) => {
-      const serviciosPagados = cliente.serviciosPagados || {};
-      return sum + getTotalPagadoCliente(cliente, serviciosPagados);
-    }, 0);
+    const [año, mes] = mesSeleccionado.split('-').map(Number);
+    const esMesActual = año === fechaActual.getFullYear() && (mes - 1) === fechaActual.getMonth();
+
+    let ingresosAuto;
+    if (!esMesActual && ingresosAutomaticosCongelados !== null) {
+      ingresosAuto = ingresosAutomaticosCongelados;
+    } else {
+      ingresosAuto = clientesConEstado.reduce((sum, cliente) => {
+        if (cliente.montoPagado !== undefined && cliente.montoPagado !== null && Number(cliente.montoPagado) > 0) {
+          return sum + Number(cliente.montoPagado);
+        }
+        const serviciosPagados = cliente.serviciosPagados || {};
+        return sum + getTotalPagadoCliente(cliente, serviciosPagados);
+      }, 0);
+    }
     
     const ingresosMan = ingresos.reduce((sum, ingreso) => sum + (parseFloat(ingreso.monto) || 0), 0);
     
@@ -175,7 +213,7 @@ function BalancePageContent() {
       utilidadNeta: utilidad,
       porcentajeUtilidad: porcentaje
     };
-  }, [clientesConEstado, ingresos, gastos]);
+  }, [clientesConEstado, ingresos, gastos, ingresosAutomaticosCongelados, mesSeleccionado, fechaActual]);
 
   // Generar opciones de meses
   const generarOpcionesMeses = async () => {

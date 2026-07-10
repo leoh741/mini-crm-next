@@ -193,6 +193,39 @@ export async function DELETE(request, { params }) {
         { status: 404 }
       );
     }
+
+    // Antes de borrar: congelar montos en MonthlyPayment para que el balance histórico no cambie
+    try {
+      const MonthlyPayment = (await import('../../../../models/MonthlyPayment')).default;
+      const idsPosibles = [
+        cliente._id?.toString(),
+        cliente.crmId,
+        params.id
+      ].filter(Boolean);
+
+      const pagos = await MonthlyPayment.find({ crmClientId: { $in: idsPosibles } });
+      for (const pago of pagos) {
+        const serviciosPagados = pago.serviciosPagados instanceof Map
+          ? Object.fromEntries(pago.serviciosPagados)
+          : (pago.serviciosPagados || {});
+        let monto = 0;
+        if (Array.isArray(cliente.servicios) && cliente.servicios.length > 0) {
+          monto = cliente.servicios.reduce((sum, servicio, index) => {
+            if (serviciosPagados[index] === true || serviciosPagados[String(index)] === true) {
+              return sum + (Number(servicio.precio) || 0);
+            }
+            return sum;
+          }, 0);
+        } else if (pago.pagado) {
+          monto = Number(cliente.montoPago) || 0;
+        }
+        pago.montoPagado = monto;
+        pago.clienteNombre = cliente.nombre;
+        await pago.save();
+      }
+    } catch (snapshotError) {
+      console.warn('[API Clientes DELETE] No se pudo congelar pagos históricos:', snapshotError.message);
+    }
     
     // Eliminar usando el _id encontrado (optimizado para servidor VPS)
     await Client.findByIdAndDelete(cliente._id, { 

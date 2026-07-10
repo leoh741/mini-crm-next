@@ -93,7 +93,7 @@ function PagosPageContent() {
         // Por eso cargamos el estado del mes actual para todos, y luego los servicios pagados se suman a las métricas
         // Usar caché para mejorar rendimiento
         const estadosMap = clientesIds.length > 0 
-          ? await getEstadosPagoMes(clientesIds, mesIndex, añoSeleccionado, true) // true = usar caché para mejor rendimiento
+          ? await getEstadosPagoMes(clientesIds, mesIndex, añoSeleccionado, false)
           : {};
         
         setClientes(clientesData);
@@ -108,51 +108,19 @@ function PagosPageContent() {
           const estadoMes = estadosMap[clienteId];
           let serviciosPagados = estadoMes ? (estadoMes.serviciosPagados || {}) : {};
           
-          // Migración automática: Solo ejecutar en background para no bloquear la carga
-          // Si el cliente tiene servicios pero serviciosPagados está vacío o incompleto,
-          // y el estado pagado general es true, migrar todos los servicios como pagados
-          if (cliente.servicios && Array.isArray(cliente.servicios) && cliente.servicios.length > 0) {
-            const estadoPagadoGeneral = estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false);
-            
-            // Si está marcado como pagado pero no tiene serviciosPagados definidos, inicializar todos como pagados
-            if (estadoPagadoGeneral && Object.keys(serviciosPagados).length === 0) {
-              const serviciosMigrados = {};
-              cliente.servicios.forEach((_, index) => {
-                serviciosMigrados[index] = true;
-              });
-              serviciosPagados = serviciosMigrados;
-              
-              // Sincronizar en background (no esperar) - usar setTimeout para no bloquear
-              setTimeout(() => {
-                const hoy = new Date();
-                const mesActual = hoy.getMonth();
-                const añoActual = hoy.getFullYear();
-                // Si es pagoMesSiguiente, guardar en el mes siguiente
-                const mesParaGuardar = cliente.pagoMesSiguiente ? (mesActual + 1 > 11 ? 0 : mesActual + 1) : mesActual;
-                const añoParaGuardar = cliente.pagoMesSiguiente && mesActual + 1 > 11 ? añoActual + 1 : añoActual;
-                import('../../lib/clientesUtils').then(({ guardarEstadoPagoMes }) => {
-                  guardarEstadoPagoMes(clienteId, mesParaGuardar, añoParaGuardar, true, serviciosPagados)
-                    .catch(err => console.warn('Error al migrar servicios pagados:', err));
-                }).catch(err => console.warn('Error al importar clientesUtils:', err));
-              }, 0);
-            }
-          }
-          
-          // Si el cliente tiene servicios, calcular pagado basándose en serviciosPagados
-          // Si no tiene servicios, usar el estado pagado general (para compatibilidad con clientes antiguos)
+          // Sin registro del mes = impago (no heredar Client.pagado del mes anterior)
           let pagadoCalculado;
           if (cliente.servicios && Array.isArray(cliente.servicios) && cliente.servicios.length > 0) {
-            // Calcular si todos los servicios están pagados
             pagadoCalculado = todosLosServiciosPagados(cliente, serviciosPagados);
           } else {
-            // Compatibilidad: usar el estado pagado general
-            pagadoCalculado = estadoMes ? estadoMes.pagado : (esMesActual ? cliente.pagado : false);
+            pagadoCalculado = estadoMes ? !!estadoMes.pagado : false;
           }
           
           return {
             ...cliente,
             pagado: pagadoCalculado,
-            serviciosPagados: serviciosPagados
+            serviciosPagados: serviciosPagados,
+            montoPagado: estadoMes ? (estadoMes.montoPagado || 0) : 0
           };
         });
         setClientesConEstado(clientesConEstados);
