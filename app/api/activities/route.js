@@ -313,6 +313,40 @@ export async function PATCH(request) {
     }
     
     const body = await request.json();
+
+    // Reordenamiento masivo: una sola petición para actualizar varios orders
+    if (Array.isArray(body.orders) && body.orders.length > 0) {
+      if (userRole !== 'admin' && userRole !== 'coordinador') {
+        return NextResponse.json(
+          { success: false, error: 'No tienes permisos para reordenar actividades' },
+          { status: 403 }
+        );
+      }
+
+      const ops = body.orders
+        .filter(item => item && item.id && item.order !== undefined)
+        .map(item => ({
+          updateOne: {
+            filter: { _id: item.id },
+            update: { $set: { order: Number(item.order) || 0 } }
+          }
+        }));
+
+      if (ops.length === 0) {
+        return NextResponse.json(
+          { success: false, error: 'No hay órdenes válidos para actualizar' },
+          { status: 400 }
+        );
+      }
+
+      await Activity.bulkWrite(ops, { ordered: false });
+      updateUserLastSeen(userId);
+
+      return NextResponse.json({
+        success: true,
+        data: { updated: ops.length }
+      });
+    }
     
     if (!body.id) {
       return NextResponse.json(

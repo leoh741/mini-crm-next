@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { getActivityLists, createActivityList, updateActivityList, deleteActivityList } from "../../lib/activitiesUtils";
-import { getActivities, createActivity, updateActivity, deleteActivity } from "../../lib/activitiesUtils";
+import { getActivities, createActivity, updateActivity, deleteActivity, reorderActivities } from "../../lib/activitiesUtils";
 import { getUsuarioActual, puedeGestionarActividades, esAdmin } from "../../lib/authUtils";
 import { getUsuarios } from "../../lib/usuariosUtils";
 import ProtectedRoute from "../../components/ProtectedRoute";
@@ -792,11 +792,14 @@ function ActivitiesPageContent() {
       const previousOrders = new Map((previousList || []).map(a => [a.id, a.order || 0]));
       const changed = orderedList.filter(a => previousOrders.get(a.id) !== a.order);
       if (changed.length === 0) return;
-      await Promise.all(changed.map(a => updateActivity(a.id, { order: a.order })));
+
+      // Una sola petición en lugar de N en paralelo (evita Failed to fetch)
+      await reorderActivities(changed.map(a => ({ id: a.id, order: a.order })));
     } catch (err) {
       console.error('Error al guardar orden de actividades:', err);
       if (previousList) setActivities(previousList);
-      setError(err.message || "Error al guardar el orden de las actividades");
+      // Error local, no tumbar toda la página
+      alert(err.message || "Error al guardar el orden de las actividades");
     } finally {
       isSavingOrderRef.current = false;
     }
