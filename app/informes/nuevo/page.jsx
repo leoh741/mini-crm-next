@@ -387,6 +387,25 @@ function NuevoInformePageContent() {
                 <option value="EUR">EUR - Euro</option>
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">
+                Porcentaje de Impuestos (%)
+              </label>
+              <input
+                type="number"
+                name="porcentajeImpuestos"
+                value={formData.porcentajeImpuestos}
+                onChange={handleChange}
+                min="0"
+                max="100"
+                step="0.01"
+                placeholder="0"
+                className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-blue-500"
+              />
+              <p className="mt-1 text-xs text-slate-400">
+                El porcentaje de impuestos se aplicará al Importe Gastado Total
+              </p>
+            </div>
           </div>
         </div>
       )}

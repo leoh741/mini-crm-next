@@ -20,7 +20,7 @@ function MiembroDetailPageContent() {
   const [guardando, setGuardando] = useState(false);
   const [mostrarFormComentario, setMostrarFormComentario] = useState(false);
   const [editandoComentario, setEditandoComentario] = useState(null);
-  const [comentarioEditando, setComentarioEditando] = useState({ texto: "", calificacion: "" });
+  const [comentarioEditando, setComentarioEditando] = useState({ texto: "" });
   
   const [formData, setFormData] = useState({
     nombre: "",
@@ -35,8 +35,7 @@ function MiembroDetailPageContent() {
   const [todasLasHabilidades, setTodasLasHabilidades] = useState([]);
   
   const [nuevoComentario, setNuevoComentario] = useState({
-    texto: "",
-    calificacion: ""
+    texto: ""
   });
 
   useEffect(() => {
@@ -164,15 +163,14 @@ function MiembroDetailPageContent() {
       const usuario = getUsuarioActual();
       const comentario = {
         texto: nuevoComentario.texto,
-        autor: usuario?.nombre || "Usuario",
-        calificacion: nuevoComentario.calificacion ? parseFloat(nuevoComentario.calificacion) : undefined
+        autor: usuario?.nombre || "Usuario"
       };
 
       const resultado = await agregarComentario(id, comentario);
       
       if (resultado) {
         setMiembro(resultado);
-        setNuevoComentario({ texto: "", calificacion: "" });
+        setNuevoComentario({ texto: "" });
         setMostrarFormComentario(false);
         // Recargar datos
         const miembroData = await getMiembroById(id, true);
@@ -213,12 +211,9 @@ function MiembroDetailPageContent() {
     }
   };
 
-  const handleEditarComentario = async (index, texto, calificacion) => {
+  const handleEditarComentario = async (index, texto) => {
     try {
-      const resultado = await actualizarComentario(id, index, {
-        texto,
-        calificacion: calificacion ? parseFloat(calificacion) : undefined
-      });
+      const resultado = await actualizarComentario(id, index, { texto });
       
       if (resultado) {
         setMiembro(resultado);
@@ -268,7 +263,7 @@ function MiembroDetailPageContent() {
 
   const formatearCalificacion = (calificacion) => {
     if (calificacion === undefined || calificacion === null) return "N/A";
-    return calificacion.toFixed(1);
+    return Number(calificacion).toFixed(1);
   };
 
   const getColorCalificacion = (calificacion) => {
@@ -279,19 +274,7 @@ function MiembroDetailPageContent() {
   };
 
   const calcularCalificacionPromedio = () => {
-    if (!miembro || !miembro.comentarios || miembro.comentarios.length === 0) {
-      return miembro?.calificacion || 0;
-    }
-    const calificaciones = miembro.comentarios
-      .map(c => c.calificacion)
-      .filter(c => c !== undefined && c !== null);
-    
-    if (calificaciones.length === 0) {
-      return miembro.calificacion || 0;
-    }
-    
-    const suma = calificaciones.reduce((sum, c) => sum + c, 0);
-    return suma / calificaciones.length;
+    return miembro?.calificacion || 0;
   };
 
   if (loading) {
@@ -325,23 +308,23 @@ function MiembroDetailPageContent() {
         <Link href="/equipo" className="text-blue-400 hover:text-blue-300 text-sm mb-2 inline-block">
           ← Volver al equipo
         </Link>
-        <div className="flex items-center justify-between mt-2">
-          <div>
-            <h2 className="text-xl md:text-2xl font-bold">{miembro.nombre}</h2>
-            {miembro.cargo && <p className="text-sm text-slate-400 mt-1">{miembro.cargo}</p>}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-2">
+          <div className="min-w-0">
+            <h2 className="text-xl md:text-2xl font-bold break-words">{miembro.nombre}</h2>
+            {miembro.cargo && <p className="text-sm text-slate-400 mt-1 break-words">{miembro.cargo}</p>}
           </div>
           {!editando && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full sm:w-auto">
               <button
                 onClick={() => setEditando(true)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium"
+                className="flex-1 sm:flex-none px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium"
               >
                 Editar
               </button>
               <button
                 onClick={handleEliminar}
                 disabled={guardando}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-lg text-sm font-medium"
+                className="flex-1 sm:flex-none px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-lg text-sm font-medium"
               >
                 {guardando ? "Eliminando..." : "Eliminar"}
               </button>
@@ -357,7 +340,7 @@ function MiembroDetailPageContent() {
       )}
 
       {/* Información del miembro */}
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 mb-6">
+      <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 sm:p-6 mb-6 overflow-hidden">
         <h3 className="text-lg font-semibold mb-4">Información del Miembro</h3>
         
         {editando ? (
@@ -459,36 +442,36 @@ function MiembroDetailPageContent() {
         ) : (
           <div className="space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm text-slate-400">Nombre</p>
-                <p className="text-slate-100">{miembro.nombre}</p>
+                <p className="text-slate-100 break-words">{miembro.nombre}</p>
               </div>
               {miembro.cargo && (
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm text-slate-400">Cargo</p>
-                  <p className="text-slate-100">{miembro.cargo}</p>
+                  <p className="text-slate-100 break-words">{miembro.cargo}</p>
                 </div>
               )}
               {miembro.email && (
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm text-slate-400">Email</p>
-                  <p className="text-slate-100">{miembro.email}</p>
+                  <p className="text-slate-100 break-all">{miembro.email}</p>
                 </div>
               )}
               {miembro.telefono && (
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm text-slate-400">Teléfono</p>
-                  <p className="text-slate-100">{miembro.telefono}</p>
+                  <p className="text-slate-100 break-all">{miembro.telefono}</p>
                 </div>
               )}
-              <div>
-                <p className="text-sm text-slate-400">Calificación Promedio</p>
+              <div className="min-w-0">
+                <p className="text-sm text-slate-400">Calificación</p>
                 <p className={`text-lg font-semibold ${getColorCalificacion(calificacionPromedio)}`}>
                   {formatearCalificacion(calificacionPromedio)}/10
                 </p>
               </div>
               {miembro.habilidades && miembro.habilidades.length > 0 && (
-                <div className="col-span-2">
+                <div className="min-w-0 md:col-span-2">
                   <p className="text-sm text-slate-400 mb-2">Habilidades</p>
                   <div className="flex flex-wrap gap-2">
                     {miembro.habilidades.map((habilidad, index) => {
@@ -505,7 +488,7 @@ function MiembroDetailPageContent() {
                   </div>
                 </div>
               )}
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm text-slate-400">Estado</p>
                 <p className={miembro.activo ? "text-green-400" : "text-red-400"}>
                   {miembro.activo ? "Activo" : "Inactivo"}
@@ -517,13 +500,13 @@ function MiembroDetailPageContent() {
       </div>
 
       {/* Comentarios */}
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 sm:p-6 overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <h3 className="text-lg font-semibold">Comentarios ({miembro.comentarios?.length || 0})</h3>
           {!mostrarFormComentario && (
             <button
               onClick={() => setMostrarFormComentario(true)}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium"
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium w-full sm:w-auto"
             >
               + Agregar Comentario
             </button>
@@ -544,18 +527,6 @@ function MiembroDetailPageContent() {
                   placeholder="Escribe tu comentario..."
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Calificación (0-10, opcional)</label>
-                <input
-                  type="number"
-                  value={nuevoComentario.calificacion}
-                  onChange={(e) => setNuevoComentario({ ...nuevoComentario, calificacion: e.target.value })}
-                  min="0"
-                  max="10"
-                  step="0.1"
-                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-blue-500"
-                />
-              </div>
               <div className="flex gap-3">
                 <button
                   onClick={handleAgregarComentario}
@@ -566,7 +537,7 @@ function MiembroDetailPageContent() {
                 <button
                   onClick={() => {
                     setMostrarFormComentario(false);
-                    setNuevoComentario({ texto: "", calificacion: "" });
+                    setNuevoComentario({ texto: "" });
                   }}
                   className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-medium"
                 >
@@ -580,38 +551,22 @@ function MiembroDetailPageContent() {
         {miembro.comentarios && miembro.comentarios.length > 0 ? (
           <div className="space-y-4">
             {miembro.comentarios.map((comentario, index) => (
-              <div key={index} className="p-4 bg-slate-900 rounded-lg border border-slate-700">
+              <div key={index} className="p-4 bg-slate-900 rounded-lg border border-slate-700 min-w-0 overflow-hidden">
                 {editandoComentario === index ? (
-                  <div className="space-y-3">
-                    <div>
+                  <div className="space-y-3 min-w-0">
+                    <div className="min-w-0">
                       <label className="block text-sm font-medium text-slate-300 mb-2">Comentario</label>
                       <textarea
                         value={comentarioEditando.texto}
                         onChange={(e) => setComentarioEditando({ ...comentarioEditando, texto: e.target.value })}
                         rows={3}
-                        className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">Calificación (0-10)</label>
-                      <input
-                        type="number"
-                        value={comentarioEditando.calificacion}
-                        onChange={(e) => setComentarioEditando({ ...comentarioEditando, calificacion: e.target.value })}
-                        min="0"
-                        max="10"
-                        step="0.1"
-                        className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-blue-500"
+                        className="w-full max-w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-blue-500"
                       />
                     </div>
                     <div className="flex gap-3">
                       <button
                         onClick={() => {
-                          handleEditarComentario(
-                            index,
-                            comentarioEditando.texto,
-                            comentarioEditando.calificacion
-                          );
+                          handleEditarComentario(index, comentarioEditando.texto);
                         }}
                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium"
                       >
@@ -620,7 +575,7 @@ function MiembroDetailPageContent() {
                       <button
                         onClick={() => {
                           setEditandoComentario(null);
-                          setComentarioEditando({ texto: "", calificacion: "" });
+                          setComentarioEditando({ texto: "" });
                         }}
                         className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-medium"
                       >
@@ -630,9 +585,9 @@ function MiembroDetailPageContent() {
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <p className="text-sm font-medium text-slate-300">{comentario.autor}</p>
+                    <div className="flex items-start justify-between gap-3 mb-2 min-w-0">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-slate-300 break-words">{comentario.autor}</p>
                         <p className="text-xs text-slate-500">
                           {new Date(comentario.fecha).toLocaleDateString('es-ES', {
                             day: '2-digit',
@@ -643,20 +598,14 @@ function MiembroDetailPageContent() {
                           })}
                         </p>
                       </div>
-                      {comentario.calificacion !== undefined && comentario.calificacion !== null && (
-                        <span className={`text-sm font-semibold ${getColorCalificacion(comentario.calificacion)}`}>
-                          {formatearCalificacion(comentario.calificacion)}/10
-                        </span>
-                      )}
                     </div>
-                    <p className="text-slate-200 mb-3 whitespace-pre-wrap">{comentario.texto}</p>
-                    <div className="flex gap-2">
+                    <p className="text-slate-200 mb-3 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{comentario.texto}</p>
+                    <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => {
                           setEditandoComentario(index);
                           setComentarioEditando({
-                            texto: comentario.texto,
-                            calificacion: comentario.calificacion !== undefined && comentario.calificacion !== null ? comentario.calificacion.toString() : ""
+                            texto: comentario.texto
                           });
                         }}
                         className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs font-medium"

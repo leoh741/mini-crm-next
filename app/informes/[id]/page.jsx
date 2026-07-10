@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getReportById, deleteReport, duplicateReport } from "../../../lib/reportsUtils";
@@ -9,8 +9,7 @@ import { Icons } from "../../../components/Icons";
 import TotalsPanel from "../../../components/reports/TotalsPanel";
 import SharePanel from "../../../components/reports/SharePanel";
 import { formatNumber, formatPercentage } from "../../../lib/reportCalculations";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
+import { generarInformePDF } from "../../../lib/pdfGenerator";
 
 function InformeDetallePageContent() {
   const params = useParams();
@@ -21,7 +20,6 @@ function InformeDetallePageContent() {
   const [activeTab, setActiveTab] = useState("resumen");
   const [deleting, setDeleting] = useState(false);
   const [downloadingPDF, setDownloadingPDF] = useState(false);
-  const resumenRef = useRef(null);
 
   useEffect(() => {
     const cargarInforme = async () => {
@@ -82,385 +80,12 @@ function InformeDetallePageContent() {
     setInforme(updatedInforme);
   };
 
-  // Función auxiliar para cargar imagen a base64
-  const cargarLogoBase64 = async (url) => {
-    return new Promise((resolve, reject) => {
-      // Intentar con fetch primero
-      fetch(url, { mode: 'cors', cache: 'no-cache' })
-        .then(response => {
-          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-          return response.blob();
-        })
-        .then(blob => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        })
-        .catch(() => {
-          // Fallback: intentar con Image (puede fallar por CORS)
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.onload = function() {
-            try {
-              const canvas = document.createElement('canvas');
-              canvas.width = img.width;
-              canvas.height = img.height;
-              const ctx = canvas.getContext('2d');
-              ctx.drawImage(img, 0, 0);
-              resolve(canvas.toDataURL('image/png'));
-            } catch (error) {
-              reject(error);
-            }
-          };
-          img.onerror = reject;
-          img.src = url;
-        });
-    });
-  };
-
   const handleDownloadPDF = async () => {
+    if (!informe) return;
     try {
       setDownloadingPDF(true);
-      
-      // Asegurar que el tab de resumen esté activo
-      if (activeTab !== "resumen") {
-        setActiveTab("resumen");
-        await new Promise(resolve => setTimeout(resolve, 300));
-      }
-      
-      // Buscar el elemento del resumen
-      const resumenElement = resumenRef.current;
-      if (!resumenElement) {
-        throw new Error("No se pudo encontrar el contenido del resumen");
-      }
-      
-      // Función para cargar logo (misma que en pdfGenerator)
-      
-      // Función para obtener dimensiones del logo manteniendo proporciones
-      const obtenerDimensionesLogo = async (base64, anchoMaximo) => {
-        return new Promise((resolve) => {
-          const img = new Image();
-          img.onload = function() {
-            const aspectRatio = img.width / img.height;
-            const logoWidth = anchoMaximo;
-            const logoHeight = logoWidth / aspectRatio;
-            resolve({ width: logoWidth, height: logoHeight });
-          };
-          img.onerror = function() {
-            // Si falla, usar dimensiones por defecto con aspect ratio típico
-            const logoWidth = anchoMaximo;
-            const logoHeight = logoWidth / 2;
-            resolve({ width: logoWidth, height: logoHeight });
-          };
-          img.src = base64;
-        });
-      };
-      
-      // Crear PDF usando jsPDF (igual que presupuestos y resúmenes)
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      
-      // Color azul del header del CRM (RGB: 20, 38, 120 - #142678)
-      const azulMarca = [20, 38, 120];
-      const blanco = [255, 255, 255];
-      
-      // Dibujar fondo azul en toda la página
-      doc.setFillColor(azulMarca[0], azulMarca[1], azulMarca[2]);
-      doc.rect(0, 0, pageWidth, pageHeight, 'F');
-      
-      let yPos = 20;
-      
-      // Logo en header
-      try {
-        const logoUrl = 'https://digitalspace.com.ar/wp-content/uploads/2025/01/Recurso-1.webp';
-        const logoBase64 = await cargarLogoBase64(logoUrl);
-        if (logoBase64) {
-          const logoWidth = 60;
-          const logoHeight = 20;
-          const formato = logoBase64.startsWith('data:image/png') ? 'PNG' : 
-                         logoBase64.startsWith('data:image/webp') ? 'WEBP' : 
-                         logoBase64.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG';
-          doc.addImage(logoBase64, formato, pageWidth / 2 - logoWidth / 2, yPos, logoWidth, logoHeight);
-          yPos += logoHeight + 10;
-        }
-      } catch (error) {
-        console.warn('Error al cargar logo del header:', error);
-      }
-      
-      // Título del informe
-      doc.setFontSize(18);
-      doc.setFont(undefined, 'bold');
-      doc.setTextColor(blanco[0], blanco[1], blanco[2]);
-      doc.text(informe.titulo || 'Informe', pageWidth / 2, yPos, { align: 'center' });
-      yPos += 15;
-      
-      // Información del cliente y período
-      doc.setFontSize(12);
-      doc.setFont(undefined, 'bold');
-      doc.text('Cliente:', 20, yPos);
-      doc.setFont(undefined, 'normal');
-      doc.text(informe.clienteNombre || 'N/A', 50, yPos);
-      yPos += 8;
-      
-      if (informe.clienteEmail) {
-        doc.setFont(undefined, 'bold');
-        doc.text('Email:', 20, yPos);
-        doc.setFont(undefined, 'normal');
-        doc.text(informe.clienteEmail, 50, yPos);
-        yPos += 8;
-      }
-      
-      doc.setFont(undefined, 'bold');
-      doc.text('Período:', 20, yPos);
-      doc.setFont(undefined, 'normal');
-      doc.text(formatearPeriodo(informe.periodo), 50, yPos);
-      yPos += 15;
-      
-      // Dividir el contenido en contenedores individuales para evitar cortar elementos
-      const footerHeight = 30; // Espacio para logo y número de página
-      const imgWidth = pageWidth - 40; // Margen de 20mm cada lado
-      
-      // Función auxiliar para verificar si un elemento cabe en la página actual
-      const getElementHeight = async (element) => {
-        const canvas = await html2canvas(element, {
-          backgroundColor: null,
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          logging: false
-        });
-        return (canvas.height * imgWidth) / canvas.width;
-      };
-      
-      // Función auxiliar para agregar una imagen al PDF con manejo de páginas
-      const addElementToPDF = async (element, addSpace = true) => {
-        const canvas = await html2canvas(element, {
-          backgroundColor: null, // Fondo transparente
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          logging: false
-        });
-        
-        const imgData = canvas.toDataURL('image/png');
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        
-        // Calcular la altura disponible en la página actual
-        const availableHeight = pageHeight - yPos - footerHeight;
-        
-        // Si este elemento no cabe en la página actual, crear una nueva página
-        if (yPos > 20 && imgHeight > availableHeight) {
-          doc.addPage();
-          // Dibujar fondo azul en la nueva página
-          doc.setFillColor(azulMarca[0], azulMarca[1], azulMarca[2]);
-          doc.rect(0, 0, pageWidth, pageHeight, 'F');
-          yPos = 20; // Reiniciar Y para la nueva página
-        }
-        
-        // Agregar este elemento al PDF
-        doc.addImage(imgData, 'PNG', 20, yPos, imgWidth, imgHeight);
-        yPos += imgHeight + (addSpace ? 10 : 0); // Agregar espacio entre elementos si se solicita
-        
-        // Verificar si después de agregar este elemento necesitamos una nueva página
-        if (yPos > pageHeight - footerHeight) {
-          doc.addPage();
-          // Dibujar fondo azul en la nueva página
-          doc.setFillColor(azulMarca[0], azulMarca[1], azulMarca[2]);
-          doc.rect(0, 0, pageWidth, pageHeight, 'F');
-          yPos = 20; // Reiniciar Y para la nueva página
-        }
-      };
-      
-      // Obtener todos los elementos hijos directos del resumen
-      const children = Array.from(resumenElement.children);
-      
-      for (let i = 0; i < children.length; i++) {
-        const childElement = children[i];
-        
-        // Si es el contenedor de "Campañas", dividir cada sección por páginas manteniendo el contenedor
-        const campanasTitle = childElement.querySelector('h3');
-        if (campanasTitle && campanasTitle.textContent.trim() === 'Campañas') {
-          // Este es el contenedor de campañas
-          const secciones = childElement.querySelectorAll('.bg-slate-800.border.border-slate-700.rounded-lg');
-          
-          // Agregar el título "Campañas" solo en la primera página (antes de las secciones)
-          const titleWrapper = document.createElement('div');
-          titleWrapper.style.position = 'absolute';
-          titleWrapper.style.left = '-9999px';
-          titleWrapper.style.width = resumenElement.offsetWidth + 'px';
-          titleWrapper.style.padding = '15px 0 15px 0';
-          titleWrapper.style.margin = '0';
-          titleWrapper.style.overflow = 'visible';
-          titleWrapper.style.height = 'auto';
-          titleWrapper.className = '';
-          const clonedTitle = campanasTitle.cloneNode(true);
-          // Asegurar que el título tenga suficiente espacio y no se corte
-          clonedTitle.style.margin = '0';
-          clonedTitle.style.padding = '0';
-          clonedTitle.style.overflow = 'visible';
-          clonedTitle.style.lineHeight = '1.5';
-          clonedTitle.style.height = 'auto';
-          titleWrapper.appendChild(clonedTitle);
-          document.body.appendChild(titleWrapper);
-          
-          try {
-            await addElementToPDF(titleWrapper, false);
-          } catch (titleError) {
-            console.warn('Error al agregar título de campañas:', titleError);
-          } finally {
-            if (document.body.contains(titleWrapper)) {
-              document.body.removeChild(titleWrapper);
-            }
-          }
-          
-          // Procesar cada sección (plataforma)
-          for (const seccion of secciones) {
-            try {
-              const seccionHeader = seccion.querySelector('h4');
-              const campanasContainer = seccion.querySelector('.space-y-4');
-              
-              if (!campanasContainer || campanasContainer.children.length === 0) {
-                // Si no hay campañas, agregar la sección completa
-                await addElementToPDF(seccion, true);
-                continue;
-              }
-              
-              // Obtener todas las campañas de esta sección
-              const campanasItems = Array.from(campanasContainer.children);
-              
-              // Dividir las campañas en grupos que quepan en cada página
-              let campanaIndex = 0;
-              
-              while (campanaIndex < campanasItems.length) {
-                // Crear un contenedor temporal para este grupo de campañas
-                const sectionWrapper = document.createElement('div');
-                sectionWrapper.style.position = 'absolute';
-                sectionWrapper.style.left = '-9999px';
-                sectionWrapper.style.width = resumenElement.offsetWidth + 'px';
-                sectionWrapper.className = 'bg-slate-800 border border-slate-700 rounded-lg p-6';
-                
-                // Agregar el header de la sección (plataforma)
-                if (seccionHeader) {
-                  const clonedHeader = seccionHeader.cloneNode(true);
-                  sectionWrapper.appendChild(clonedHeader);
-                }
-                
-                // Crear contenedor para las campañas de este grupo
-                const campanasGroup = document.createElement('div');
-                campanasGroup.className = 'space-y-4 mt-4';
-                sectionWrapper.appendChild(campanasGroup);
-                
-                // Agregar el contenedor al DOM antes de trabajar con él
-                document.body.appendChild(sectionWrapper);
-                
-                try {
-                  // Agregar campañas mientras quepan en la página actual
-                  let currentAvailableHeight = pageHeight - yPos - footerHeight;
-                  
-                  while (campanaIndex < campanasItems.length) {
-                    const campana = campanasItems[campanaIndex];
-                    const clonedCampana = campana.cloneNode(true);
-                    campanasGroup.appendChild(clonedCampana);
-                    
-                    // Calcular altura de este contenedor con las campañas agregadas hasta ahora
-                    const sectionHeight = await getElementHeight(sectionWrapper);
-                    
-                    // Si este contenedor no cabe en la página actual y ya hay al menos una campaña, remover la última y terminar
-                    if (sectionHeight > currentAvailableHeight && campanasGroup.children.length > 1) {
-                      campanasGroup.removeChild(clonedCampana);
-                      break;
-                    }
-                    
-                    // Si este contenedor no cabe incluso con una sola campaña, crear nueva página primero
-                    if (sectionHeight > currentAvailableHeight && campanasGroup.children.length === 1) {
-                      doc.addPage();
-                      doc.setFillColor(azulMarca[0], azulMarca[1], azulMarca[2]);
-                      doc.rect(0, 0, pageWidth, pageHeight, 'F');
-                      yPos = 20;
-                      const newAvailableHeight = pageHeight - yPos - footerHeight;
-                      // Recalcular altura con la nueva página
-                      const newSectionHeight = await getElementHeight(sectionWrapper);
-                      if (newSectionHeight > newAvailableHeight) {
-                        // Si aún no cabe, remover la campaña y continuar con la siguiente
-                        campanasGroup.removeChild(clonedCampana);
-                        campanaIndex++;
-                        break;
-                      }
-                      // Si cabe en la nueva página, actualizar la altura disponible
-                      currentAvailableHeight = newAvailableHeight;
-                    }
-                    
-                    // Incrementar el índice solo si la campaña se agregó exitosamente
-                    campanaIndex++;
-                  }
-                  
-                  // Si hay campañas en este grupo, agregarlo al PDF
-                  if (campanasGroup.children.length > 0) {
-                    await addElementToPDF(sectionWrapper, true);
-                  } else {
-                    // Si no hay campañas en el grupo, detener
-                    break;
-                  }
-                } finally {
-                  if (document.body.contains(sectionWrapper)) {
-                    document.body.removeChild(sectionWrapper);
-                  }
-                }
-              }
-            } catch (sectionError) {
-              console.warn('Error al procesar sección:', sectionError);
-              // Continuar con la siguiente sección
-            }
-          }
-        } else {
-          // Para otros elementos (Importe gastado total, Totales por Plataforma), agregarlos directamente
-          await addElementToPDF(childElement, true);
-        }
-      }
-      
-      // Obtener el número total de páginas después de agregar la imagen
-      const totalPages = doc.internal.pages.length - 1;
-      
-      // Agregar logo y número de página en cada página
-      for (let i = 1; i <= totalPages; i++) {
-        doc.setPage(i);
-        
-        // Logo en footer
-        try {
-          let logoBase64 = null;
-          try {
-            logoBase64 = await cargarLogoBase64(`${window.location.origin}/Logo.png`);
-          } catch (localError) {
-            logoBase64 = await cargarLogoBase64('https://digitalspace.com.ar/wp-content/uploads/2025/01/Recurso-1.webp');
-          }
-          if (logoBase64) {
-            // Obtener dimensiones manteniendo proporciones originales
-            const dimensiones = await obtenerDimensionesLogo(logoBase64, 20); // Ancho máximo 20mm
-            const logoWidth = dimensiones.width;
-            const logoHeight = dimensiones.height;
-            const logoY = pageHeight - 25;
-            const formato = logoBase64.startsWith('data:image/png') ? 'PNG' : 
-                           logoBase64.startsWith('data:image/webp') ? 'WEBP' : 
-                           logoBase64.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG';
-            doc.addImage(logoBase64, formato, pageWidth / 2 - logoWidth / 2, logoY, logoWidth, logoHeight);
-          }
-        } catch (error) {
-          console.warn('Error al cargar logo del footer:', error);
-        }
-        
-        // Número de página
-        doc.setFontSize(8);
-        doc.setFont(undefined, 'normal');
-        doc.setTextColor(blanco[0], blanco[1], blanco[2]);
-        doc.text(`Página ${i} de ${totalPages}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
-      }
-      
-      // Guardar PDF
-      const nombreArchivo = `${informe.titulo?.replace(/[^a-z0-9\s]/gi, '').trim().replace(/\s+/g, ' ') || 'Informe'}.pdf`;
-      doc.save(nombreArchivo);
-      
+      // Generación programática (igual en móvil y escritorio), como resúmenes de pago
+      await generarInformePDF(informe, informe.computed);
     } catch (err) {
       console.error('Error al descargar PDF:', err);
       const errorMessage = err?.message || err?.toString() || 'Error desconocido';
@@ -613,20 +238,20 @@ function InformeDetallePageContent() {
   return (
     <div>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div className="flex-1">
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="min-w-0">
           <Link href="/informes" className="text-blue-400 hover:text-blue-300 text-sm mb-2 inline-block">
             ← Volver a Informes
           </Link>
-          <h1 className="text-2xl font-semibold mb-1">{informe.titulo}</h1>
-          <div className="flex flex-wrap items-center gap-4 text-sm text-slate-400">
-            <span className="flex items-center gap-1">
-              <Icons.User className="w-4 h-4" />
-              {informe.clienteNombre}
-              {informe.clienteEmail && <span className="text-slate-500">• {informe.clienteEmail}</span>}
+          <h1 className="text-xl sm:text-2xl font-semibold mb-1 break-words">{informe.titulo}</h1>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-400">
+            <span className="flex items-center gap-1 min-w-0">
+              <Icons.User className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">{informe.clienteNombre}</span>
+              {informe.clienteEmail && <span className="text-slate-500 hidden sm:inline">• {informe.clienteEmail}</span>}
             </span>
             <span className="flex items-center gap-1">
-              <Icons.Calendar className="w-4 h-4" />
+              <Icons.Calendar className="w-4 h-4 flex-shrink-0" />
               {formatearPeriodo(informe.periodo)}
             </span>
             <span className={`px-2 py-1 rounded text-xs border ${
@@ -638,57 +263,57 @@ function InformeDetallePageContent() {
             </span>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 w-full">
           <button
             onClick={handleDownloadPDF}
             disabled={downloadingPDF || loading}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-white flex items-center gap-2"
+            className="px-3 py-2.5 sm:px-4 sm:py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-xs sm:text-sm font-medium text-white flex items-center justify-center gap-1.5 sm:gap-2"
           >
             {downloadingPDF ? (
               <>
-                <Icons.Refresh className="w-4 h-4 animate-spin" />
-                Generando...
+                <Icons.Refresh className="w-4 h-4 animate-spin flex-shrink-0" />
+                <span>Generando...</span>
               </>
             ) : (
               <>
-                <Icons.Download className="w-4 h-4" />
-                Descargar PDF
+                <Icons.Download className="w-4 h-4 flex-shrink-0" />
+                <span>Descargar PDF</span>
               </>
             )}
           </button>
           <Link
             href={`/informes/${informe._id || informe.reportId}/editar`}
-            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-medium text-white flex items-center gap-2"
+            className="px-3 py-2.5 sm:px-4 sm:py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs sm:text-sm font-medium text-white flex items-center justify-center gap-1.5 sm:gap-2"
           >
-            <Icons.Pencil className="w-4 h-4" />
-            Editar
+            <Icons.Pencil className="w-4 h-4 flex-shrink-0" />
+            <span>Editar</span>
           </Link>
           <button
             onClick={handleDuplicate}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium text-white flex items-center gap-2"
+            className="px-3 py-2.5 sm:px-4 sm:py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs sm:text-sm font-medium text-white flex items-center justify-center gap-1.5 sm:gap-2"
           >
-            <Icons.Duplicate className="w-4 h-4" />
-            Duplicar
+            <Icons.Duplicate className="w-4 h-4 flex-shrink-0" />
+            <span>Duplicar</span>
           </button>
           <button
             onClick={handleDelete}
             disabled={deleting}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-white flex items-center gap-2"
+            className="px-3 py-2.5 sm:px-4 sm:py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-xs sm:text-sm font-medium text-white flex items-center justify-center gap-1.5 sm:gap-2"
           >
-            <Icons.Trash className="w-4 h-4" />
-            {deleting ? 'Eliminando...' : 'Eliminar'}
+            <Icons.Trash className="w-4 h-4 flex-shrink-0" />
+            <span>{deleting ? 'Eliminando...' : 'Eliminar'}</span>
           </button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-slate-700 mb-6">
-        <div className="flex gap-2">
+      <div className="border-b border-slate-700 mb-6 -mx-3 px-3 md:mx-0 md:px-0 overflow-x-auto">
+        <div className="flex gap-1 sm:gap-2 min-w-max">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 border-b-2 transition-colors ${
+              className={`px-3 sm:px-4 py-2 border-b-2 transition-colors whitespace-nowrap text-sm ${
                 activeTab === tab.id
                   ? 'border-blue-500 text-blue-400'
                   : 'border-transparent text-slate-400 hover:text-slate-300'
@@ -702,7 +327,7 @@ function InformeDetallePageContent() {
 
       {/* Tab Content */}
       {activeTab === "resumen" && (
-        <div ref={resumenRef} className="space-y-6">
+        <div className="space-y-6 pb-4">
           {/* Importe gastado total */}
           {informe.computed?.totalsGlobal?.spend && (
               <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { getActivityLists, createActivityList, updateActivityList, deleteActivityList } from "../../lib/activitiesUtils";
 import { getActivities, createActivity, updateActivity, deleteActivity } from "../../lib/activitiesUtils";
 import { getUsuarioActual, puedeGestionarActividades, esAdmin } from "../../lib/authUtils";
@@ -49,6 +49,15 @@ function ActivitiesPageContent() {
   const [usersLastSeen, setUsersLastSeen] = useState({});
   const [draggedActivityId, setDraggedActivityId] = useState(null);
   const [dragOverActivityId, setDragOverActivityId] = useState(null);
+  const [dropPosition, setDropPosition] = useState(null); // 'before' | 'after'
+  const draggedActivityIdRef = useRef(null);
+  const dragOverKeyRef = useRef(null);
+  const dropPositionRef = useRef(null);
+  const activitiesBeforeDragRef = useRef(null);
+  const activitiesRef = useRef(activities);
+  const isSavingOrderRef = useRef(false);
+  const didDropRef = useRef(false);
+  activitiesRef.current = activities;
 
   useEffect(() => {
     // Verificar permisos al cargar el componente
@@ -741,125 +750,144 @@ function ActivitiesPageContent() {
     return canPause;
   };
 
+  const sortActivitiesByOrder = (list) => {
+    return [...list].sort((a, b) => {
+      if (a.order !== b.order) return (a.order || 0) - (b.order || 0);
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+  };
+
+  const resetDragState = () => {
+    draggedActivityIdRef.current = null;
+    dragOverKeyRef.current = null;
+    dropPositionRef.current = null;
+    setDraggedActivityId(null);
+    setDragOverActivityId(null);
+    setDropPosition(null);
+  };
+
+  const moveActivityInList = (list, fromId, toId, placeAfter) => {
+    const sorted = sortActivitiesByOrder(list);
+    const fromIndex = sorted.findIndex(a => a.id === fromId);
+    const toIndex = sorted.findIndex(a => a.id === toId);
+    if (fromIndex === -1 || toIndex === -1) return null;
+
+    let insertIndex = placeAfter ? toIndex + 1 : toIndex;
+    const next = [...sorted];
+    const [item] = next.splice(fromIndex, 1);
+    if (fromIndex < insertIndex) insertIndex -= 1;
+    insertIndex = Math.max(0, Math.min(insertIndex, next.length));
+
+    if (insertIndex === fromIndex) return null;
+    next.splice(insertIndex, 0, item);
+
+    if (next.every((a, i) => a.id === sorted[i].id)) return null;
+    return next.map((a, i) => ({ ...a, order: (i + 1) * 1000 }));
+  };
+
+  const persistActivityOrders = async (orderedList, previousList) => {
+    if (isSavingOrderRef.current) return;
+    isSavingOrderRef.current = true;
+    try {
+      const previousOrders = new Map((previousList || []).map(a => [a.id, a.order || 0]));
+      const changed = orderedList.filter(a => previousOrders.get(a.id) !== a.order);
+      if (changed.length === 0) return;
+      await Promise.all(changed.map(a => updateActivity(a.id, { order: a.order })));
+    } catch (err) {
+      console.error('Error al guardar orden de actividades:', err);
+      if (previousList) setActivities(previousList);
+      setError(err.message || "Error al guardar el orden de las actividades");
+    } finally {
+      isSavingOrderRef.current = false;
+    }
+  };
+
   const handleDragStart = (e, activity) => {
-    if (!puedeGestionar) return;
+    if (!puedeGestionar) {
+      e.preventDefault();
+      return;
+    }
+    didDropRef.current = false;
+    activitiesBeforeDragRef.current = activitiesRef.current;
+    draggedActivityIdRef.current = activity.id;
+    dragOverKeyRef.current = null;
+    dropPositionRef.current = null;
     setDraggedActivityId(activity.id);
+    setDragOverActivityId(null);
+    setDropPosition(null);
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/html', activity.id);
-    // Hacer el elemento semi-transparente mientras se arrastra
+    e.dataTransfer.setData('text/plain', activity.id);
     e.currentTarget.style.opacity = '0.5';
   };
 
   const handleDragEnd = (e) => {
     e.currentTarget.style.opacity = '';
-    setDraggedActivityId(null);
-    setDragOverActivityId(null);
+    // Si se canceló el drag (sin drop), no hay nada que revertir en UI
+    // porque el orden solo cambia al soltar
+    activitiesBeforeDragRef.current = null;
+    didDropRef.current = false;
+    resetDragState();
   };
 
   const handleDragOver = (e, activity) => {
-    if (!puedeGestionar || draggedActivityId === activity.id) return;
+    if (!puedeGestionar) return;
     e.preventDefault();
+    e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
+
+    const fromId = draggedActivityIdRef.current;
+    if (!fromId) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const placeAfter = e.clientY > rect.top + rect.height / 2;
+    const position = placeAfter ? 'after' : 'before';
+    const key = `${activity.id}:${position}`;
+
+    if (dragOverKeyRef.current === key) return;
+    dragOverKeyRef.current = key;
+    dropPositionRef.current = fromId === activity.id ? null : position;
     setDragOverActivityId(activity.id);
+    setDropPosition(fromId === activity.id ? null : position);
   };
 
   const handleDragLeave = (e) => {
+    // Evitar parpadeo al pasar por hijos del mismo card
+    if (e.currentTarget.contains(e.relatedTarget)) return;
     setDragOverActivityId(null);
+    setDropPosition(null);
+    dropPositionRef.current = null;
   };
 
   const handleDrop = async (e, targetActivity) => {
-    if (!puedeGestionar || !draggedActivityId || draggedActivityId === targetActivity.id) {
-      setDragOverActivityId(null);
-      return;
-    }
-    
     e.preventDefault();
     e.stopPropagation();
-    
-    try {
-      const draggedIndex = filteredActivities.findIndex(a => a.id === draggedActivityId);
-      const targetIndex = filteredActivities.findIndex(a => a.id === targetActivity.id);
-      
-      if (draggedIndex === -1 || targetIndex === -1 || draggedIndex === targetIndex) {
-        setDragOverActivityId(null);
-        return;
-      }
 
-      // Calcular nuevo orden basado en la posición
-      // Si movemos hacia abajo, el nuevo order será mayor que el target
-      // Si movemos hacia arriba, el nuevo order será menor que el target
-      const movedDown = draggedIndex < targetIndex;
-      
-      let newOrder;
-      if (movedDown) {
-        // Moviendo hacia abajo: poner después de la actividad objetivo
-        // Usar el order de la siguiente actividad o targetOrder + 1000
-        const nextIndex = targetIndex + 1;
-        if (nextIndex < filteredActivities.length) {
-          const nextActivity = filteredActivities[nextIndex];
-          const nextOrder = nextActivity.order || 0;
-          const targetOrder = targetActivity.order || 0;
-          // Calcular un order intermedio
-          newOrder = Math.floor((targetOrder + nextOrder) / 2);
-          // Si es el mismo, incrementar
-          if (newOrder === targetOrder) {
-            newOrder = targetOrder + 500;
-          }
-        } else {
-          // Es la última, usar un order mayor
-          const targetOrder = targetActivity.order || 0;
-          newOrder = targetOrder + 1000;
-        }
-      } else {
-        // Moviendo hacia arriba: poner antes de la actividad objetivo
-        // Usar el order de la actividad anterior o targetOrder - 1000
-        const prevIndex = targetIndex - 1;
-        if (prevIndex >= 0) {
-          const prevActivity = filteredActivities[prevIndex];
-          const prevOrder = prevActivity.order || 0;
-          const targetOrder = targetActivity.order || 0;
-          // Calcular un order intermedio
-          newOrder = Math.floor((prevOrder + targetOrder) / 2);
-          // Si es el mismo o menor, decrementar
-          if (newOrder >= targetOrder || newOrder <= 0) {
-            newOrder = Math.max(1, targetOrder - 500);
-          }
-        } else {
-          // Es la primera, usar un order menor
-          const targetOrder = targetActivity.order || 1000;
-          newOrder = Math.max(1, targetOrder - 1000);
-        }
-      }
-      
-      // Asegurar que el order sea positivo
-      if (newOrder <= 0) {
-        newOrder = 1;
-      }
-      
-      console.log('[Activities] Moviendo actividad:', {
-        draggedId: draggedActivityId,
-        targetId: targetActivity.id,
-        draggedIndex,
-        targetIndex,
-        movedDown,
-        newOrder,
-        targetOrder: targetActivity.order
-      });
-      
-      // Actualizar el order de la actividad arrastrada
-      await updateActivity(draggedActivityId, { order: newOrder });
-      
-      // Recargar actividades para reflejar el nuevo orden
-      await loadActivities(selectedListId);
-      
-      setDragOverActivityId(null);
-      setDraggedActivityId(null);
-    } catch (err) {
-      console.error('Error al mover actividad:', err);
-      setError(err.message || "Error al mover la actividad");
-      setDragOverActivityId(null);
-      setDraggedActivityId(null);
+    const fromId = draggedActivityIdRef.current;
+    if (!puedeGestionar || !fromId) {
+      resetDragState();
+      return;
     }
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const placeAfter = dropPositionRef.current === 'after'
+      || (dropPositionRef.current !== 'before' && e.clientY > rect.top + rect.height / 2);
+    const previous = activitiesBeforeDragRef.current || activitiesRef.current;
+    const current = activitiesRef.current;
+
+    let nextList = current;
+    if (fromId !== targetActivity.id) {
+      const reordered = moveActivityInList(current, fromId, targetActivity.id, placeAfter);
+      if (reordered) {
+        nextList = reordered;
+        setActivities(reordered);
+      }
+    }
+
+    didDropRef.current = true;
+    activitiesBeforeDragRef.current = null;
+    resetDragState();
+
+    await persistActivityOrders(nextList, previous);
   };
 
   const addLabel = () => {
@@ -1118,7 +1146,14 @@ function ActivitiesPageContent() {
             )}
 
             {/* Lista de Actividades */}
-            <div className="space-y-1">
+            <div
+              className="space-y-1"
+              onDragOver={(e) => {
+                if (!puedeGestionar || !draggedActivityIdRef.current) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+              }}
+            >
               {filteredActivities.length === 0 ? (
                 <p className="text-slate-400 text-center py-8">
                   {activities.length === 0
@@ -1137,24 +1172,33 @@ function ActivitiesPageContent() {
                     onDragOver={(e) => handleDragOver(e, activity)}
                     onDragLeave={handleDragLeave}
                     onDrop={(e) => handleDrop(e, activity)}
-                    className={`relative px-4 py-2.5 rounded-lg border transition-all ${
+                    className={`relative px-4 py-2.5 rounded-lg border transition-colors ${
                       activity.status === "completada"
                         ? "bg-slate-800/50 border-slate-700 opacity-60"
                         : esActividadAsignada(activity)
                         ? "bg-slate-800 border-violet-500 border-2"
                         : "bg-slate-800 border-slate-700"
                     } ${
-                      puedeGestionar ? "cursor-move hover:border-blue-600" : ""
+                      puedeGestionar ? "cursor-grab active:cursor-grabbing hover:border-blue-600" : ""
                     } ${
-                      draggedActivityId === activity.id ? "opacity-30" : ""
+                      draggedActivityId === activity.id ? "opacity-40 scale-[0.99]" : ""
                     } ${
-                      dragOverActivityId === activity.id ? "border-blue-500 border-2 bg-blue-900/20" : ""
+                      dragOverActivityId === activity.id && draggedActivityId !== activity.id
+                        ? "border-blue-500 bg-blue-900/10"
+                        : ""
                     }`}
                   >
+                    {/* Indicador de posición de drop */}
+                    {dragOverActivityId === activity.id && dropPosition === 'before' && draggedActivityId !== activity.id && (
+                      <div className="absolute -top-0.5 left-2 right-2 h-1 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)] z-10 pointer-events-none" />
+                    )}
+                    {dragOverActivityId === activity.id && dropPosition === 'after' && draggedActivityId !== activity.id && (
+                      <div className="absolute -bottom-0.5 left-2 right-2 h-1 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)] z-10 pointer-events-none" />
+                    )}
                     <div className="flex items-center gap-3">
                       {/* Icono de arrastre */}
                       {puedeGestionar && (
-                        <div className="text-slate-500 opacity-40 flex-shrink-0">
+                        <div className="text-slate-500 opacity-40 flex-shrink-0 pointer-events-none">
                           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M7 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM7 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM7 14a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM13 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM13 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM13 14a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"></path>
                           </svg>

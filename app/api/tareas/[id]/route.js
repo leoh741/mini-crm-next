@@ -45,9 +45,9 @@ export async function PUT(request, { params }) {
     }
     
     if (body.descripcion !== undefined) {
-      updateData.descripcion = body.descripcion && body.descripcion.trim()
+      updateData.descripcion = body.descripcion && String(body.descripcion).trim()
         ? String(body.descripcion).trim()
-        : undefined;
+        : '';
     }
     
     if (body.fechaVencimiento !== undefined) {

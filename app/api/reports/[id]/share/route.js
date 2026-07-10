@@ -43,14 +43,6 @@ export async function POST(request, { params }) {
       );
     }
     
-    // Verificar que el usuario es el creador
-    if (report.createdBy !== userId) {
-      return NextResponse.json(
-        { success: false, error: 'No autorizado para compartir este informe' },
-        { status: 403 }
-      );
-    }
-    
     const updateData = {
       'share.enabled': enabled
     };

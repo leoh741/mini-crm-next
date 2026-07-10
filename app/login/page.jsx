@@ -103,7 +103,7 @@ export default function LoginPage() {
 
         <div className="mt-6 pt-6 border-t border-slate-700">
           <p className="text-xs text-slate-400 text-center">
-            Digital Space CRM Copyright © 2025 - Todos los derechos reservados
+            Digital Space CRM Copyright © 2026 - Todos los derechos reservados
           </p>
         </div>
       </div>

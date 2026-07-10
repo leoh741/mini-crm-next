@@ -24,8 +24,8 @@ export async function GET(request) {
     const fechaDesde = searchParams.get('fechaDesde');
     const fechaHasta = searchParams.get('fechaHasta');
 
-    // Construir query de filtrado
-    const query = { createdBy: userId };
+    // Informes compartidos: todos los usuarios autenticados ven el mismo listado
+    const query = {};
 
     if (clienteNombre) {
       query.clienteNombre = { $regex: clienteNombre, $options: 'i' };

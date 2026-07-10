@@ -107,9 +107,9 @@ export async function PUT(request, { params }) {
     }
     
     if (body.observaciones !== undefined) {
-      updateData.observaciones = body.observaciones && body.observaciones.trim()
+      updateData.observaciones = body.observaciones && String(body.observaciones).trim()
         ? String(body.observaciones).trim()
-        : undefined;
+        : '';
     }
     
     if (body.asignados !== undefined) {

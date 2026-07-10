@@ -90,14 +90,6 @@ export async function PATCH(request, { params }) {
       );
     }
     
-    // Verificar que el usuario es el creador
-    if (report.createdBy !== userId) {
-      return NextResponse.json(
-        { success: false, error: 'No autorizado para modificar este informe' },
-        { status: 403 }
-      );
-    }
-    
     // Preparar datos de actualización
     const updateData = {};
     
@@ -230,14 +222,6 @@ export async function DELETE(request, { params }) {
       return NextResponse.json(
         { success: false, error: 'Informe no encontrado' },
         { status: 404 }
-      );
-    }
-    
-    // Verificar que el usuario es el creador
-    if (report.createdBy !== userId) {
-      return NextResponse.json(
-        { success: false, error: 'No autorizado para eliminar este informe' },
-        { status: 403 }
       );
     }
     

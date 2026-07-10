@@ -15,29 +15,11 @@ export async function GET(request) {
     let query = {};
     
     if (fecha) {
-      // Parsear fecha en formato YYYY-MM-DD y crear rango del día completo
-      // Usar hora local (no UTC) para que coincida con cómo se guardan las fechas
+      // Rango del día en hora local (las fechas se guardan a mediodía local)
       const [año, mes, dia] = fecha.split('-').map(Number);
-      
-      // Crear rango amplio para evitar problemas de zona horaria
-      // Las fechas se guardan a las 12:00 (mediodía) en hora local
-      // Inicio: día anterior a las 00:00 (para capturar fechas guardadas a las 12:00 del día anterior en UTC)
-      const fechaInicio = new Date(año, mes - 1, dia - 1, 0, 0, 0, 0);
-      // Fin: día siguiente a las 23:59 (para capturar todas las fechas del día)
-      const fechaFin = new Date(año, mes - 1, dia + 1, 23, 59, 59, 999);
-      
+      const fechaInicio = new Date(año, mes - 1, dia, 0, 0, 0, 0);
+      const fechaFin = new Date(año, mes - 1, dia, 23, 59, 59, 999);
       query.fecha = { $gte: fechaInicio, $lte: fechaFin };
-      
-      // Log temporal para debug
-      console.log('[API Reuniones] Filtro por fecha:', {
-        fechaBuscada: fecha,
-        fechaInicio: fechaInicio.toISOString(),
-        fechaFin: fechaFin.toISOString(),
-        fechaInicioLocal: fechaInicio.toLocaleString('es-AR'),
-        fechaFinLocal: fechaFin.toLocaleString('es-AR'),
-        fechaInicioUTC: fechaInicio.toUTCString(),
-        fechaFinUTC: fechaFin.toUTCString()
-      });
     }
     
     if (completada !== null && completada !== undefined) {
@@ -61,17 +43,6 @@ export async function GET(request) {
       .lean()
       .maxTimeMS(15000); // Timeout optimizado para VPS (15 segundos)
       // Nota: No agregamos límite aquí porque el filtro ya limita los resultados
-    
-    // Log temporal para debug
-    if (fecha) {
-      console.log('[API Reuniones] Reuniones encontradas:', reuniones.length, reuniones.map(r => ({
-        titulo: r.titulo,
-        fecha: r.fecha,
-        fechaISO: r.fecha?.toISOString?.(),
-        fechaLocal: r.fecha?.toLocaleString?.('es-AR'),
-        completada: r.completada
-      })));
-    }
     
     return NextResponse.json({ success: true, data: reuniones }, {
       headers: {
@@ -232,6 +203,9 @@ export async function POST(request) {
     if (body.observaciones) {
       reunionData.observaciones = body.observaciones;
     }
+    if (body.asignados && Array.isArray(body.asignados) && body.asignados.length > 0) {
+      reunionData.asignados = body.asignados;
+    }
     
     // Verificar una vez más que todos los campos requeridos estén presentes
     if (!reunionData.reunionId || !reunionData.titulo || !reunionData.fecha || !reunionData.hora || !reunionData.tipo) {
@@ -295,6 +269,9 @@ export async function POST(request) {
     }
     if (reunionData.observaciones && String(reunionData.observaciones).trim()) {
       reunionParaCrear.observaciones = String(reunionData.observaciones).trim();
+    }
+    if (reunionData.asignados && Array.isArray(reunionData.asignados) && reunionData.asignados.length > 0) {
+      reunionParaCrear.asignados = reunionData.asignados;
     }
     
     console.log('[API Reuniones] Objeto final para crear:', JSON.stringify({

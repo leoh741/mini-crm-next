@@ -288,9 +288,8 @@ function EditarClientePageContent() {
     if (formData.rubro.trim()) {
       datosActualizados.rubro = formData.rubro.trim();
     }
-    if (formData.observaciones.trim()) {
-      datosActualizados.observaciones = formData.observaciones.trim();
-    }
+    // Siempre enviar observaciones (también vacío) para poder borrarlas
+    datosActualizados.observaciones = formData.observaciones.trim();
     if (etiquetas.length > 0) {
       datosActualizados.etiquetas = etiquetas;
     } else {

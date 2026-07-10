@@ -208,10 +208,8 @@ function TareasPageContent() {
         return;
       }
       
-      // Agregar campos opcionales solo si tienen valor
-      if (formData.descripcion && formData.descripcion.trim()) {
-        tareaData.descripcion = String(formData.descripcion).trim();
-      }
+      // Siempre enviar descripción (también vacía) para poder borrarla al actualizar
+      tareaData.descripcion = String(formData.descripcion || '').trim();
       
       if (formData.fechaVencimiento && formData.fechaVencimiento.trim()) {
         tareaData.fechaVencimiento = String(formData.fechaVencimiento);

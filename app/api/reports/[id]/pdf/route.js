@@ -1220,14 +1220,6 @@ export async function GET(request, { params }) {
       );
     }
     
-    // Verificar que el usuario es el creador
-    if (report.createdBy !== userId) {
-      return NextResponse.json(
-        { success: false, error: 'No autorizado' },
-        { status: 403 }
-      );
-    }
-    
     // Calcular totales
     const totals = calculateReportTotals(report);
     

@@ -47,15 +47,23 @@ function ReunionesPageContent() {
     }
   };
 
+  // Comparar fechas por día local (YYYY-MM-DD), sin parsear como UTC
+  const aFechaLocal = (fecha) => {
+    if (!fecha) return '';
+    if (typeof fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fecha)) return fecha;
+    const d = new Date(fecha);
+    if (isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
   const reunionesFiltradas = useMemo(() => {
     let filtradas = [...reuniones]; // No filtrar completadas por defecto para poder verlas
 
     if (fechaFiltro) {
-      const fechaFiltroDate = new Date(fechaFiltro);
-      filtradas = filtradas.filter(r => {
-        const fechaReunion = new Date(r.fecha);
-        return fechaReunion.toDateString() === fechaFiltroDate.toDateString();
-      });
+      filtradas = filtradas.filter(r => aFechaLocal(r.fecha) === fechaFiltro);
     }
 
     if (tipoFiltro !== "todos") {
@@ -98,7 +106,7 @@ function ReunionesPageContent() {
   };
 
   const abrirFormulario = () => {
-    const hoy = new Date().toISOString().split('T')[0];
+    const hoy = aFechaLocal(new Date());
     setFormData({
       titulo: "",
       fecha: hoy,
@@ -118,7 +126,7 @@ function ReunionesPageContent() {
     setReunionEditando(reunion);
     setFormData({
       titulo: reunion.titulo || "",
-      fecha: new Date(reunion.fecha).toISOString().split('T')[0],
+      fecha: aFechaLocal(reunion.fecha),
       hora: reunion.hora || "",
       tipo: reunion.tipo || "meet",
       cliente: reunion.cliente || { nombre: "" },
@@ -186,12 +194,17 @@ function ReunionesPageContent() {
         reunionData.linkMeet = String(formData.linkMeet).trim();
       }
       
-      if (formData.observaciones && formData.observaciones.trim()) {
-        reunionData.observaciones = String(formData.observaciones).trim();
-      }
+      // Siempre enviar observaciones (también vacías) para poder borrarlas al actualizar
+      reunionData.observaciones = String(formData.observaciones || '').trim();
       
-      if (formData.asignados && Array.isArray(formData.asignados) && formData.asignados.length > 0) {
-        reunionData.asignados = formData.asignados
+      // Incluir asignados ya agregados + el que esté escrito en el input sin haber pulsado Agregar
+      const asignados = [...(formData.asignados || [])];
+      const pendiente = nuevoAsignado.trim();
+      if (pendiente && !asignados.includes(pendiente)) {
+        asignados.push(pendiente);
+      }
+      if (asignados.length > 0) {
+        reunionData.asignados = asignados
           .filter(a => a && String(a).trim())
           .map(a => String(a).trim());
       }

@@ -36,11 +36,6 @@ const TeamMemberSchema = new mongoose.Schema({
     fecha: {
       type: Date,
       default: Date.now
-    },
-    calificacion: {
-      type: Number,
-      min: 0,
-      max: 10
     }
   }],
   activo: {

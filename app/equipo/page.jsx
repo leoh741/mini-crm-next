@@ -225,9 +225,7 @@ function EquipoPageContent() {
         <div className="space-y-2" style={{ position: 'relative', zIndex: 1, overflow: 'visible' }}>
           {miembrosFiltrados.map((miembro, index) => {
             const miembroId = miembro.id || miembro._id || miembro.crmId;
-            const calificacionPromedio = miembro.comentarios && miembro.comentarios.length > 0
-              ? miembro.comentarios.reduce((sum, c) => sum + (c.calificacion || 0), 0) / miembro.comentarios.length
-              : miembro.calificacion || 0;
+            const calificacion = miembro.calificacion || 0;
             const esSiguienteMiembro = openPanelIndex !== null && (index === openPanelIndex + 1 || index === openPanelIndex + 2);
             const tienePanelAbierto = openPanelIndex === index;
 
@@ -258,7 +256,7 @@ function EquipoPageContent() {
                         <p className="text-sm text-slate-400 mt-1">{miembro.cargo}</p>
                       )}
                       {miembro.email && (
-                        <p className="text-xs text-slate-500 mt-1">{miembro.email}</p>
+                        <p className="text-xs text-slate-500 mt-1 truncate" title={miembro.email}>{miembro.email}</p>
                       )}
                       {miembro.habilidades && miembro.habilidades.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 mt-2">
@@ -280,8 +278,8 @@ function EquipoPageContent() {
                       <div className="flex items-center gap-4 mt-2">
                         <div className="flex items-center gap-1">
                           <span className="text-xs text-slate-400">Calificación:</span>
-                          <span className={`text-sm font-medium ${getColorCalificacion(calificacionPromedio)}`}>
-                            {formatearCalificacion(calificacionPromedio)}/10
+                          <span className={`text-sm font-medium ${getColorCalificacion(calificacion)}`}>
+                            {formatearCalificacion(calificacion)}/10
                           </span>
                         </div>
                         {miembro.comentarios && miembro.comentarios.length > 0 && (

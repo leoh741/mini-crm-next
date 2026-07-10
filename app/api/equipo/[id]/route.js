@@ -90,10 +90,7 @@ export async function PUT(request, { params }) {
       const nuevoComentario = {
         texto: body.nuevoComentario.texto,
         autor: body.nuevoComentario.autor,
-        fecha: new Date(),
-        calificacion: body.nuevoComentario.calificacion !== undefined 
-          ? Math.max(0, Math.min(10, parseFloat(body.nuevoComentario.calificacion) || 0))
-          : undefined
+        fecha: new Date()
       };
       
       if (!miembro.comentarios) {
@@ -105,12 +102,9 @@ export async function PUT(request, { params }) {
     
     // Actualizar comentario existente
     if (body.actualizarComentario) {
-      const { comentarioId, texto, calificacion } = body.actualizarComentario;
+      const { comentarioId, texto } = body.actualizarComentario;
       if (miembro.comentarios && miembro.comentarios[comentarioId]) {
         if (texto !== undefined) miembro.comentarios[comentarioId].texto = texto;
-        if (calificacion !== undefined) {
-          miembro.comentarios[comentarioId].calificacion = Math.max(0, Math.min(10, parseFloat(calificacion) || 0));
-        }
         updateData.comentarios = miembro.comentarios;
       }
     }
