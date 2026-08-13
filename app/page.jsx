@@ -234,6 +234,16 @@ function HomePageContent() {
               <Icons.Folder className="text-sm" />
               <span>Drive</span>
             </a>
+            <a 
+              href="https://docs.google.com/spreadsheets/d/14UgG1F1aShiBId2L3bNDbl_CZ_Kl76I8/edit?gid=102270999#gid=102270999" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-xs font-medium text-white transition-colors duration-200 border border-emerald-500/30 shadow-sm hover:shadow-md"
+              title="Abrir Prospectos"
+            >
+              <Icons.DocumentReport className="text-sm" />
+              <span>Prospectos</span>
+            </a>
           </div>
           <div className="px-3 py-1.5 bg-slate-800 rounded-lg border border-slate-700 w-full sm:w-auto">
             <p className="text-xs text-slate-300 font-medium text-center sm:text-left" suppressHydrationWarning>

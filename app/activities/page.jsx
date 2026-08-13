@@ -57,7 +57,16 @@ function ActivitiesPageContent() {
   const activitiesRef = useRef(activities);
   const isSavingOrderRef = useRef(false);
   const didDropRef = useRef(false);
+  const activitiesLoadIdRef = useRef(0);
+  const activitiesLoadingRef = useRef(false);
   activitiesRef.current = activities;
+
+  const isTransientFetchError = (err) => {
+    if (!err) return false;
+    if (err.name === 'AbortError' || err.name === 'TimeoutError') return true;
+    const msg = String(err.message || '').toLowerCase();
+    return msg.includes('aborted') || msg.includes('abort') || msg.includes('timeout');
+  };
 
   useEffect(() => {
     // Verificar permisos al cargar el componente
@@ -175,10 +184,10 @@ function ActivitiesPageContent() {
   useEffect(() => {
     if (!selectedListId) return;
 
-    // Recargar actividades cada 5 segundos para mantener sincronización casi en tiempo real
+    // Recargar actividades cada 15 s (silencioso: no mostrar error si falla un poll)
     const activitiesInterval = setInterval(() => {
-      loadActivities(selectedListId);
-    }, 5000);
+      loadActivities(selectedListId, { silent: true });
+    }, 15000);
 
     return () => clearInterval(activitiesInterval);
   }, [selectedListId, filterStatus]);
@@ -291,6 +300,10 @@ function ActivitiesPageContent() {
       setError("");
     } catch (err) {
       console.error('[Activities] Error completo al cargar datos:', err);
+      if (isTransientFetchError(err)) {
+        console.debug('[Activities] Carga inicial omitida (timeout/abort)');
+        return;
+      }
       const errorMessage = err.message || "Error al cargar las listas de actividades. Verifica tu conexión e intenta nuevamente.";
       setError(errorMessage);
       // Asegurar que los estados estén inicializados
@@ -304,21 +317,41 @@ function ActivitiesPageContent() {
     }
   };
 
-  const loadActivities = async (listId) => {
+  const loadActivities = async (listId, { silent = false } = {}) => {
+    if (!listId) return;
+    if (silent && activitiesLoadingRef.current) return;
+
+    const requestId = ++activitiesLoadIdRef.current;
+    activitiesLoadingRef.current = true;
+
     try {
-      setError("");
+      if (!silent) setError("");
       const filters = {};
-      // Si el filtro es "pendiente", no enviarlo al backend para que cargue todas las actividades
-      // y luego el frontend filtrará pendiente y en_proceso juntos
       if (filterStatus && filterStatus !== "pendiente") {
         filters.status = filterStatus;
       }
-      // Note: assigneeId filter can be added later if needed
       const activitiesData = await getActivities(listId, filters);
+
+      // Ignorar respuestas obsoletas si el usuario cambió de lista/filtro
+      if (requestId !== activitiesLoadIdRef.current) return;
+
       setActivities(activitiesData);
     } catch (err) {
+      if (requestId !== activitiesLoadIdRef.current) return;
+
+      if (isTransientFetchError(err)) {
+        console.debug('[Activities] Recarga omitida (timeout/abort):', err.message);
+        return;
+      }
+
       console.error('Error al cargar actividades:', err);
-      setError(err.message || "Error al cargar las actividades");
+      if (!silent) {
+        setError(err.message || "Error al cargar las actividades");
+      }
+    } finally {
+      if (requestId === activitiesLoadIdRef.current) {
+        activitiesLoadingRef.current = false;
+      }
     }
   };
 

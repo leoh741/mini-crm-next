@@ -29,12 +29,27 @@ function TareasPageContent() {
   const [nuevoAsignado, setNuevoAsignado] = useState("");
 
   useEffect(() => {
-    cargarTareas();
+    cargarTareas(true);
   }, []);
 
-  const cargarTareas = async () => {
+  const aplicarTareaEnLista = (tareaActualizada) => {
+    if (!tareaActualizada?.tareaId) return;
+    setTareas((prev) => {
+      const idx = prev.findIndex((t) => t.tareaId === tareaActualizada.tareaId);
+      if (idx === -1) return [tareaActualizada, ...prev];
+      const next = [...prev];
+      next[idx] = tareaActualizada;
+      return next;
+    });
+  };
+
+  const quitarTareaDeLista = (tareaId) => {
+    setTareas((prev) => prev.filter((t) => t.tareaId !== tareaId));
+  };
+
+  const cargarTareas = async (esInicial = false) => {
     try {
-      setLoading(true);
+      if (esInicial) setLoading(true);
       setError("");
       const datos = await getTareas(null, null, null, false, false);
       setTareas(datos);
@@ -42,7 +57,7 @@ function TareasPageContent() {
       console.error('Error al cargar tareas:', err);
       setError("Error al cargar las tareas.");
     } finally {
-      setLoading(false);
+      if (esInicial) setLoading(false);
     }
   };
 
@@ -234,12 +249,14 @@ function TareasPageContent() {
           .map(a => String(a).trim());
       }
 
+      let tareaGuardada;
       if (tareaEditando) {
-        await actualizarTarea(tareaEditando.tareaId, tareaData);
+        tareaGuardada = await actualizarTarea(tareaEditando.tareaId, tareaData);
+        if (tareaGuardada) aplicarTareaEnLista(tareaGuardada);
       } else {
-        await crearTarea(tareaData);
+        tareaGuardada = await crearTarea(tareaData);
+        if (tareaGuardada) aplicarTareaEnLista(tareaGuardada);
       }
-      await cargarTareas();
       setMostrarFormulario(false);
       setTareaEditando(null);
     } catch (err) {
@@ -253,8 +270,9 @@ function TareasPageContent() {
     if (!mostrarConfirmacion) return;
     try {
       setGuardando(true);
-      await eliminarTarea(mostrarConfirmacion);
-      await cargarTareas();
+      const tareaId = mostrarConfirmacion;
+      await eliminarTarea(tareaId);
+      quitarTareaDeLista(tareaId);
       setMostrarConfirmacion(null);
     } catch (err) {
       setError(err.message || "Error al eliminar");
@@ -264,10 +282,34 @@ function TareasPageContent() {
   };
 
   const cambiarEstado = async (tarea, nuevoEstado) => {
+    const estadoAnterior = tarea.estado;
+    const completadaAnterior = tarea.completada;
+
+    // Actualización optimista: el listado responde al instante
+    setTareas((prev) =>
+      prev.map((t) =>
+        t.tareaId === tarea.tareaId
+          ? {
+              ...t,
+              estado: nuevoEstado,
+              completada: nuevoEstado === 'completada',
+              fechaCompletada: nuevoEstado === 'completada' ? new Date().toISOString() : undefined
+            }
+          : t
+      )
+    );
+
     try {
-      await actualizarTarea(tarea.tareaId, { estado: nuevoEstado });
-      await cargarTareas();
+      const actualizada = await actualizarTarea(tarea.tareaId, { estado: nuevoEstado });
+      if (actualizada) aplicarTareaEnLista(actualizada);
     } catch (err) {
+      setTareas((prev) =>
+        prev.map((t) =>
+          t.tareaId === tarea.tareaId
+            ? { ...t, estado: estadoAnterior, completada: completadaAnterior }
+            : t
+        )
+      );
       setError(err.message || "Error al actualizar estado");
     }
   };
