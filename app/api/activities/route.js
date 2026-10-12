@@ -6,6 +6,16 @@ import { getCurrentUserId, getCurrentUserRole } from '../../../lib/auth';
 import { updateUserLastSeen } from '../../../lib/userActivity';
 import mongoose from 'mongoose';
 
+// "YYYY-MM-DD" se guarda a las 12:00 UTC para que el día no cambie según la zona horaria
+function parseDueDate(value) {
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [y, m, d] = value.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0));
+  }
+  const date = new Date(value);
+  return isNaN(date.getTime()) ? null : date;
+}
+
 export async function GET(request) {
   try {
     await connectDB();
@@ -219,14 +229,7 @@ export async function POST(request) {
       }
     }
     
-    // Parse dueDate
-    let dueDate = null;
-    if (body.dueDate) {
-      dueDate = new Date(body.dueDate);
-      if (isNaN(dueDate.getTime())) {
-        dueDate = null;
-      }
-    }
+    const dueDate = body.dueDate ? parseDueDate(body.dueDate) : null;
     
     const activityData = {
       list: new mongoose.Types.ObjectId(body.listId),
@@ -443,8 +446,7 @@ export async function PATCH(request) {
     }
     if (body.dueDate !== undefined) {
       if (body.dueDate) {
-        const dueDate = new Date(body.dueDate);
-        activity.dueDate = isNaN(dueDate.getTime()) ? null : dueDate;
+        activity.dueDate = parseDueDate(body.dueDate);
       } else {
         activity.dueDate = null;
       }

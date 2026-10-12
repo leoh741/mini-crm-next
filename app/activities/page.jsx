@@ -945,9 +945,10 @@ function ActivitiesPageContent() {
 
   const formatDate = (dateString) => {
     if (!dateString) return "";
+    // dueDate es una fecha de calendario guardada en UTC: leerla en UTC evita mostrar el día anterior
     const date = new Date(dateString);
     const months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
-    return `${date.getDate()} ${months[date.getMonth()]}`;
+    return `${date.getUTCDate()} ${months[date.getUTCMonth()]}`;
   };
 
   const getPriorityColor = (priority) => {

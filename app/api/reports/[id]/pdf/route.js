@@ -5,6 +5,7 @@ import { getCurrentUserId } from '../../../../../lib/auth';
 import { calculateReportTotals } from '../../../../../lib/reportCalculations';
 import jsPDF from 'jspdf';
 import { Buffer } from 'buffer';
+import { limpiarNombreArchivo } from '../../../../../lib/fileName';
 
 // Función auxiliar para cargar logo desde URL (versión servidor)
 async function cargarLogoBase64Server(url) {
@@ -1227,15 +1228,16 @@ export async function GET(request, { params }) {
     const pdfBuffer = await generarInformePDFServer(report, totals, request);
     
     // Generar nombre del archivo
-    const nombreLimpio = report.titulo?.replace(/[^a-z0-9\s]/gi, '').trim().replace(/\s+/g, ' ') || 'Informe';
-    const nombreArchivo = `${nombreLimpio}.pdf`;
+    const nombreArchivo = `${limpiarNombreArchivo(report.titulo, 'Informe')}.pdf`;
+    // filename= solo admite ASCII; filename* lleva el nombre real con tildes (RFC 5987)
+    const nombreAscii = nombreArchivo.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7E]/g, '');
     
     // Devolver PDF
     return new NextResponse(pdfBuffer, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${encodeURIComponent(nombreArchivo)}"`,
+        'Content-Disposition': `attachment; filename="${nombreAscii}"; filename*=UTF-8''${encodeURIComponent(nombreArchivo)}`,
         'Content-Length': pdfBuffer.byteLength.toString()
       }
     });

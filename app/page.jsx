@@ -215,7 +215,7 @@ function HomePageContent() {
     <div className="flex flex-col space-y-3" style={{ maxWidth: '100%', overflowX: 'hidden' }}>
       <div className="flex-shrink-0">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div>
               <h2 className="text-lg md:text-xl font-semibold">
                 Bienvenido 👋
@@ -228,21 +228,31 @@ function HomePageContent() {
               href="https://drive.google.com/drive/folders/1V0yno1ceB-F1vfOFNWtpulphCYnBVCBz" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 rounded-lg text-xs font-medium text-white transition-colors duration-200 border border-amber-500/30 shadow-sm hover:shadow-md"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 rounded-lg text-xs font-medium text-white transition-colors duration-200 border border-sky-500/30 shadow-sm hover:shadow-md"
               title="Abrir Drive Digital Space"
             >
               <Icons.Folder className="text-sm" />
               <span>Drive</span>
             </a>
             <a 
-              href="https://docs.google.com/spreadsheets/d/14UgG1F1aShiBId2L3bNDbl_CZ_Kl76I8/edit?gid=102270999#gid=102270999" 
+              href="https://donweb.com/" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-xs font-medium text-white transition-colors duration-200 border border-emerald-500/30 shadow-sm hover:shadow-md"
-              title="Abrir Prospectos"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-orange-50 rounded-lg text-xs font-semibold text-orange-600 transition-colors duration-200 border border-orange-200 shadow-sm hover:shadow-md"
+              title="Abrir Don Web"
             >
-              <Icons.DocumentReport className="text-sm" />
-              <span>Prospectos</span>
+              <Icons.Link className="text-sm" />
+              <span>Don Web</span>
+            </a>
+            <a 
+              href="https://dash.cloudflare.com/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 rounded-lg text-xs font-medium text-white transition-colors duration-200 border border-orange-500/30 shadow-sm hover:shadow-md"
+              title="Abrir Cloudflare"
+            >
+              <Icons.Link className="text-sm" />
+              <span>Cloudflare</span>
             </a>
           </div>
           <div className="px-3 py-1.5 bg-slate-800 rounded-lg border border-slate-700 w-full sm:w-auto">
