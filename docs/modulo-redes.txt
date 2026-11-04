@@ -1,0 +1,147 @@
+# Módulo Redes (Community Manager)
+Documento de definición — pendiente de implementación
+
+Última actualización: 2026-11-04
+
+--------------------------------------------------------------------------------
+1. OBJETIVO
+--------------------------------------------------------------------------------
+Sección del CRM para que el equipo de Redes (Community Managers) programe
+contenido por cliente en un calendario, vea qué tiene que publicar cada día
+y pueda marcar cada ítem como hecho.
+
+--------------------------------------------------------------------------------
+2. ROLES Y PERMISOS
+--------------------------------------------------------------------------------
+Admin
+- Ve TODO el CRM, incluyendo Redes.
+- Ve todos los CM, todos los clientes de redes y todos los calendarios.
+- Puede supervisar, filtrar y reasignar si un CM deja de trabajar.
+
+CM (Community Manager) — rol nuevo, ej. "cm"
+- Solo ve la sección Redes.
+- No ve el resto del CRM (Clientes, Pedidos, Tareas internas, etc.).
+- Solo ve SUS clientes y SU calendario.
+- En la vista "Hoy" solo ve sus publicaciones del día.
+- Solo puede marcar como hecho sus propios ítems.
+
+Coordinador
+- NO ingresa a Redes por ahora (su foco es diseño).
+
+Otros usuarios
+- Sin acceso a Redes.
+
+Importante:
+- El control de acceso debe aplicarse también en las APIs (no solo ocultar menú).
+- Login de CM: idealmente entra directo a Redes o a un home mínimo de Redes.
+
+--------------------------------------------------------------------------------
+3. REGLA DE NEGOCIO PRINCIPAL
+--------------------------------------------------------------------------------
+Cada persona de Redes:
+1) Carga / gestiona sus propios clientes de redes.
+2) Arma el calendario de esos clientes.
+3) Solo puede ver lo suyo.
+4) Trabaja el día a día desde "Hoy" + notificaciones.
+5) Marca como hecho cuando publicó.
+
+Admin puede ver y auditar todo.
+
+--------------------------------------------------------------------------------
+4. QUÉ ES UN ÍTEM DEL CALENDARIO (contenido programado)
+--------------------------------------------------------------------------------
+Campos mínimos sugeridos:
+- Cliente (de la cartera del CM)
+- Responsable / owner (el CM)
+- Tipo de contenido: Reel, Story, Post, Carrusel, TikTok, etc.
+- Plataforma: Instagram, Facebook, TikTok, etc.
+- Fecha y hora de publicación
+- Título / descripción breve
+- Copy / guion / hashtags (opcional)
+- Link a material (Drive u otro) (opcional)
+- Estado: programado | en_proceso | hecho/publicado | cancelado
+- Fechas de control: createdAt, updatedAt, completedAt, completedBy
+
+Estados operativos del MVP:
+- Programado
+- Hecho
+(Opcional después: en_proceso, cancelado)
+
+--------------------------------------------------------------------------------
+5. PANTALLAS / VISTAS (MVP)
+--------------------------------------------------------------------------------
+5.1 Sección Redes
+- Acceso desde menú (Admin y CM).
+- CM solo ve este módulo.
+
+5.2 Cartera de clientes del CM
+- Alta / edición de sus clientes de redes.
+- Admin ve todos; puede filtrar por CM.
+
+5.3 Calendario por cliente
+- Vista mensual / semanal.
+- Crear, editar y eliminar publicaciones programadas.
+- CM solo sobre sus clientes.
+
+5.4 Vista "Hoy"
+- Listado de lo pendiente del día para el usuario logueado.
+- Acción: marcar como Hecho.
+- Base para la notificación del día en el home (si aplica).
+
+5.5 Vista Admin de supervisión
+- Filtros: por CM, cliente, fecha, estado.
+- Reasignación de clientes/calendario entre CMs.
+
+--------------------------------------------------------------------------------
+6. RELACIÓN CON OTRAS SECCIONES
+--------------------------------------------------------------------------------
+Mantener Redes SEPARADO de:
+- Pedidos (ex Actividades)
+- Tareas internas (ex Tareas)
+
+Motivo: el flujo de CM es planificación/publicación social, no producción
+general ni tareas internas del equipo.
+
+--------------------------------------------------------------------------------
+7. MVP (PRIMERA VERSIÓN A IMPLEMENTAR)
+--------------------------------------------------------------------------------
+1. Rol "cm".
+2. Menú y rutas: CM solo accede a Redes.
+3. Clientes de redes propios de cada CM.
+4. Calendario por cliente (CRUD de publicaciones).
+5. Vista Hoy + marcar Hecho.
+6. Admin ve todo; coordinador fuera de Redes.
+7. Seguridad en API por rol y por ownership (solo lo propio).
+
+Fuera del MVP (fase 2+):
+- Aprobación de contenido (cliente / cuenta).
+- Recurrencia ("todos los lunes un reel").
+- Adjuntos / evidencia (link o captura de lo publicado).
+- Reportes mensuales por cliente.
+- Notificaciones por email / WhatsApp.
+- Acceso de coordinador a Redes.
+
+--------------------------------------------------------------------------------
+8. DECISIÓN PENDIENTE ANTES DE CODEAR
+--------------------------------------------------------------------------------
+Origen del "cliente de redes":
+A) Vincular a un Cliente existente del CRM + asignar CM responsable.
+B) Cartera propia dentro de Redes (más aislada; recomendable si el CM
+   no debe ver el resto del CRM).
+
+Pendiente de cerrar al momento de implementar.
+
+--------------------------------------------------------------------------------
+9. CASOS BORDE A TENER EN CUENTA
+--------------------------------------------------------------------------------
+- Reasignar clientes si un CM se va.
+- Un día con muchos clientes: filtros por cliente/plataforma/estado.
+- Historial de quién marcó Hecho y cuándo.
+- No mezclar "programado" con "publicado/hecho".
+- Evitar que un CM pueda adivinar IDs de calendarios ajenos (filtro server-side).
+
+--------------------------------------------------------------------------------
+10. RESUMEN EN UNA FRASE
+--------------------------------------------------------------------------------
+Admin ve y controla todo; cada CM carga y opera solo su cartera y calendario
+de redes; el coordinador no entra a Redes por ahora.

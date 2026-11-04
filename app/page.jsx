@@ -14,7 +14,7 @@ function HomePageContent() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [reunionesProximas, setReunionesProximas] = useState([]);
   const [tareasPendientes, setTareasPendientes] = useState([]);
-  const [mostrarInputImportar, setMostrarInputImportar] = useState(false);
+  const [importando, setImportando] = useState(false);
 
   useEffect(() => {
     setIsAdmin(esAdmin());
@@ -221,7 +221,7 @@ function HomePageContent() {
                 Bienvenido 👋
               </h2>
               <p className="text-xs md:text-sm text-slate-400">
-                Digital Space CRM
+                Digital Space CRM+Gestión
               </p>
             </div>
             <a 
@@ -330,13 +330,13 @@ function HomePageContent() {
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Icons.CheckCircle className="text-lg" />
-              <h3 className="font-semibold text-indigo-300">Tareas Pendientes</h3>
+              <h3 className="font-semibold text-indigo-300">Tareas internas pendientes</h3>
             </div>
             <Link 
               href="/tareas"
               className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-xs font-medium transition-colors duration-200 flex-shrink-0 text-white"
             >
-              Ver Tareas
+              Ver Tareas internas
             </Link>
           </div>
           <div className="space-y-2">
@@ -384,7 +384,7 @@ function HomePageContent() {
             })}
             {tareasPendientes.length > 3 && (
               <Link href="/tareas" className="text-xs text-indigo-400 hover:text-indigo-300 underline block text-center pt-1">
-                Ver todas las tareas pendientes ({tareasPendientes.length})
+                Ver todas las tareas internas pendientes ({tareasPendientes.length})
               </Link>
             )}
           </div>
@@ -469,7 +469,7 @@ function HomePageContent() {
               <div className="w-1.5 h-1.5 bg-pink-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white mb-1">Tareas</h3>
+              <h3 className="text-lg font-bold text-white mb-1">Tareas internas</h3>
               <p className="text-xs text-pink-100/90">Gestionar pendientes</p>
             </div>
             <div className="absolute bottom-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mb-12 group-hover:scale-150 transition-transform duration-500"></div>
@@ -511,8 +511,8 @@ function HomePageContent() {
               <div className="w-1.5 h-1.5 bg-teal-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white mb-1">Actividades</h3>
-              <p className="text-xs text-teal-100/90">Gestionar actividades</p>
+              <h3 className="text-lg font-bold text-white mb-1">Pedidos</h3>
+              <p className="text-xs text-teal-100/90">Gestionar pedidos</p>
             </div>
             <div className="absolute bottom-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mb-12 group-hover:scale-150 transition-transform duration-500"></div>
           </div>
@@ -566,80 +566,55 @@ function HomePageContent() {
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
             </button>
             <label className="group relative flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 rounded-lg text-xs font-medium text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 border border-indigo-500/30 cursor-pointer overflow-hidden">
-              <span className="relative z-10 flex items-center justify-center gap-1.5">
+              <span className="relative z-10 flex items-center justify-center gap-1.5 pointer-events-none">
                 <Icons.Upload className="text-sm" />
-                <span>Importar</span>
+                <span>{importando ? 'Importando…' : 'Importar'}</span>
               </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+              <div className="absolute inset-0 pointer-events-none bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
               <input
                 type="file"
-                accept=".json"
-                className="hidden"
+                accept=".json,application/json"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                disabled={importando}
                 onChange={async (e) => {
-                  const archivo = e.target.files[0];
-                  if (!archivo) {
-                    e.target.value = '';
+                  const archivo = e.target.files?.[0];
+                  e.target.value = '';
+                  if (!archivo) return;
+
+                  if (!archivo.name.toLowerCase().endsWith('.json')) {
+                    alert('Seleccioná un archivo .json de respaldo.');
                     return;
                   }
-                  
-                  // PROTECCIÓN MÁXIMA: Requerir triple confirmación antes de importar
-                  const confirmacion1 = window.prompt(
-                    '⚠️⚠️⚠️ ADVERTENCIA MÁXIMA ⚠️⚠️⚠️\n\n' +
-                    'Esta operación ACTUALIZARÁ PERMANENTEMENTE TODOS los datos existentes.\n\n' +
-                    'Esto incluye:\n' +
-                    '- Todos los clientes\n' +
-                    '- Todos los pagos\n' +
-                    '- Todos los gastos e ingresos\n' +
-                    '- Todos los presupuestos\n' +
-                    '- Todas las reuniones\n' +
-                    '- Todas las tareas\n\n' +
-                    'Para continuar, escribe exactamente: ACTUALIZAR TODO\n\n' +
-                    'Esta acción NO se puede deshacer.'
+
+                  // confirm (no prompt): tras el file picker, prompt suele fallar en silencio
+                  const ok1 = window.confirm(
+                    '⚠️ ADVERTENCIA\n\n' +
+                    'Vas a reemplazar los datos actuales con el backup:\n' +
+                    `"${archivo.name}"\n\n` +
+                    'Incluye clientes, pagos, gastos, ingresos, presupuestos, reuniones, tareas, pedidos e informes.\n\n' +
+                    '¿Querés continuar?'
                   );
-                  
-                  if (confirmacion1 !== 'ACTUALIZAR TODO') {
-                    alert('Operación cancelada. Debes escribir exactamente "ACTUALIZAR TODO" para continuar.');
-                    e.target.value = '';
-                    return;
-                  }
-                  
-                  const confirmacion2 = window.prompt(
-                    '⚠️ SEGUNDA CONFIRMACIÓN ⚠️\n\n' +
-                    'Estás a punto de ACTUALIZAR PERMANENTEMENTE todos los datos.\n\n' +
-                    'Escribe exactamente: CONFIRMO ACTUALIZAR'
+                  if (!ok1) return;
+
+                  const ok2 = window.confirm(
+                    '⚠️ ÚLTIMA CONFIRMACIÓN\n\n' +
+                    'Esta acción actualiza la base de datos y no se puede deshacer.\n\n' +
+                    '¿Confirmás la importación?'
                   );
-                  
-                  if (confirmacion2 !== 'CONFIRMO ACTUALIZAR') {
-                    alert('Operación cancelada. Debes escribir exactamente "CONFIRMO ACTUALIZAR" para continuar.');
-                    e.target.value = '';
-                    return;
-                  }
-                  
-                  const confirmacion3 = window.confirm(
-                    '⚠️ ÚLTIMA CONFIRMACIÓN ⚠️\n\n' +
-                    'Esta es tu última oportunidad para cancelar.\n\n' +
-                    '¿Estás ABSOLUTAMENTE SEGURO de que quieres ACTUALIZAR TODOS los datos?\n\n' +
-                    'Esta acción es IRREVERSIBLE.'
-                  );
-                  
-                  if (!confirmacion3) {
-                    alert('Operación cancelada.');
-                    e.target.value = '';
-                    return;
-                  }
-                  
-                  // Solo después de las 3 confirmaciones, proceder con la importación
+                  if (!ok2) return;
+
+                  setImportando(true);
                   try {
-                    const resultado = await cargarBackup(archivo);
-                    const mensaje = resultado?.resultados 
-                      ? `Datos importados correctamente:\n- Clientes: ${resultado.resultados.clientes}\n- Pagos: ${resultado.resultados.pagosMensuales}\n- Gastos: ${resultado.resultados.gastos}\n- Ingresos: ${resultado.resultados.ingresos}\n- Presupuestos: ${resultado.resultados.presupuestos || 0}\n- Reuniones: ${resultado.resultados.reuniones || 0}\n- Tareas: ${resultado.resultados.tareas || 0}\n- Equipo: ${resultado.resultados.equipo || 0}\n- Listas de Actividades: ${resultado.resultados.activityLists || 0}\n- Actividades: ${resultado.resultados.activities || 0}\n- Informes: ${resultado.resultados.informes || 0}\n- Usuarios: ${resultado.resultados.usuarios} (${resultado.resultados.usuariosMantenidos || 0} mantenidos)\n\nRecarga la página para ver los cambios.`
-                      : 'Datos importados correctamente. Recarga la página para ver los cambios.';
+                    const resultado = await cargarBackup(archivo, { skipClientConfirms: true });
+                    const mensaje = resultado?.resultados
+                      ? `Datos importados correctamente:\n- Clientes: ${resultado.resultados.clientes}\n- Pagos: ${resultado.resultados.pagosMensuales}\n- Gastos: ${resultado.resultados.gastos}\n- Ingresos: ${resultado.resultados.ingresos}\n- Presupuestos: ${resultado.resultados.presupuestos || 0}\n- Reuniones: ${resultado.resultados.reuniones || 0}\n- Tareas internas: ${resultado.resultados.tareas || 0}\n- Equipo: ${resultado.resultados.equipo || 0}\n- Listas de Pedidos: ${resultado.resultados.activityLists || 0}\n- Pedidos: ${resultado.resultados.activities || 0}\n- Informes: ${resultado.resultados.informes || 0}\n- Usuarios: ${resultado.resultados.usuarios} (${resultado.resultados.usuariosMantenidos || 0} mantenidos)\n\nSe recargará la página.`
+                      : 'Datos importados correctamente. Se recargará la página.';
                     alert(mensaje);
                     window.location.reload();
                   } catch (error) {
-                    alert('Error al importar: ' + error.message);
+                    alert('Error al importar: ' + (error?.message || 'Error desconocido'));
                   } finally {
-                    e.target.value = '';
+                    setImportando(false);
                   }
                 }}
               />
@@ -647,6 +622,14 @@ function HomePageContent() {
           </div>
         </div>
       </div>
+
+      {importando && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm">
+          <div className="rounded-xl border border-indigo-400/40 bg-slate-900 px-6 py-4 text-sm text-white shadow-xl">
+            Importando respaldo… no cierres esta ventana.
+          </div>
+        </div>
+      )}
 
       {isAdmin && (
         <div className="flex-shrink-0 mt-3 pt-3 border-t border-slate-700">

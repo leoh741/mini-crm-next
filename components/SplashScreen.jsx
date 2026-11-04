@@ -100,7 +100,7 @@ export default function SplashScreen() {
       {splashImage ? (
         <img 
           src={splashImage}
-          alt="Digital Space CRM"
+          alt="Digital Space CRM+Gestión"
           style={{
             width: '100%',
             height: '100%',
@@ -112,7 +112,7 @@ export default function SplashScreen() {
             e.target.style.display = 'none';
             const fallback = document.createElement('div');
             fallback.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;';
-            fallback.innerHTML = '<img src="/icons/icon-512.png" alt="Digital Space CRM" style="width: 128px; height: 128px;" /><div style="color: white; margin-top: 16px; font-size: 18px; font-weight: 600;">Digital Space CRM</div>';
+            fallback.innerHTML = '<img src="/icons/icon-512.png" alt="Digital Space CRM+Gestión" style="width: 128px; height: 128px;" /><div style="color: white; margin-top: 16px; font-size: 18px; font-weight: 600;">Digital Space CRM+Gestión</div>';
             e.target.parentElement.appendChild(fallback);
           }}
         />
@@ -121,10 +121,10 @@ export default function SplashScreen() {
           <div className="flex flex-col items-center justify-center">
             <img 
               src="/icons/icon-512.png" 
-              alt="Digital Space CRM" 
+              alt="Digital Space CRM+Gestión" 
               className="w-32 h-32 mb-4"
             />
-            <div className="text-white text-lg font-semibold">Digital Space CRM</div>
+            <div className="text-white text-lg font-semibold">Digital Space CRM+Gestión</div>
           </div>
         </div>
       )}

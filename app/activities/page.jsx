@@ -8,6 +8,33 @@ import { getUsuarios } from "../../lib/usuariosUtils";
 import ProtectedRoute from "../../components/ProtectedRoute";
 import { Icons } from "../../components/Icons";
 
+function LivePedidoTimer({ baseMs = 0, runStartedAt = null, formatDuration }) {
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!runStartedAt) return undefined;
+    // Solo fuerza re-render; el tiempo se calcula siempre con Date.now() (sin estado viejo)
+    const id = setInterval(() => setTick((t) => t + 1), 250);
+    return () => clearInterval(id);
+  }, [runStartedAt]);
+
+  const base = Math.max(0, Number(baseMs) || 0);
+  const segment = runStartedAt ? Math.max(0, Date.now() - runStartedAt) : 0;
+  const elapsed = base + segment;
+
+  if (!runStartedAt && base <= 0) return null;
+
+  return (
+    <div
+      className="flex items-center gap-1 text-[10px] md:text-xs text-amber-300 whitespace-nowrap font-mono"
+      title="Tiempo en curso"
+    >
+      <Icons.Refresh className="w-3 h-3 md:w-3.5 md:h-3.5 animate-spin" style={{ animationDuration: '2s' }} />
+      <span>{formatDuration(elapsed)}</span>
+    </div>
+  );
+}
+
 function ActivitiesPageContent() {
   const [lists, setLists] = useState([]);
   const [selectedListId, setSelectedListId] = useState(null);
@@ -16,6 +43,9 @@ function ActivitiesPageContent() {
   const [error, setError] = useState("");
   const [filterStatus, setFilterStatus] = useState("pendiente");
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
   const [puedeGestionar, setPuedeGestionar] = useState(false);
   
   // Modal states
@@ -59,7 +89,55 @@ function ActivitiesPageContent() {
   const didDropRef = useRef(false);
   const activitiesLoadIdRef = useRef(0);
   const activitiesLoadingRef = useRef(false);
+  // Cronómetro client-side (autoritativo en pantalla). El server solo persiste.
+  // baseMs = acumulado al pausar; runStartedAt = Date.now() del tramo actual en curso
+  const timerMemoryRef = useRef({});
   activitiesRef.current = activities;
+
+  const getTimerMem = (activityId) => timerMemoryRef.current[activityId] || null;
+
+  const setTimerMem = (activityId, next) => {
+    if (!activityId) return;
+    timerMemoryRef.current[activityId] = next;
+  };
+
+  const hydrateTimerFromActivity = (activity) => {
+    if (!activity?.id) return activity;
+    const mem = getTimerMem(activity.id);
+
+    // Si hay un tramo local en curso, no dejar que el server pise el reloj
+    if (mem?.runStartedAt) {
+      return {
+        ...activity,
+        elapsedMs: mem.baseMs,
+        startedAt: new Date(mem.runStartedAt).toISOString()
+      };
+    }
+
+    const serverElapsed = typeof activity.elapsedMs === 'number' ? activity.elapsedMs : 0;
+    const baseMs = Math.max(serverElapsed, mem?.baseMs || 0);
+
+    // Hidratar desde server solo si no hay memoria local activa
+    if (!mem) {
+      if (activity.status === 'en_proceso' && activity.startedAt) {
+        setTimerMem(activity.id, {
+          baseMs: serverElapsed,
+          runStartedAt: new Date(activity.startedAt).getTime()
+        });
+      } else {
+        setTimerMem(activity.id, { baseMs: serverElapsed, runStartedAt: null });
+      }
+    } else if (serverElapsed > (mem.baseMs || 0) && !mem.runStartedAt) {
+      setTimerMem(activity.id, { baseMs: serverElapsed, runStartedAt: null });
+    }
+
+    const finalMem = getTimerMem(activity.id);
+    return {
+      ...activity,
+      elapsedMs: finalMem?.baseMs ?? baseMs,
+      startedAt: finalMem?.runStartedAt ? new Date(finalMem.runStartedAt).toISOString() : null
+    };
+  };
 
   const isTransientFetchError = (err) => {
     if (!err) return false;
@@ -172,13 +250,19 @@ function ActivitiesPageContent() {
     };
   }, []);
 
+  // Debounce de búsqueda: evita pedir historial en cada tecla
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchKeyword.trim()), 350);
+    return () => clearTimeout(t);
+  }, [searchKeyword]);
+
   useEffect(() => {
     if (selectedListId) {
       loadActivities(selectedListId);
     } else {
       setActivities([]);
     }
-  }, [selectedListId, filterStatus]);
+  }, [selectedListId, filterStatus, debouncedSearch, filterDateFrom, filterDateTo]);
 
   // Recargar actividades periódicamente para sincronización en tiempo real
   useEffect(() => {
@@ -190,7 +274,7 @@ function ActivitiesPageContent() {
     }, 15000);
 
     return () => clearInterval(activitiesInterval);
-  }, [selectedListId, filterStatus]);
+  }, [selectedListId, filterStatus, debouncedSearch, filterDateFrom, filterDateTo]);
 
   // Actualizar lastSeen de usuarios periódicamente
   useEffect(() => {
@@ -304,7 +388,7 @@ function ActivitiesPageContent() {
         console.debug('[Activities] Carga inicial omitida (timeout/abort)');
         return;
       }
-      const errorMessage = err.message || "Error al cargar las listas de actividades. Verifica tu conexión e intenta nuevamente.";
+      const errorMessage = err.message || "Error al cargar las listas de pedidos. Verifica tu conexión e intenta nuevamente.";
       setError(errorMessage);
       // Asegurar que los estados estén inicializados
       setLists([]);
@@ -317,6 +401,85 @@ function ActivitiesPageContent() {
     }
   };
 
+  const toLocalISODate = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const setMonthRange = (offsetMonths = 0) => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() + offsetMonths, 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + offsetMonths + 1, 0);
+    setFilterDateFrom(toLocalISODate(start));
+    setFilterDateTo(toLocalISODate(end));
+    if (filterStatus !== "completada") setFilterStatus("completada");
+  };
+
+  const clearDateRange = () => {
+    setFilterDateFrom("");
+    setFilterDateTo("");
+  };
+
+  const buildActivityFilters = () => {
+    const filters = {};
+    const hasSearch = Boolean(debouncedSearch);
+    const hasDateRange = Boolean(filterDateFrom || filterDateTo);
+
+    // Con búsqueda o rango: consultar historial (incluye completadas antiguas)
+    if (hasSearch) filters.q = debouncedSearch;
+    if (hasDateRange) {
+      if (filterDateFrom) filters.dateFrom = filterDateFrom;
+      if (filterDateTo) filters.dateTo = filterDateTo;
+      // Completadas: filtrar por fecha de completado; resto: por vencimiento
+      filters.dateField = filterStatus === "completada" ? "completedAt" : "dueDate";
+    }
+    if (hasSearch || hasDateRange) {
+      filters.history = true;
+      if (filterStatus === "completada") filters.status = "completada";
+      else if (filterStatus === "pendiente") filters.status = "pendiente";
+      return filters;
+    }
+
+    if (filterStatus === "pendiente") {
+      // Tablero: solo activas (no carga historial de completadas)
+      filters.status = "pendiente";
+    } else if (filterStatus === "completada") {
+      filters.status = "completada";
+      filters.completedDays = 30;
+    } else {
+      // "Todos": activas + completadas recientes
+      filters.completedDays = 14;
+    }
+
+    return filters;
+  };
+
+  const applyActivityInList = (activity) => {
+    if (!activity?.id) return;
+    const merged = hydrateTimerFromActivity(activity);
+    setActivities((prev) => {
+      const idx = prev.findIndex((a) => a.id === activity.id);
+      if (idx === -1) return [merged, ...prev];
+      const current = prev[idx];
+      const next = [...prev];
+      const mem = getTimerMem(activity.id);
+      next[idx] = {
+        ...current,
+        ...merged,
+        // Mantener valores locales del cronómetro si hay tramo en curso
+        elapsedMs: mem?.baseMs ?? merged.elapsedMs,
+        startedAt: mem?.runStartedAt ? new Date(mem.runStartedAt).toISOString() : merged.startedAt
+      };
+      return next;
+    });
+  };
+
+  const removeActivityFromList = (activityId) => {
+    setActivities((prev) => prev.filter((a) => a.id !== activityId));
+  };
+
   const loadActivities = async (listId, { silent = false } = {}) => {
     if (!listId) return;
     if (silent && activitiesLoadingRef.current) return;
@@ -326,16 +489,13 @@ function ActivitiesPageContent() {
 
     try {
       if (!silent) setError("");
-      const filters = {};
-      if (filterStatus && filterStatus !== "pendiente") {
-        filters.status = filterStatus;
-      }
-      const activitiesData = await getActivities(listId, filters);
+      const activitiesData = await getActivities(listId, buildActivityFilters());
 
       // Ignorar respuestas obsoletas si el usuario cambió de lista/filtro
       if (requestId !== activitiesLoadIdRef.current) return;
 
-      setActivities(activitiesData);
+      // Fusionar cronómetro local para que el poll no reinicie el contador
+      setActivities(activitiesData.map(hydrateTimerFromActivity));
     } catch (err) {
       if (requestId !== activitiesLoadIdRef.current) return;
 
@@ -346,7 +506,7 @@ function ActivitiesPageContent() {
 
       console.error('Error al cargar actividades:', err);
       if (!silent) {
-        setError(err.message || "Error al cargar las actividades");
+        setError(err.message || "Error al cargar los pedidos");
       }
     } finally {
       if (requestId === activitiesLoadIdRef.current) {
@@ -362,41 +522,49 @@ function ActivitiesPageContent() {
   const filteredActivities = useMemo(() => {
     let filtered = activities;
 
-    // Filtrar por estado
-    if (filterStatus) {
-      if (filterStatus === "pendiente") {
-        // Incluir pendiente y en_proceso como subestados de pendiente
-        filtered = filtered.filter(a => a.status === "pendiente" || a.status === "en_proceso");
-      } else {
-        filtered = filtered.filter(a => a.status === filterStatus);
-      }
+    // Refuerzo local (la API ya filtra; con búsqueda/rango no ocultamos resultados del servidor)
+    const searching = Boolean(searchKeyword.trim() || filterDateFrom || filterDateTo);
+    if (!searching && filterStatus === "pendiente") {
+      filtered = filtered.filter(a => a.status === "pendiente" || a.status === "en_proceso");
+    } else if (filterStatus === "completada") {
+      filtered = filtered.filter(a => a.status === "completada");
     }
 
-    // Filtrar por búsqueda (palabra clave)
     if (searchKeyword.trim()) {
       const keywordLower = searchKeyword.toLowerCase().trim();
       filtered = filtered.filter(a => {
-        // Buscar en título
         if (a.title?.toLowerCase().includes(keywordLower)) return true;
-        // Buscar en descripción
         if (a.description?.toLowerCase().includes(keywordLower)) return true;
-        // Buscar en nombre del responsable
         if (a.assignee?.nombre?.toLowerCase().includes(keywordLower)) return true;
         if (a.assignee?.name?.toLowerCase().includes(keywordLower)) return true;
-        // Buscar en etiquetas
         if (a.labels?.some(label => label.toLowerCase().includes(keywordLower))) return true;
         return false;
       });
     }
 
+    if (filterDateFrom || filterDateTo) {
+      const fromMs = filterDateFrom ? Date.parse(`${filterDateFrom}T00:00:00.000Z`) : null;
+      const toMs = filterDateTo ? Date.parse(`${filterDateTo}T23:59:59.999Z`) : null;
+      const useCompletedAt = filterStatus === "completada";
+
+      filtered = filtered.filter(a => {
+        const raw = useCompletedAt ? (a.completedAt || a.updatedAt || a.createdAt) : a.dueDate;
+        if (!raw) return false;
+        const ms = new Date(raw).getTime();
+        if (Number.isNaN(ms)) return false;
+        if (fromMs !== null && ms < fromMs) return false;
+        if (toMs !== null && ms > toMs) return false;
+        return true;
+      });
+    }
+
     return filtered.sort((a, b) => {
-      // Sort by order first, then by creation date
       if (a.order !== b.order) {
         return a.order - b.order;
       }
       return new Date(b.createdAt) - new Date(a.createdAt);
     });
-  }, [activities, filterStatus, searchKeyword]);
+  }, [activities, filterStatus, searchKeyword, filterDateFrom, filterDateTo]);
 
   // Función helper para calcular si un usuario está online
   const calculateUserIsOnline = (user, usersLastSeenMap) => {
@@ -540,14 +708,14 @@ function ActivitiesPageContent() {
 
       if (editingActivity) {
         console.log('[Activities] Actualizando actividad:', editingActivity.id);
-        await updateActivity(editingActivity.id, activityData);
+        const updated = await updateActivity(editingActivity.id, activityData);
+        if (updated) applyActivityInList(updated);
       } else {
         console.log('[Activities] Creando nueva actividad');
-        await createActivity(activityData);
+        const created = await createActivity(activityData);
+        if (created) applyActivityInList(created);
       }
       
-      console.log('[Activities] Actividad guardada, recargando lista...');
-      await loadActivities(selectedListId);
       setShowActivityModal(false);
       setEditingActivity(null);
       setActivityFormData({
@@ -563,7 +731,7 @@ function ActivitiesPageContent() {
       setError(""); // Limpiar errores anteriores
     } catch (err) {
       console.error('[Activities] Error al guardar actividad:', err);
-      setError(err.message || "Error al guardar la actividad. Verifica la consola para más detalles.");
+      setError(err.message || "Error al guardar el pedido. Verifica la consola para más detalles.");
     } finally {
       setSaving(false);
     }
@@ -589,22 +757,113 @@ function ActivitiesPageContent() {
     try {
       setSaving(true);
       setError("");
-      await deleteActivity(deletingActivityId);
-      await loadActivities(selectedListId);
+      const idToDelete = deletingActivityId;
+      await deleteActivity(idToDelete);
+      removeActivityFromList(idToDelete);
       setDeletingActivityId(null);
     } catch (err) {
-      setError(err.message || "Error al eliminar la actividad");
+      setError(err.message || "Error al eliminar el pedido");
     } finally {
       setSaving(false);
     }
   };
 
   const handleChangeActivityStatus = async (activity, newStatus) => {
+    const previous = {
+      status: activity.status,
+      startedAt: activity.startedAt,
+      completedAt: activity.completedAt,
+      completedBy: activity.completedBy,
+      durationMs: activity.durationMs,
+      elapsedMs: activity.elapsedMs
+    };
+    const previousMem = getTimerMem(activity.id)
+      ? { ...getTimerMem(activity.id) }
+      : null;
+
+    const now = Date.now();
+    const mem = getTimerMem(activity.id) || {
+      baseMs: typeof activity.elapsedMs === 'number' ? activity.elapsedMs : 0,
+      runStartedAt: activity.startedAt ? new Date(activity.startedAt).getTime() : null
+    };
+
+    const optimistic = { ...activity, status: newStatus };
+
+    if (newStatus === "en_proceso") {
+      // Iniciar / reanudar: el reloj local manda
+      const baseMs = Math.max(0, mem.baseMs || 0);
+      setTimerMem(activity.id, { baseMs, runStartedAt: now });
+      optimistic.startedAt = new Date(now).toISOString();
+      optimistic.elapsedMs = baseMs;
+      optimistic.completedAt = null;
+      optimistic.completedBy = null;
+      optimistic.durationMs = null;
+    } else if (newStatus === "completada") {
+      const segmentMs = mem.runStartedAt ? Math.max(0, now - mem.runStartedAt) : 0;
+      const totalMs = Math.max(0, (mem.baseMs || 0) + segmentMs);
+      setTimerMem(activity.id, { baseMs: totalMs, runStartedAt: null });
+      optimistic.startedAt = null;
+      optimistic.completedAt = new Date(now).toISOString();
+      optimistic.durationMs = totalMs;
+      optimistic.elapsedMs = totalMs;
+      const user = getUsuarioActual();
+      optimistic.completedBy = user
+        ? { _id: user.usuarioId, nombre: user.nombre || user.email || "Usuario" }
+        : null;
+    } else if (newStatus === "pendiente") {
+      if (activity.status === "en_proceso") {
+        // Pausar: congelar baseMs con el tramo actual
+        const segmentMs = mem.runStartedAt ? Math.max(0, now - mem.runStartedAt) : 0;
+        const frozen = Math.max(0, (mem.baseMs || 0) + segmentMs);
+        setTimerMem(activity.id, { baseMs: frozen, runStartedAt: null });
+        optimistic.elapsedMs = frozen;
+        optimistic.startedAt = null;
+        optimistic.completedAt = null;
+        optimistic.completedBy = null;
+        optimistic.durationMs = null;
+      } else if (activity.status === "completada") {
+        setTimerMem(activity.id, { baseMs: 0, runStartedAt: null });
+        optimistic.startedAt = null;
+        optimistic.completedAt = null;
+        optimistic.completedBy = null;
+        optimistic.durationMs = null;
+        optimistic.elapsedMs = 0;
+      } else {
+        optimistic.startedAt = null;
+        optimistic.completedAt = null;
+        optimistic.completedBy = null;
+        optimistic.durationMs = null;
+      }
+    }
+
+    setActivities((prev) =>
+      prev.map((a) => (a.id === activity.id ? optimistic : a))
+    );
+
     try {
-      await updateActivity(activity.id, { status: newStatus });
-      await loadActivities(selectedListId);
+      const updated = await updateActivity(activity.id, { status: newStatus });
+      // Persistir en server, pero NO dejar que pise el reloj local en curso
+      if (updated) applyActivityInList({
+        ...updated,
+        elapsedMs: getTimerMem(activity.id)?.baseMs ?? updated.elapsedMs,
+        startedAt: getTimerMem(activity.id)?.runStartedAt
+          ? new Date(getTimerMem(activity.id).runStartedAt).toISOString()
+          : updated.startedAt
+      });
+
+      // Si el filtro actual ya no debería mostrar esta actividad, quitarla del listado
+      if (filterStatus === "pendiente" && newStatus === "completada") {
+        removeActivityFromList(activity.id);
+      } else if (filterStatus === "completada" && newStatus !== "completada") {
+        removeActivityFromList(activity.id);
+      }
     } catch (err) {
-      setError(err.message || "Error al cambiar el estado de la actividad");
+      if (previousMem) setTimerMem(activity.id, previousMem);
+      else delete timerMemoryRef.current[activity.id];
+      setActivities((prev) =>
+        prev.map((a) => (a.id === activity.id ? { ...a, ...previous } : a))
+      );
+      setError(err.message || "Error al cambiar el estado del pedido");
     }
   };
 
@@ -832,7 +1091,7 @@ function ActivitiesPageContent() {
       console.error('Error al guardar orden de actividades:', err);
       if (previousList) setActivities(previousList);
       // Error local, no tumbar toda la página
-      alert(err.message || "Error al guardar el orden de las actividades");
+      alert(err.message || "Error al guardar el orden de los pedidos");
     } finally {
       isSavingOrderRef.current = false;
     }
@@ -951,6 +1210,17 @@ function ActivitiesPageContent() {
     return `${date.getUTCDate()} ${months[date.getUTCMonth()]}`;
   };
 
+  const formatDuration = (ms) => {
+    if (ms == null || Number.isNaN(ms) || ms < 0) return "—";
+    const totalSec = Math.floor(ms / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (h > 0) return `${h}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
+    if (m > 0) return `${m}m ${String(s).padStart(2, "0")}s`;
+    return `${s}s`;
+  };
+
   const getPriorityColor = (priority) => {
     const colors = {
       baja: "bg-green-900/30 text-green-400 border-green-700",
@@ -976,7 +1246,7 @@ function ActivitiesPageContent() {
     <div className="flex flex-col gap-4 min-h-[calc(100vh-200px)]">
       {showLoadingOverlay && (
         <div className="fixed inset-0 flex items-center justify-center bg-slate-900/90 z-50">
-          <div className="text-slate-300 text-lg">Cargando actividades...</div>
+          <div className="text-slate-300 text-lg">Cargando pedidos...</div>
         </div>
       )}
 
@@ -1136,24 +1406,24 @@ function ActivitiesPageContent() {
                 }}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium flex-shrink-0"
               >
-                + Nueva Actividad
+                + Nuevo Pedido
               </button>
               )}
             </div>
 
             {/* Búsqueda y Filtros */}
-            <div className="mb-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="mb-4 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {/* Búsqueda por palabras clave */}
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-1">
-                    Buscar actividades
+                    Buscar pedidos
                   </label>
                   <input
                     type="text"
                     value={searchKeyword}
                     onChange={(e) => setSearchKeyword(e.target.value)}
-                    placeholder="Buscar por título, descripción, responsable o etiquetas..."
+                    placeholder="Título, descripción, etiquetas..."
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 text-sm focus:outline-none focus:border-blue-500 placeholder:text-slate-500"
                   />
                 </div>
@@ -1168,10 +1438,70 @@ function ActivitiesPageContent() {
                     onChange={(e) => setFilterStatus(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 text-sm"
                   >
-                    <option value="">Todos</option>
+                    <option value="">Todos (recientes)</option>
                     <option value="pendiente">Pendiente/En Proceso</option>
                     <option value="completada">Completada</option>
                   </select>
+                </div>
+
+                <div className="flex flex-col justify-end">
+                  <p className="text-[11px] text-slate-500 md:pb-2">
+                    {filterStatus === "completada"
+                      ? "El rango filtra por fecha de completado (historial incluido)"
+                      : "El rango filtra por fecha de vencimiento"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Rango de fechas */}
+              <div className="bg-slate-900/40 border border-slate-700 rounded-lg p-3">
+                <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">Desde</label>
+                      <input
+                        type="date"
+                        value={filterDateFrom}
+                        onChange={(e) => setFilterDateFrom(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">Hasta</label>
+                      <input
+                        type="date"
+                        value={filterDateTo}
+                        onChange={(e) => setFilterDateTo(e.target.value)}
+                        min={filterDateFrom || undefined}
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMonthRange(0)}
+                      className="px-3 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-xs text-slate-200"
+                    >
+                      Este mes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMonthRange(-1)}
+                      className="px-3 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-xs text-slate-200"
+                    >
+                      Mes anterior
+                    </button>
+                    {(filterDateFrom || filterDateTo) && (
+                      <button
+                        type="button"
+                        onClick={clearDateRange}
+                        className="px-3 py-2 bg-slate-700 hover:bg-red-900/40 border border-slate-600 rounded-lg text-xs text-slate-300"
+                      >
+                        Limpiar fechas
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1194,10 +1524,10 @@ function ActivitiesPageContent() {
               {filteredActivities.length === 0 ? (
                 <p className="text-slate-400 text-center py-8">
                   {activities.length === 0
-                    ? "No hay actividades en esta lista"
-                    : searchKeyword.trim() || filterStatus
-                    ? "No hay actividades que coincidan con los filtros o búsqueda"
-                    : "No hay actividades"}
+                    ? "No hay pedidos en esta lista"
+                    : searchKeyword.trim() || filterDateFrom || filterDateTo || filterStatus
+                    ? "No hay pedidos que coincidan con los filtros o búsqueda"
+                    : "No hay pedidos"}
                 </p>
               ) : (
                 filteredActivities.map((activity) => (
@@ -1315,6 +1645,64 @@ function ActivitiesPageContent() {
                             <span>{formatDate(activity.dueDate)}</span>
                           </div>
                         )}
+
+                        {/* Cronómetro en curso */}
+                        {activity.status === "en_proceso" && (() => {
+                          const mem = getTimerMem(activity.id);
+                          const baseMs = mem?.baseMs ?? (activity.elapsedMs || 0);
+                          const runStartedAt = mem?.runStartedAt
+                            ?? (activity.startedAt ? new Date(activity.startedAt).getTime() : null);
+                          if (!runStartedAt && baseMs <= 0) return null;
+                          return (
+                            <LivePedidoTimer
+                              key={`${activity.id}-${runStartedAt || 'paused'}-${baseMs}`}
+                              baseMs={baseMs}
+                              runStartedAt={runStartedAt}
+                              formatDuration={formatDuration}
+                            />
+                          );
+                        })()}
+                        {activity.status === "pendiente" && (() => {
+                          const mem = getTimerMem(activity.id);
+                          const frozen = mem?.baseMs ?? activity.elapsedMs ?? 0;
+                          if (frozen <= 0) return null;
+                          return (
+                            <div
+                              className="flex items-center gap-1 text-[10px] md:text-xs text-slate-400 whitespace-nowrap font-mono"
+                              title="Tiempo acumulado (pausado)"
+                            >
+                              <Icons.Pause className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                              <span>{formatDuration(frozen)}</span>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Demora + quién completó */}
+                        {activity.status === "completada" && (
+                          <div
+                            className="flex items-center gap-1.5 text-[10px] md:text-xs text-emerald-300/90 whitespace-nowrap"
+                            title={
+                              activity.completedAt
+                                ? `Completado: ${new Date(activity.completedAt).toLocaleString('es-AR')}`
+                                : "Pedido completado"
+                            }
+                          >
+                            <span className="font-mono">
+                              {formatDuration(
+                                typeof activity.durationMs === "number"
+                                  ? activity.durationMs
+                                  : activity.startedAt && activity.completedAt
+                                  ? new Date(activity.completedAt) - new Date(activity.startedAt)
+                                  : null
+                              )}
+                            </span>
+                            {(activity.completedBy?.nombre || activity.completedBy?.name) && (
+                              <span className="text-slate-400">
+                                · {activity.completedBy.nombre || activity.completedBy.name}
+                              </span>
+                            )}
+                          </div>
+                        )}
                         
                         {/* Prioridad */}
                         <span
@@ -1341,7 +1729,7 @@ function ActivitiesPageContent() {
                       </div>
                       
                       {/* Botones de acción */}
-                      {(puedeGestionar || puedePonerEnProceso(activity) || puedePausarActividad(activity)) && (
+                      {(puedeGestionar || puedePonerEnProceso(activity) || puedePausarActividad(activity) || (activity.status === "en_proceso" && esActividadAsignada(activity))) && (
                         <div className="flex items-center gap-1 flex-shrink-0">
                           {/* Botón "En Proceso" - visible para admin/coordinador o usuario asignado cuando está pendiente */}
                           {activity.status === "pendiente" && puedePonerEnProceso(activity) && (
@@ -1366,8 +1754,8 @@ function ActivitiesPageContent() {
                                   <Icons.Pause className="w-3 h-3 md:w-3.5 md:h-3.5" />
                                 </button>
                               )}
-                              {/* Botón completar - solo admin/coordinador */}
-                              {puedeGestionar && (
+                              {/* Completar: admin/coordinador o usuario asignado */}
+                              {(puedeGestionar || esActividadAsignada(activity)) && (
                                 <button
                                   onClick={() => handleCompleteActivity(activity)}
                                   className="px-1.5 py-0.5 md:px-2 md:py-1 bg-green-600 hover:bg-green-700 rounded text-[10px] md:text-xs font-medium"
@@ -1425,7 +1813,7 @@ function ActivitiesPageContent() {
             {lists.length === 0 ? (
               <div className="text-center">
                 <p className="text-slate-400 mb-4">
-                  No hay listas de actividades. {esAdmin() ? 'Crea una nueva lista para comenzar.' : 'Contacta a un administrador para crear listas.'}
+                  No hay listas de pedidos. {esAdmin() ? 'Crea una nueva lista para comenzar.' : 'Contacta a un administrador para crear listas.'}
                 </p>
                 {esAdmin() && (
                   <button
@@ -1438,7 +1826,7 @@ function ActivitiesPageContent() {
               </div>
             ) : (
               <p className="text-slate-400">
-                Selecciona una lista de actividades del panel lateral
+                Selecciona una lista de pedidos del panel lateral
               </p>
             )}
           </div>
@@ -1522,13 +1910,13 @@ function ActivitiesPageContent() {
         </div>
       )}
 
-      {/* Modal - Nueva/Editar Actividad */}
+      {/* Modal - Nueva/Editar Pedido */}
       {showActivityModal && (
         <div className="fixed inset-0 bg-black/50 flex items-end justify-center p-4 pb-20 md:pb-4 md:items-center z-50">
           <div className="bg-slate-800 rounded-lg border border-slate-700 w-full max-w-lg max-h-[calc(100vh-120px)] md:max-h-[90vh] overflow-y-auto">
             <div className="p-4 sm:p-6 pb-6 pt-6">
               <h3 className="text-xl font-semibold mb-6">
-                {editingActivity ? "Editar Actividad" : "Nueva Actividad"}
+                {editingActivity ? "Editar Pedido" : "Nuevo Pedido"}
               </h3>
               {error && (
                 <div className="mb-4 p-3 bg-red-900/50 border border-red-700 rounded-lg text-red-200 text-sm">
@@ -1739,7 +2127,7 @@ function ActivitiesPageContent() {
               Confirmar eliminación
             </h3>
             <p className="text-slate-300 mb-4">
-              ¿Estás seguro de que deseas eliminar esta actividad?
+              ¿Estás seguro de que deseas eliminar este pedido?
             </p>
             <div className="flex gap-3 justify-end">
               <button
@@ -1769,7 +2157,7 @@ function ActivitiesPageContent() {
               Confirmar eliminación
             </h3>
             <p className="text-slate-300 mb-4">
-              ¿Estás seguro de que deseas eliminar esta lista? Esta acción también eliminará todas las actividades asociadas y no se puede deshacer.
+              ¿Estás seguro de que deseas eliminar esta lista? Esta acción también eliminará todos los pedidos asociados y no se puede deshacer.
             </p>
             <div className="flex gap-3 justify-end">
               <button
@@ -1798,7 +2186,7 @@ export default function ActivitiesPage() {
   return (
     <ProtectedRoute>
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold">Actividades</h1>
+        <h1 className="text-2xl font-semibold">Pedidos</h1>
         <ActivitiesPageContent />
       </div>
     </ProtectedRoute>

@@ -53,6 +53,30 @@ const ActivitySchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  // Cronómetro del pedido
+  startedAt: {
+    type: Date,
+    index: true
+  },
+  completedAt: {
+    type: Date,
+    index: true
+  },
+  completedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    index: true
+  },
+  durationMs: {
+    type: Number,
+    min: 0
+  },
+  // Tiempo acumulado al pausar (para reanudar el cronómetro sin volver a 0)
+  elapsedMs: {
+    type: Number,
+    min: 0,
+    default: 0
+  },
   isDeleted: {
     type: Boolean,
     default: false,
@@ -62,11 +86,26 @@ const ActivitySchema = new mongoose.Schema({
     type: Date
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  strictPopulate: false
 });
 
 ActivitySchema.index({ list: 1, order: 1, createdAt: -1 });
 ActivitySchema.index({ list: 1, status: 1 });
 ActivitySchema.index({ assignee: 1, status: 1 });
+ActivitySchema.index({ list: 1, completedAt: -1 });
+
+// Hot-reload: asegurar campos del cronómetro en el modelo cacheado
+if (mongoose.models.Activity) {
+  const cachedSchema = mongoose.models.Activity.schema;
+  cachedSchema.add({
+    startedAt: { type: Date, index: true },
+    completedAt: { type: Date, index: true },
+    completedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
+    durationMs: { type: Number, min: 0 },
+    elapsedMs: { type: Number, min: 0, default: 0 }
+  });
+  cachedSchema.set('strictPopulate', false);
+}
 
 export default mongoose.models.Activity || mongoose.model('Activity', ActivitySchema);

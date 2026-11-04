@@ -4,8 +4,8 @@ import Footer from '../components/Footer';
 import DisablePWA from '../components/DisablePWA';
 
 export const metadata = {
-  title: "Digital Space CRM",
-  description: "CRM para gestionar clientes de Digital Space",
+  title: "Digital Space CRM+Gestión",
+  description: "CRM+Gestión para gestionar clientes de Digital Space",
   icons: {
     icon: '/logo-512x512.png',
     apple: '/logo-512x512.png',
@@ -24,7 +24,7 @@ export default function RootLayout({ children }) {
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="application-name" content="Digital Space CRM" />
+        <meta name="application-name" content="Digital Space CRM+Gestión" />
         <meta name="msapplication-TileColor" content="#0f172a" />
         <script
           dangerouslySetInnerHTML={{

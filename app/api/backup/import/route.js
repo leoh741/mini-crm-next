@@ -545,6 +545,9 @@ export async function POST(request) {
               crmClientId,
               pagado: datosPago?.pagado || false,
               serviciosPagados: datosPago?.serviciosPagados || {},
+              // Compatibilidad: backups viejos sin snapshot → 0 / sin nombre
+              montoPagado: typeof datosPago?.montoPagado === 'number' ? datosPago.montoPagado : 0,
+              clienteNombre: datosPago?.clienteNombre ? String(datosPago.clienteNombre).trim() : undefined,
               fechaActualizacion: datosPago?.fechaActualizacion ? new Date(datosPago.fechaActualizacion) : null
             });
           }
@@ -779,12 +782,8 @@ export async function POST(request) {
             assigneeId = activity.assignee._id.toString();
           } else if (activity.assignee.id) {
             assigneeId = activity.assignee.id.toString();
-          } else if (activity.assignee.toString && typeof activity.assignee.toString === 'function') {
-            try {
-              assigneeId = activity.assignee.toString();
-            } catch (e) {
-              // Ignorar error
-            }
+          } else if (activity.assignee.crmId) {
+            assigneeId = String(activity.assignee.crmId);
           }
         }
 
@@ -797,12 +796,22 @@ export async function POST(request) {
             createdById = activity.createdBy._id.toString();
           } else if (activity.createdBy.id) {
             createdById = activity.createdBy.id.toString();
-          } else if (activity.createdBy.toString && typeof activity.createdBy.toString === 'function') {
-            try {
-              createdById = activity.createdBy.toString();
-            } catch (e) {
-              console.warn(`[BACKUP IMPORT] No se pudo convertir createdBy a string (actividad ${index + 1}):`, e);
-            }
+          } else if (activity.createdBy.crmId) {
+            createdById = String(activity.createdBy.crmId);
+          }
+        }
+
+        // Quién completó el pedido (cronómetro)
+        let completedById = null;
+        if (activity.completedBy) {
+          if (typeof activity.completedBy === 'string') {
+            completedById = activity.completedBy;
+          } else if (activity.completedBy._id) {
+            completedById = activity.completedBy._id.toString();
+          } else if (activity.completedBy.id) {
+            completedById = activity.completedBy.id.toString();
+          } else if (activity.completedBy.crmId) {
+            completedById = String(activity.completedBy.crmId);
           }
         }
 
@@ -813,6 +822,9 @@ export async function POST(request) {
             listId: listId,
             createdById: createdById,
             assigneeId: assigneeId,
+            completedById: completedById,
+            elapsedMs: activity.elapsedMs,
+            durationMs: activity.durationMs,
             listOriginal: activity.list,
             createdByOriginal: activity.createdBy
           });
@@ -828,7 +840,15 @@ export async function POST(request) {
           labels: Array.isArray(activity.labels) ? activity.labels.map(l => String(l).trim()).filter(l => l) : [],
           dueDate: activity.dueDate ? new Date(activity.dueDate) : null,
           order: activity.order !== undefined ? Number(activity.order) : 0,
-          createdBy: createdById
+          createdBy: createdById,
+          // Cronómetro (compatibilidad con backups viejos sin estos campos)
+          startedAt: activity.startedAt ? new Date(activity.startedAt) : null,
+          completedAt: activity.completedAt ? new Date(activity.completedAt) : null,
+          completedBy: completedById || undefined,
+          durationMs: typeof activity.durationMs === 'number' ? activity.durationMs : null,
+          elapsedMs: typeof activity.elapsedMs === 'number' ? activity.elapsedMs : 0,
+          isDeleted: Boolean(activity.isDeleted),
+          deletedAt: activity.deletedAt ? new Date(activity.deletedAt) : null
         };
       }).filter(a => {
         // Filtrar solo actividades con título válido
@@ -1066,7 +1086,12 @@ export async function POST(request) {
         Task.find({}).lean(),
         TeamMember.find({}).lean(),
         ActivityList.find({}).lean(),
-        Activity.find({}).populate('assignee', 'nombre email crmId').populate('createdBy', 'nombre email crmId').populate('list', 'name color').lean()
+        Activity.find({})
+          .populate('assignee', 'nombre email crmId')
+          .populate('createdBy', 'nombre email crmId')
+          .populate({ path: 'completedBy', select: 'nombre email crmId', strictPopulate: false })
+          .populate('list', 'name color')
+          .lean()
       ]);
       
       // Formatear para backup (igual que en export)
@@ -1096,6 +1121,8 @@ export async function POST(request) {
         pagosMensualesBackup[pago.mes][pago.crmClientId] = {
           pagado: pago.pagado || false,
           serviciosPagados: pago.serviciosPagados || {},
+          montoPagado: typeof pago.montoPagado === 'number' ? pago.montoPagado : 0,
+          clienteNombre: pago.clienteNombre || undefined,
           fechaActualizacion: pago.fechaActualizacion || null
         };
       });
@@ -1214,7 +1241,18 @@ export async function POST(request) {
         updatedAt: list.updatedAt || null
       }));
       
-      // Formatear Activities
+      // Formatear Activities (incluye cronómetro)
+      const formatUserRefBackup = (user) => {
+        if (!user) return undefined;
+        if (typeof user === 'string') return user;
+        return {
+          _id: user._id?.toString() || user.id?.toString(),
+          id: user._id?.toString() || user.id?.toString(),
+          crmId: user.crmId,
+          nombre: user.nombre,
+          email: user.email
+        };
+      };
       const activitiesBackup = activitiesExistentes.map(activity => ({
         id: activity._id.toString(),
         list: activity.list?._id?.toString() || activity.list?.toString() || activity.list,
@@ -1222,23 +1260,18 @@ export async function POST(request) {
         description: activity.description || undefined,
         status: activity.status || 'pendiente',
         priority: activity.priority || 'media',
-        assignee: activity.assignee ? {
-          _id: activity.assignee._id?.toString() || activity.assignee.id?.toString(),
-          id: activity.assignee._id?.toString() || activity.assignee.id?.toString(),
-          crmId: activity.assignee.crmId,
-          nombre: activity.assignee.nombre,
-          email: activity.assignee.email
-        } : undefined,
+        assignee: formatUserRefBackup(activity.assignee),
         labels: activity.labels || [],
         dueDate: activity.dueDate || null,
         order: activity.order || 0,
-        createdBy: activity.createdBy ? {
-          _id: activity.createdBy._id?.toString() || activity.createdBy.id?.toString(),
-          id: activity.createdBy._id?.toString() || activity.createdBy.id?.toString(),
-          crmId: activity.createdBy.crmId,
-          nombre: activity.createdBy.nombre,
-          email: activity.createdBy.email
-        } : activity.createdBy?.toString() || activity.createdBy,
+        createdBy: formatUserRefBackup(activity.createdBy) || activity.createdBy?.toString() || activity.createdBy,
+        startedAt: activity.startedAt || null,
+        completedAt: activity.completedAt || null,
+        completedBy: formatUserRefBackup(activity.completedBy),
+        durationMs: typeof activity.durationMs === 'number' ? activity.durationMs : null,
+        elapsedMs: typeof activity.elapsedMs === 'number' ? activity.elapsedMs : 0,
+        isDeleted: Boolean(activity.isDeleted),
+        deletedAt: activity.deletedAt || null,
         createdAt: activity.createdAt || null,
         updatedAt: activity.updatedAt || null
       }));
@@ -1255,7 +1288,7 @@ export async function POST(request) {
         activityLists: JSON.stringify(activityListsBackup),
         activities: JSON.stringify(activitiesBackup),
         fechaExportacion: new Date().toISOString(),
-        version: '2.4',
+        version: '2.6',
         tipo: 'backup_automatico_pre_importacion'
       };
       
@@ -2195,33 +2228,29 @@ export async function POST(request) {
             }
           }
           
-          // Convertir assignee a ObjectId si existe
-          let assigneeObjectId = null;
-          if (activity.assignee) {
-            if (mongoose.Types.ObjectId.isValid(activity.assignee)) {
-              assigneeObjectId = new mongoose.Types.ObjectId(activity.assignee);
-            } else {
-              const assigneeUser = await User.findOne({ crmId: activity.assignee }).select('_id').lean();
-              if (assigneeUser) {
-                assigneeObjectId = assigneeUser._id;
-              }
+          // Resolver refs de usuario (string ObjectId, crmId u objeto exportado)
+          const resolverUserObjectId = async (ref) => {
+            if (!ref) return null;
+            const raw = typeof ref === 'object'
+              ? (ref._id || ref.id || ref.crmId || null)
+              : ref;
+            if (!raw) return null;
+            const asString = String(raw);
+            if (mongoose.Types.ObjectId.isValid(asString) && String(new mongoose.Types.ObjectId(asString)) === asString) {
+              return new mongoose.Types.ObjectId(asString);
             }
+            const byCrmId = await User.findOne({ crmId: asString }).select('_id').lean();
+            return byCrmId?._id || null;
+          };
+
+          const assigneeObjectId = await resolverUserObjectId(activity.assignee);
+          const createdByObjectId = await resolverUserObjectId(activity.createdBy);
+          if (!createdByObjectId) {
+            console.warn(`[BACKUP IMPORT] Actividad ${i + 1} (${activity.title}) omitida: createdBy no encontrado`, activity.createdBy);
+            errores++;
+            continue;
           }
-          
-          // Convertir createdBy a ObjectId
-          let createdByObjectId;
-          if (mongoose.Types.ObjectId.isValid(activity.createdBy)) {
-            createdByObjectId = new mongoose.Types.ObjectId(activity.createdBy);
-          } else {
-            const createdByUser = await User.findOne({ crmId: activity.createdBy }).select('_id').lean();
-            if (createdByUser) {
-              createdByObjectId = createdByUser._id;
-            } else {
-              console.warn(`[BACKUP IMPORT] Actividad ${i + 1} omitida: createdBy no encontrado`, activity.createdBy);
-              errores++;
-              continue;
-            }
-          }
+          const completedByObjectId = await resolverUserObjectId(activity.completedBy);
           
           const activityData = {
             list: listObjectId,
@@ -2233,7 +2262,15 @@ export async function POST(request) {
             labels: activity.labels,
             dueDate: activity.dueDate,
             order: activity.order,
-            createdBy: createdByObjectId
+            createdBy: createdByObjectId,
+            // Cronómetro del pedido
+            startedAt: activity.startedAt || null,
+            completedAt: activity.completedAt || null,
+            completedBy: completedByObjectId || undefined,
+            durationMs: typeof activity.durationMs === 'number' ? activity.durationMs : null,
+            elapsedMs: typeof activity.elapsedMs === 'number' ? activity.elapsedMs : 0,
+            isDeleted: Boolean(activity.isDeleted),
+            deletedAt: activity.deletedAt || null
           };
           
           // Usar upsert basado en una combinación única de título, lista y createdBy

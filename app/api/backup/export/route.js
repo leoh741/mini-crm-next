@@ -81,6 +81,7 @@ export async function GET() {
     const activities = await Activity.find({})
       .populate('assignee', 'nombre email crmId _id')
       .populate('createdBy', 'nombre email crmId _id')
+      .populate({ path: 'completedBy', select: 'nombre email crmId _id', strictPopulate: false })
       .populate('list', 'name color _id')
       .lean()
       .maxTimeMS(60000);
@@ -182,6 +183,9 @@ export async function GET() {
       pagosMensualesFormateados[pago.mes][pago.crmClientId] = {
         pagado: pago.pagado || false,
         serviciosPagados: pago.serviciosPagados || {},
+        // Snapshot de cobro (balance de meses pasados / clientes borrados)
+        montoPagado: typeof pago.montoPagado === 'number' ? pago.montoPagado : 0,
+        clienteNombre: pago.clienteNombre || undefined,
         fechaActualizacion: pago.fechaActualizacion || null
       };
     });
@@ -395,6 +399,18 @@ export async function GET() {
         }
       }
       
+      const formatUserRef = (user) => {
+        if (!user) return undefined;
+        if (typeof user === 'string') return user;
+        return {
+          _id: user._id?.toString() || user.id?.toString(),
+          id: user._id?.toString() || user.id?.toString(),
+          crmId: user.crmId,
+          nombre: user.nombre,
+          email: user.email
+        };
+      };
+
       return {
       id: activity._id ? activity._id.toString() : (activity.id ? activity.id.toString() : `unknown-${index}`),
       list: listId || (activity.list ? (activity.list.toString ? activity.list.toString() : String(activity.list)) : null),
@@ -402,23 +418,19 @@ export async function GET() {
       description: activity.description || undefined,
       status: activity.status || 'pendiente',
       priority: activity.priority || 'media',
-      assignee: activity.assignee ? {
-        _id: activity.assignee._id?.toString() || activity.assignee.id?.toString(),
-        id: activity.assignee._id?.toString() || activity.assignee.id?.toString(),
-        crmId: activity.assignee.crmId,
-        nombre: activity.assignee.nombre,
-        email: activity.assignee.email
-      } : undefined,
+      assignee: formatUserRef(activity.assignee),
       labels: activity.labels || [],
       dueDate: activity.dueDate || null,
       order: activity.order || 0,
-      createdBy: activity.createdBy ? {
-        _id: activity.createdBy._id?.toString() || activity.createdBy.id?.toString(),
-        id: activity.createdBy._id?.toString() || activity.createdBy.id?.toString(),
-        crmId: activity.createdBy.crmId,
-        nombre: activity.createdBy.nombre,
-        email: activity.createdBy.email
-      } : activity.createdBy?.toString() || activity.createdBy,
+      createdBy: formatUserRef(activity.createdBy) || activity.createdBy?.toString() || activity.createdBy,
+      // Cronómetro del pedido
+      startedAt: activity.startedAt || null,
+      completedAt: activity.completedAt || null,
+      completedBy: formatUserRef(activity.completedBy),
+      durationMs: typeof activity.durationMs === 'number' ? activity.durationMs : null,
+      elapsedMs: typeof activity.elapsedMs === 'number' ? activity.elapsedMs : 0,
+      isDeleted: Boolean(activity.isDeleted),
+      deletedAt: activity.deletedAt || null,
       createdAt: activity.createdAt || null,
       updatedAt: activity.updatedAt || null
       };
@@ -464,7 +476,7 @@ export async function GET() {
       activities: activitiesFormateadas, // Array directamente
       informes: informesFormateados, // Array directamente
       fechaExportacion: new Date().toISOString(),
-      version: '2.5'
+      version: '2.6'
     };
     
     // Logging para verificar que todas las actividades se exportaron

@@ -51,7 +51,7 @@ export default function LoginPage() {
     <div className="fixed inset-0 h-screen w-screen flex items-center justify-center bg-slate-900 overflow-hidden px-4" style={{ overflow: 'hidden' }}>
       <div className="w-full max-w-md p-6 md:p-8 bg-slate-800 rounded-lg border border-slate-700">
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold mb-2">Digital Space CRM</h1>
+          <h1 className="text-3xl font-bold mb-2">Digital Space CRM+Gestión</h1>
           <p className="text-slate-400">Inicia sesión para continuar</p>
         </div>
 
@@ -103,7 +103,7 @@ export default function LoginPage() {
 
         <div className="mt-6 pt-6 border-t border-slate-700">
           <p className="text-xs text-slate-400 text-center">
-            Digital Space CRM Copyright © 2026 - Todos los derechos reservados
+            Digital Space CRM+Gestión Copyright © 2026 - Todos los derechos reservados
           </p>
         </div>
       </div>

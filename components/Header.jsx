@@ -125,7 +125,7 @@ function Header() {
           )}
           {/* Actividades visible para todos los usuarios autenticados */}
           <Link href="/activities" prefetch={true} className={pathname?.startsWith("/activities") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
-            Actividades
+            Pedidos
           </Link>
           {esAdminUser && (
             <>
@@ -148,7 +148,7 @@ function Header() {
                 Reuniones
               </Link>
               <Link href="/tareas" prefetch={true} className={pathname?.startsWith("/tareas") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
-                Tareas
+                Tareas internas
               </Link>
               <Link href="/equipo" prefetch={true} className={pathname?.startsWith("/equipo") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
                 Equipo
@@ -220,7 +220,7 @@ function Header() {
               className={`px-4 py-3 ${pathname?.startsWith("/activities") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
               onClick={() => setMenuAbierto(false)}
             >
-              Actividades
+              Pedidos
             </Link>
             {esAdminUser && (
               <>
@@ -271,7 +271,7 @@ function Header() {
                   className={`px-4 py-3 ${pathname?.startsWith("/tareas") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
                   onClick={() => setMenuAbierto(false)}
                 >
-                  Tareas
+                  Tareas internas
                 </Link>
                 <Link 
                   href="/equipo" 

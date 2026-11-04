@@ -37,8 +37,33 @@ export async function GET(request) {
     const listId = searchParams.get('listId');
     const status = searchParams.get('status');
     const assigneeId = searchParams.get('assigneeId');
+    const q = (searchParams.get('q') || '').trim();
+    const dueDate = searchParams.get('dueDate'); // YYYY-MM-DD (día exacto, compat)
+    const dateFrom = searchParams.get('dateFrom'); // YYYY-MM-DD
+    const dateTo = searchParams.get('dateTo'); // YYYY-MM-DD
+    // dateField: updatedAt (completado) | dueDate (vencimiento). Por defecto según status.
+    const dateFieldParam = searchParams.get('dateField');
+    // completedDays: incluir completadas solo de los últimos N días (tablero liviano)
+    // history=true: incluir historial completo de completadas (búsqueda / filtro explícito)
+    const history = searchParams.get('history') === 'true';
+    const completedDaysRaw = searchParams.get('completedDays');
+    const completedDays = completedDaysRaw !== null && completedDaysRaw !== ''
+      ? Math.max(0, parseInt(completedDaysRaw, 10) || 0)
+      : null;
+
+    const parseDayStartUTC = (value) => {
+      if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+      const [y, m, d] = value.split('-').map(Number);
+      return new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
+    };
+    const parseDayEndUTC = (value) => {
+      if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+      const [y, m, d] = value.split('-').map(Number);
+      return new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
+    };
     
     let query = {};
+    const andConditions = [];
     
     if (listId) {
       // Validate ObjectId
@@ -55,14 +80,50 @@ export async function GET(request) {
       console.log('[API Activities GET] Obteniendo actividades de la lista:', listId);
     }
     
-    if (status) {
-      query.status = status;
-    }
-    
     // Por defecto, no mostrar actividades eliminadas a menos que se solicite explícitamente
     const includeDeleted = searchParams.get('includeDeleted') === 'true';
     if (!includeDeleted) {
       query.isDeleted = { $ne: true };
+    }
+
+    const hasDateRange = Boolean(dateFrom || dateTo || dueDate);
+
+    // Filtro de estado + historial de completadas
+    // - status=pendiente: solo pendiente + en_proceso (tablero rápido)
+    // - status=completada: solo completadas (recientes, o todo el historial si history/q/rango)
+    // - sin status: tablero + completadas recientes (completedDays)
+    const searchingHistory = history || Boolean(q) || hasDateRange;
+
+    if (status === 'pendiente') {
+      andConditions.push({ status: { $in: ['pendiente', 'en_proceso'] } });
+    } else if (status === 'completada') {
+      andConditions.push({ status: 'completada' });
+      if (!searchingHistory && completedDays !== null) {
+        const since = new Date();
+        since.setDate(since.getDate() - completedDays);
+        andConditions.push({
+          $or: [
+            { completedAt: { $gte: since } },
+            { completedAt: null, updatedAt: { $gte: since } },
+            { completedAt: { $exists: false }, updatedAt: { $gte: since } }
+          ]
+        });
+      }
+    } else if (status) {
+      andConditions.push({ status });
+    } else if (!searchingHistory && completedDays !== null) {
+      // Vista "Todos": activas + completadas recientes
+      const since = new Date();
+      since.setDate(since.getDate() - completedDays);
+      andConditions.push({
+        $or: [
+          { status: { $in: ['pendiente', 'en_proceso'] } },
+          { status: 'completada', updatedAt: { $gte: since } }
+        ]
+      });
+    } else if (!searchingHistory) {
+      // Sin completedDays ni búsqueda: solo tablero activo
+      andConditions.push({ status: { $in: ['pendiente', 'en_proceso'] } });
     }
     
     if (assigneeId) {
@@ -81,10 +142,68 @@ export async function GET(request) {
         query.assignee = assigneeObjectId;
       }
     }
+
+    if (q) {
+      const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escaped, 'i');
+      andConditions.push({
+        $or: [
+          { title: regex },
+          { description: regex },
+          { labels: regex }
+        ]
+      });
+    }
+
+    // Rango / día: en completadas usa completedAt (o updatedAt legacy); si no, dueDate
+    const dateField = dateFieldParam === 'dueDate' || dateFieldParam === 'updatedAt' || dateFieldParam === 'completedAt'
+      ? dateFieldParam
+      : (status === 'completada' ? 'completedAt' : 'dueDate');
+
+    if (dueDate && /^\d{4}-\d{2}-\d{2}$/.test(dueDate) && !dateFrom && !dateTo) {
+      const start = parseDayStartUTC(dueDate);
+      const end = parseDayEndUTC(dueDate);
+      andConditions.push({ [dateField]: { $gte: start, $lte: end } });
+    } else if (dateFrom || dateTo) {
+      const range = {};
+      const start = parseDayStartUTC(dateFrom);
+      const end = parseDayEndUTC(dateTo);
+      if (start) range.$gte = start;
+      if (end) range.$lte = end;
+      if (Object.keys(range).length > 0) {
+        andConditions.push({ [dateField]: range });
+      }
+    }
+
+    if (andConditions.length > 0) {
+      query.$and = andConditions;
+    }
     
+    // Si filtra por completedAt, incluir también legacy (updatedAt) sin completedAt
+    if (dateField === 'completedAt' && (dateFrom || dateTo || dueDate)) {
+      const range = {};
+      const start = parseDayStartUTC(dateFrom || (dueDate && !dateTo ? dueDate : null));
+      const end = parseDayEndUTC(dateTo || (dueDate && !dateFrom ? dueDate : null));
+      if (start) range.$gte = start;
+      if (end) range.$lte = end;
+      const idx = andConditions.findIndex(
+        (c) => c && Object.prototype.hasOwnProperty.call(c, 'completedAt')
+      );
+      if (idx >= 0 && Object.keys(range).length > 0) {
+        andConditions[idx] = {
+          $or: [
+            { completedAt: range },
+            { completedAt: null, updatedAt: range },
+            { completedAt: { $exists: false }, updatedAt: range }
+          ]
+        };
+      }
+    }
+
     const activities = await Activity.find(query)
       .populate('assignee', 'nombre email')
       .populate('createdBy', 'nombre email')
+      .populate({ path: 'completedBy', select: 'nombre email', strictPopulate: false })
       .populate('list', 'name color')
       .sort({ order: 1, createdAt: -1 })
       .lean()
@@ -378,7 +497,7 @@ export async function PATCH(request) {
     const onlyChangingStatus = body.status !== undefined && 
       Object.keys(body).filter(k => k !== 'id' && k !== 'status').length === 0;
     const isStatusChangeAllowed = onlyChangingStatus && 
-      (body.status === 'en_proceso' || body.status === 'pendiente');
+      (body.status === 'en_proceso' || body.status === 'pendiente' || body.status === 'completada');
     
     // Si es admin, permitir siempre
     if (userRole === 'admin') {
@@ -434,7 +553,62 @@ export async function PATCH(request) {
       activity.description = body.description?.trim() || '';
     }
     if (body.status !== undefined) {
-      activity.status = body.status;
+      const previousStatus = activity.status;
+      const nextStatus = body.status;
+      activity.status = nextStatus;
+
+      // Cronómetro reanudable: elapsedMs = tiempo congelado; startedAt = inicio del tramo actual
+      const baseElapsed = typeof activity.elapsedMs === 'number' && activity.elapsedMs > 0
+        ? activity.elapsedMs
+        : 0;
+
+      if (nextStatus === 'en_proceso' && previousStatus !== 'en_proceso') {
+        // Iniciar o reanudar: NO reinicia elapsedMs
+        activity.startedAt = new Date();
+        activity.elapsedMs = baseElapsed;
+        activity.completedAt = null;
+        activity.completedBy = null;
+        activity.durationMs = null;
+        activity.markModified('elapsedMs');
+        activity.markModified('startedAt');
+      } else if (nextStatus === 'completada' && previousStatus !== 'completada') {
+        const completedAt = new Date();
+        const segmentMs = activity.startedAt
+          ? Math.max(0, completedAt.getTime() - new Date(activity.startedAt).getTime())
+          : 0;
+        const totalMs = baseElapsed + segmentMs;
+        activity.completedAt = completedAt;
+        activity.completedBy = userObjectId;
+        activity.durationMs = totalMs;
+        activity.elapsedMs = totalMs;
+        activity.startedAt = null;
+        activity.markModified('elapsedMs');
+        activity.markModified('durationMs');
+        activity.markModified('startedAt');
+      } else if (nextStatus === 'pendiente') {
+        if (previousStatus === 'en_proceso') {
+          // Pausar: sumar el tramo actual a elapsedMs y congelar
+          const segmentMs = activity.startedAt
+            ? Math.max(0, Date.now() - new Date(activity.startedAt).getTime())
+            : 0;
+          activity.elapsedMs = baseElapsed + segmentMs;
+          activity.startedAt = null;
+          activity.completedAt = null;
+          activity.completedBy = null;
+          activity.durationMs = null;
+          activity.markModified('elapsedMs');
+          activity.markModified('startedAt');
+          console.log('[API Activities PATCH] Pausado. elapsedMs=', activity.elapsedMs);
+        } else if (previousStatus === 'completada') {
+          // Reabrir completado: reiniciar cronómetro
+          activity.startedAt = null;
+          activity.completedAt = null;
+          activity.completedBy = null;
+          activity.durationMs = null;
+          activity.elapsedMs = 0;
+          activity.markModified('elapsedMs');
+        }
+      }
     }
     if (body.priority !== undefined) {
       activity.priority = body.priority;
@@ -471,15 +645,65 @@ export async function PATCH(request) {
     if (body.order !== undefined) {
       activity.order = Number(body.order) || 0;
     }
+
+    // Guardar con la colección nativa para que elapsedMs no lo elimine el schema estricto cacheado
+    if (body.status !== undefined) {
+      const timerSet = {
+        status: activity.status,
+        startedAt: activity.startedAt || null,
+        completedAt: activity.completedAt || null,
+        completedBy: activity.completedBy || null,
+        durationMs: typeof activity.durationMs === 'number' ? activity.durationMs : null,
+        elapsedMs: typeof activity.elapsedMs === 'number' ? activity.elapsedMs : 0,
+        updatedAt: new Date()
+      };
+      if (body.title !== undefined) timerSet.title = activity.title;
+      if (body.description !== undefined) timerSet.description = activity.description;
+      if (body.priority !== undefined) timerSet.priority = activity.priority;
+      if (body.labels !== undefined) timerSet.labels = activity.labels;
+      if (body.dueDate !== undefined) timerSet.dueDate = activity.dueDate;
+      if (body.assignee !== undefined) timerSet.assignee = activity.assignee;
+      if (body.order !== undefined) timerSet.order = activity.order;
+
+      await Activity.collection.updateOne(
+        { _id: activity._id },
+        { $set: timerSet }
+      );
+      console.log('[API Activities PATCH] Cronómetro guardado:', {
+        id: String(activity._id),
+        status: timerSet.status,
+        elapsedMs: timerSet.elapsedMs,
+        startedAt: timerSet.startedAt
+      });
+    } else {
+      await activity.save();
+    }
+
+    // Leer crudo + populate (elapsedMs viene del documento aunque el schema cache esté viejo)
+    const raw = await Activity.collection.findOne({ _id: activity._id });
+    const refreshed = await Activity.findById(activity._id)
+      .populate('assignee', 'nombre email')
+      .populate('createdBy', 'nombre email')
+      .populate({ path: 'completedBy', select: 'nombre email', strictPopulate: false })
+      .populate('list', 'name color')
+      .lean();
+
+    const payload = {
+      ...(refreshed || {}),
+      ...(raw || {}),
+      // Preferir valores de cronómetro del documento crudo
+      startedAt: raw?.startedAt ?? refreshed?.startedAt ?? null,
+      completedAt: raw?.completedAt ?? refreshed?.completedAt ?? null,
+      completedBy: refreshed?.completedBy ?? raw?.completedBy ?? null,
+      durationMs: raw?.durationMs ?? refreshed?.durationMs ?? null,
+      elapsedMs: typeof raw?.elapsedMs === 'number' ? raw.elapsedMs : (refreshed?.elapsedMs || 0),
+      assignee: refreshed?.assignee,
+      createdBy: refreshed?.createdBy,
+      list: refreshed?.list,
+      _id: activity._id
+    };
     
-    await activity.save();
-    
-    // Populate before returning
-    await activity.populate('assignee', 'nombre email');
-    await activity.populate('createdBy', 'nombre email');
-    await activity.populate('list', 'name color');
-    
-    return NextResponse.json({ success: true, data: activity });
+    return NextResponse.json({ success: true, data: payload });
   } catch (error) {
     console.error('[API Activities PATCH] Error:', error);
     return NextResponse.json(

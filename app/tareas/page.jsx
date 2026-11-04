@@ -326,7 +326,7 @@ function TareasPageContent() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl font-semibold">Tareas</h1>
+        <h1 className="text-2xl font-semibold">Tareas internas</h1>
         <button onClick={abrirFormulario} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium">
           + Nueva Tarea
         </button>
