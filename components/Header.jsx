@@ -117,8 +117,9 @@ function Header() {
           </Link>
         </div>
         
-        {/* Menú desktop */}
-        <nav className="hidden md:flex gap-x-2.5 text-xs xl:gap-x-3 xl:text-sm items-center min-w-0 flex-1 overflow-x-auto [&_a]:shrink-0 [&_a]:whitespace-nowrap">
+        {/* Menú desktop: a la derecha del logo. Si no entra, se desplaza sin tapar el logo ni Salir. */}
+        <div className="hidden md:flex min-w-0 flex-1 justify-end">
+        <nav className="flex max-w-full gap-x-2.5 text-xs xl:gap-x-3 xl:text-sm items-center overflow-x-auto [&_a]:shrink-0 [&_a]:whitespace-nowrap">
           {/* Solo mostrar enlaces de admin para administradores */}
           {esAdminUser && (
             <>
@@ -172,6 +173,7 @@ function Header() {
             </>
           )}
         </nav>
+        </div>
         {usuario && (
           <div className="hidden md:flex items-center gap-2 shrink-0 pl-2 border-l border-blue-800">
             <span className="text-xs text-slate-300 hidden xl:inline">{usuario.nombre}</span>
