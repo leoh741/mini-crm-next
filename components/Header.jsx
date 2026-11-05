@@ -118,8 +118,8 @@ function Header() {
         </div>
         
         {/* Menú desktop: a la derecha del logo. Si no entra, se desplaza sin tapar el logo ni Salir. */}
-        <div className="hidden md:flex min-w-0 flex-1 justify-end">
-        <nav className="flex max-w-full gap-x-2.5 text-xs xl:gap-x-3 xl:text-sm items-center overflow-x-auto [&_a]:shrink-0 [&_a]:whitespace-nowrap">
+        <div className="hidden min-[1120px]:flex min-w-0 flex-1 justify-end">
+        <nav className="flex max-w-full gap-x-2.5 text-xs xl:gap-x-3 xl:text-sm items-center overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&_a]:shrink-0 [&_a]:whitespace-nowrap">
           {/* Solo mostrar enlaces de admin para administradores */}
           {esAdminUser && (
             <>
@@ -175,7 +175,7 @@ function Header() {
         </nav>
         </div>
         {usuario && (
-          <div className="hidden md:flex items-center gap-2 shrink-0 pl-2 border-l border-blue-800">
+          <div className="hidden min-[1120px]:flex items-center gap-2 shrink-0 pl-2 border-l border-blue-800">
             <span className="text-xs text-slate-300 hidden xl:inline">{usuario.nombre}</span>
             <button
               onClick={handleLogout}
@@ -189,7 +189,7 @@ function Header() {
         {/* Botón hamburguesa móvil */}
         <button
           onClick={() => setMenuAbierto(!menuAbierto)}
-          className="md:hidden flex flex-shrink-0 items-center justify-center text-slate-300 hover:text-white active:bg-blue-900/50 rounded transition-colors touch-manipulation"
+          className="min-[1120px]:hidden flex flex-shrink-0 items-center justify-center text-slate-300 hover:text-white active:bg-blue-900/50 rounded transition-colors touch-manipulation"
           aria-label="Toggle menu"
           style={{ 
             width: '44px',
@@ -212,7 +212,7 @@ function Header() {
 
       {/* Menú móvil desplegable */}
       {menuAbierto && (
-        <nav className="md:hidden border-t" style={{ borderColor: '#0f1d5a', backgroundColor: '#142678' }}>
+        <nav className="min-[1120px]:hidden border-t" style={{ borderColor: '#0f1d5a', backgroundColor: '#142678' }}>
           <div className="flex flex-col">
             {/* Solo mostrar enlaces de admin para administradores */}
             {esAdminUser && (

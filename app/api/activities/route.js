@@ -5,6 +5,7 @@ import ActivityList from '../../../models/ActivityList';
 import { getCurrentUserId, getCurrentUserRole } from '../../../lib/auth';
 import { updateUserLastSeen } from '../../../lib/userActivity';
 import { actividadCaeEnRango } from '../../../lib/fechaActividad';
+import { regexBusqueda, sinAcento } from '../../../lib/textoBusqueda';
 import mongoose from 'mongoose';
 
 // "YYYY-MM-DD" se guarda a las 12:00 UTC para que el día no cambie según la zona horaria
@@ -145,15 +146,20 @@ export async function GET(request) {
     }
 
     if (q) {
-      const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(escaped, 'i');
-      andConditions.push({
-        $or: [
-          { title: regex },
-          { description: regex },
-          { labels: regex }
-        ]
-      });
+      const regex = regexBusqueda(q);
+      const aguja = sinAcento(q).trim();
+      const User = (await import('../../../models/User')).default;
+      const usuarios = await User.find({}).select('_id nombre').lean();
+      const responsables = usuarios.filter((usuario) => sinAcento(usuario.nombre).includes(aguja));
+      const or = [
+        { title: regex },
+        { description: regex },
+        { labels: regex }
+      ];
+      if (responsables.length) {
+        or.push({ assignee: { $in: responsables.map((usuario) => usuario._id) } });
+      }
+      andConditions.push({ $or: or });
     }
 
     // Rango / día: en completadas usa completedAt (o updatedAt legacy); si no, dueDate
@@ -389,7 +395,8 @@ export async function POST(request) {
       dueDate: dueDate,
       assignee: assigneeObjectId,
       order: body.order || 0,
-      createdBy: userObjectId
+      createdBy: userObjectId,
+      createdAt: new Date()
     };
     
     console.log('[API Activities POST] Creando actividad con datos:', JSON.stringify({

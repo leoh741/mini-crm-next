@@ -17,7 +17,7 @@ import ActivityList from '../../../../models/ActivityList';
 import Activity from '../../../../models/Activity';
 import Report from '../../../../models/Report';
 import SocialClient from '../../../../models/SocialClient';
-import SocialPost from '../../../../models/SocialPost';
+import SocialPost, { prepararPostBackup, serializarPostBackup } from '../../../../models/SocialPost';
 
 export async function POST(request) {
   // PROTECCIÓN CRÍTICA: Bloquear importaciones desde desarrollo local si se conecta a base remota
@@ -1341,23 +1341,7 @@ export async function POST(request) {
         createdAt: cliente.createdAt || null,
         updatedAt: cliente.updatedAt || null
       }));
-      const redesPublicacionesBackup = redesPublicacionesExistentes.map((post) => ({
-        id: post._id.toString(),
-        cliente: post.cliente?.toString() || null,
-        owner: post.owner?.toString() || null,
-        tipo: post.tipo,
-        plataforma: post.plataforma,
-        fecha: post.fecha || null,
-        hora: post.hora || '09:00',
-        titulo: post.titulo,
-        copy: post.copy || '',
-        linkMaterial: post.linkMaterial || '',
-        estado: post.estado || 'programado',
-        completedAt: post.completedAt || null,
-        completedBy: post.completedBy?.toString() || null,
-        createdAt: post.createdAt || null,
-        updatedAt: post.updatedAt || null
-      }));
+      const redesPublicacionesBackup = redesPublicacionesExistentes.map((post) => serializarPostBackup(post));
 
       backupAutomatico = {
         clientes: JSON.stringify(clientesBackup),
@@ -1373,7 +1357,7 @@ export async function POST(request) {
         redesClientes: JSON.stringify(redesClientesBackup),
         redesPublicaciones: JSON.stringify(redesPublicacionesBackup),
         fechaExportacion: new Date().toISOString(),
-        version: '2.7',
+        version: '2.8',
         tipo: 'backup_automatico_pre_importacion'
       };
       
@@ -2512,33 +2496,9 @@ export async function POST(request) {
         if (actualizado && !Number.isNaN(actualizado.getTime())) doc.updatedAt = actualizado;
         return doc;
       }).filter(Boolean) : null;
-      const publicacionesRedes = Array.isArray(redesPublicaciones) ? redesPublicaciones.map((post) => {
-        const cliente = objectIdDe(post.cliente);
-        const owner = objectIdDe(post.owner);
-        if (!post?.titulo || !cliente || !owner) return null;
-        const doc = {
-          cliente,
-          owner,
-          tipo: ['reel', 'story', 'post', 'carrusel', 'tiktok', 'otro'].includes(post.tipo) ? post.tipo : 'post',
-          plataforma: ['instagram', 'facebook', 'tiktok', 'otra'].includes(post.plataforma) ? post.plataforma : 'instagram',
-          fecha: post.fecha ? new Date(post.fecha) : null,
-          hora: String(post.hora || '09:00').trim(),
-          titulo: String(post.titulo).trim(),
-          copy: String(post.copy || '').trim(),
-          linkMaterial: String(post.linkMaterial || '').trim(),
-          estado: post.estado === 'hecho' ? 'hecho' : 'programado',
-          completedAt: post.completedAt ? new Date(post.completedAt) : null,
-          completedBy: objectIdDe(post.completedBy)
-        };
-        if (!doc.fecha || Number.isNaN(doc.fecha.getTime())) return null;
-        const id = objectIdDe(post.id || post._id);
-        if (id) doc._id = id;
-        const creado = post.createdAt ? new Date(post.createdAt) : null;
-        const actualizado = post.updatedAt ? new Date(post.updatedAt) : null;
-        if (creado && !Number.isNaN(creado.getTime())) doc.createdAt = creado;
-        if (actualizado && !Number.isNaN(actualizado.getTime())) doc.updatedAt = actualizado;
-        return doc;
-      }).filter(Boolean) : null;
+      const publicacionesRedes = Array.isArray(redesPublicaciones)
+        ? redesPublicaciones.map((post) => prepararPostBackup(post, objectIdDe)).filter(Boolean)
+        : null;
 
       if (Array.isArray(redesClientes) && clientesRedes && clientesRedes.length !== redesClientes.length) {
         throw new Error(`Hay ${redesClientes.length - clientesRedes.length} clientes de redes inválidos en el backup. La cartera de RRSS no se modificó.`);

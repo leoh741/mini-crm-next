@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
-import SocialPost from '../../../../models/SocialPost';
+import SocialPost, { datosAgenda, normalizarAgenda, normalizarPlataformas, normalizarTipos, plataformasDe, tiposDe } from '../../../../models/SocialPost';
 import SocialClient from '../../../../models/SocialClient';
 import { requireRedesUser, filtroOwner } from '../../../../lib/redesAccess';
 
@@ -20,9 +20,12 @@ function serializar(post) {
     id: post._id.toString(),
     cliente,
     owner,
-    tipo: post.tipo,
-    plataforma: post.plataforma,
+    tipo: tiposDe(post)[0],
+    tipos: tiposDe(post),
+    plataforma: plataformasDe(post)[0],
+    plataformas: plataformasDe(post),
     fecha: post.fecha,
+    ...datosAgenda(post),
     hora: post.hora || '09:00',
     titulo: post.titulo,
     copy: post.copy || '',
@@ -52,17 +55,48 @@ export async function GET(request) {
     const desde = searchParams.get('desde');
     const hasta = searchParams.get('hasta');
     if (desde || hasta) {
-      query.fecha = {};
-      if (desde) query.fecha.$gte = new Date(desde);
-      if (hasta) query.fecha.$lte = new Date(hasta);
+      const rango = {};
+      if (desde) rango.$gte = new Date(desde);
+      if (hasta) rango.$lte = new Date(hasta);
+      const condicionesFecha = [
+        {
+          fecha: rango,
+          $or: [
+            { repeticion: { $exists: false } },
+            { repeticion: null },
+            { repeticion: 'unica' }
+          ]
+        },
+        {
+          repeticion: 'dias',
+          $or: [
+            { fecha: rango },
+            { fechas: { $elemMatch: rango } }
+          ]
+        },
+        {
+          repeticion: 'fija',
+          ...(hasta ? { fecha: { $lte: new Date(hasta) } } : {})
+        }
+      ];
+      query.$and = [{ $or: condicionesFecha }];
     }
     const estado = searchParams.get('estado');
-    if (estado === 'programado' || estado === 'hecho') query.estado = estado;
+    if (estado === 'programado' || estado === 'hecho') {
+      query.$and = query.$and || [];
+      query.$and.push({
+        $or: [
+          { estado },
+          { repeticion: { $in: ['dias', 'fija'] } }
+        ]
+      });
+    }
 
     const posts = await SocialPost.find(query)
       .populate('cliente', 'nombre driveUrl')
       .populate('owner', 'nombre')
       .populate('completedBy', 'nombre')
+      .populate('hechas.by', 'nombre')
       .sort({ fecha: 1, hora: 1 })
       .lean();
 
@@ -99,19 +133,40 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'La fecha es requerida' }, { status: 400 });
     }
 
+    const tipos = normalizarTipos(body.tipos, body.tipo);
+    if (!tipos.length) {
+      return NextResponse.json({ success: false, error: 'Elegí al menos un formato' }, { status: 400 });
+    }
+    const plataformas = normalizarPlataformas(body.plataformas, body.plataforma);
+    if (!plataformas.length) {
+      return NextResponse.json({ success: false, error: 'Elegí al menos una red' }, { status: 400 });
+    }
+    const agenda = normalizarAgenda(body);
+    if (agenda.repeticion === 'fija' && agenda.diasSemana.length === 0) {
+      return NextResponse.json({ success: false, error: 'Elegí al menos un día de la semana' }, { status: 400 });
+    }
+    if (agenda.repeticion === 'dias' && agenda.fechas.length === 0) {
+      return NextResponse.json({ success: false, error: 'Sumá al menos otro día' }, { status: 400 });
+    }
+
     const post = await SocialPost.create({
       cliente: cliente._id,
       owner: cliente.owner,
-      tipo: body.tipo || 'post',
-      plataforma: body.plataforma || 'instagram',
+      tipo: tipos[0],
+      tipos,
+      plataforma: plataformas[0],
+      plataformas,
       fecha,
+      repeticion: agenda.repeticion,
+      diasSemana: agenda.diasSemana,
+      fechas: agenda.fechas,
       hora: String(body.hora || '09:00').trim(),
       titulo,
       copy: String(body.copy || '').trim(),
       linkMaterial: String(body.linkMaterial || '').trim(),
       estado: 'programado'
     });
-    const poblado = await SocialPost.findById(post._id).populate('cliente', 'nombre driveUrl').populate('owner', 'nombre').populate('completedBy', 'nombre').lean();
+    const poblado = await SocialPost.findById(post._id).populate('cliente', 'nombre driveUrl').populate('owner', 'nombre').populate('completedBy', 'nombre').populate('hechas.by', 'nombre').lean();
     return NextResponse.json({ success: true, data: serializar(poblado) }, { status: 201 });
   } catch (error) {
     console.error('[RRSS publicaciones POST]', error);

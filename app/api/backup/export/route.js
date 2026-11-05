@@ -13,7 +13,7 @@ import ActivityList from '../../../../models/ActivityList';
 import Activity from '../../../../models/Activity';
 import Report from '../../../../models/Report';
 import SocialClient from '../../../../models/SocialClient';
-import SocialPost from '../../../../models/SocialPost';
+import SocialPost, { serializarPostBackup } from '../../../../models/SocialPost';
 import { logOperation, logDatabaseState, getDatabaseCounts } from '../../../../lib/auditLogger';
 import mongoose from 'mongoose';
 
@@ -477,23 +477,7 @@ export async function GET() {
       createdAt: cliente.createdAt || null,
       updatedAt: cliente.updatedAt || null
     }));
-    const redesPublicacionesFormateadas = redesPublicaciones.map((post) => ({
-      id: post._id.toString(),
-      cliente: post.cliente?.toString() || null,
-      owner: post.owner?.toString() || null,
-      tipo: post.tipo,
-      plataforma: post.plataforma,
-      fecha: post.fecha || null,
-      hora: post.hora || '09:00',
-      titulo: post.titulo,
-      copy: post.copy || '',
-      linkMaterial: post.linkMaterial || '',
-      estado: post.estado || 'programado',
-      completedAt: post.completedAt || null,
-      completedBy: post.completedBy?.toString() || null,
-      createdAt: post.createdAt || null,
-      updatedAt: post.updatedAt || null
-    }));
+    const redesPublicacionesFormateadas = redesPublicaciones.map((post) => serializarPostBackup(post));
 
     // Formato compatible: devolver como objetos/arrays directamente
     // El frontend los serializará cuando cree el archivo JSON
@@ -514,7 +498,7 @@ export async function GET() {
       redesClientes: redesClientesFormateados,
       redesPublicaciones: redesPublicacionesFormateadas,
       fechaExportacion: new Date().toISOString(),
-      version: '2.7'
+      version: '2.8'
     };
     
     // Logging para verificar que todas las actividades se exportaron

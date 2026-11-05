@@ -5,6 +5,7 @@ import { getActivityLists, createActivityList, updateActivityList, deleteActivit
 import { getActivities, createActivity, updateActivity, deleteActivity, reorderActivities } from "../../lib/activitiesUtils";
 import { getUsuarioActual, puedeGestionarActividades, esAdmin } from "../../lib/authUtils";
 import { actividadCaeEnRango } from "../../lib/fechaActividad";
+import { coincideBusqueda } from "../../lib/textoBusqueda";
 import { getUsuarios } from "../../lib/usuariosUtils";
 import ProtectedRoute from "../../components/ProtectedRoute";
 import { Icons } from "../../components/Icons";
@@ -41,6 +42,7 @@ function ActivitiesPageContent() {
   const [selectedListId, setSelectedListId] = useState(null);
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [cargandoPedidos, setCargandoPedidos] = useState(false);
   const [error, setError] = useState("");
   const [filterStatus, setFilterStatus] = useState("pendiente");
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -489,7 +491,10 @@ function ActivitiesPageContent() {
     activitiesLoadingRef.current = true;
 
     try {
-      if (!silent) setError("");
+      if (!silent) {
+        setError("");
+        setCargandoPedidos(true);
+      }
       const activitiesData = await getActivities(listId, buildActivityFilters());
 
       // Ignorar respuestas obsoletas si el usuario cambió de lista/filtro
@@ -512,6 +517,7 @@ function ActivitiesPageContent() {
     } finally {
       if (requestId === activitiesLoadIdRef.current) {
         activitiesLoadingRef.current = false;
+        if (!silent) setCargandoPedidos(false);
       }
     }
   };
@@ -532,13 +538,12 @@ function ActivitiesPageContent() {
     }
 
     if (searchKeyword.trim()) {
-      const keywordLower = searchKeyword.toLowerCase().trim();
+      const keyword = searchKeyword.trim();
       filtered = filtered.filter(a => {
-        if (a.title?.toLowerCase().includes(keywordLower)) return true;
-        if (a.description?.toLowerCase().includes(keywordLower)) return true;
-        if (a.assignee?.nombre?.toLowerCase().includes(keywordLower)) return true;
-        if (a.assignee?.name?.toLowerCase().includes(keywordLower)) return true;
-        if (a.labels?.some(label => label.toLowerCase().includes(keywordLower))) return true;
+        if (coincideBusqueda(a.title, keyword)) return true;
+        if (coincideBusqueda(a.description, keyword)) return true;
+        if (coincideBusqueda(a.assignee?.nombre || a.assignee?.name, keyword)) return true;
+        if (a.labels?.some((label) => coincideBusqueda(label, keyword))) return true;
         return false;
       });
     }
@@ -567,6 +572,9 @@ function ActivitiesPageContent() {
       return new Date(b.createdAt) - new Date(a.createdAt);
     });
   }, [activities, filterStatus, searchKeyword, filterDateFrom, filterDateTo]);
+
+  const busquedaPendiente = searchKeyword.trim() !== debouncedSearch;
+  const mostrandoCarga = cargandoPedidos || busquedaPendiente;
 
   // Función helper para calcular si un usuario está online
   const calculateUserIsOnline = (user, usersLastSeenMap) => {
@@ -1450,7 +1458,7 @@ function ActivitiesPageContent() {
                   <p className="text-[11px] text-slate-500 md:pb-2">
                     {filterStatus === "completada"
                       ? "El rango filtra por fecha de completado (historial incluido)"
-                      : "El rango filtra por vencimiento. Si no tiene, usa la fecha del nombre (05 11 = 05/11)"}
+                      : "El rango filtra por vencimiento. Si no tiene, usa la fecha del nombre (05 11 = 05/11) o la de creación"}
                   </p>
                 </div>
               </div>
@@ -1494,6 +1502,15 @@ function ActivitiesPageContent() {
                     >
                       Mes anterior
                     </button>
+                    {mostrandoCarga && (
+                      <button
+                        type="button"
+                        disabled
+                        className="px-3 py-2 bg-blue-900/70 border border-blue-600 rounded-lg text-xs text-blue-100 cursor-wait"
+                      >
+                        Cargando...
+                      </button>
+                    )}
                     {(filterDateFrom || filterDateTo) && (
                       <button
                         type="button"
@@ -1523,13 +1540,15 @@ function ActivitiesPageContent() {
                 e.dataTransfer.dropEffect = 'move';
               }}
             >
-              {filteredActivities.length === 0 ? (
+              {mostrandoCarga ? (
+                <p className="text-blue-200 text-center py-8">Cargando...</p>
+              ) : filteredActivities.length === 0 ? (
                 <p className="text-slate-400 text-center py-8">
-                  {activities.length === 0
+                  {searchKeyword.trim() || filterDateFrom || filterDateTo
+                    ? "No hay pedidos que coincidan con la búsqueda"
+                    : activities.length === 0
                     ? "No hay pedidos en esta lista"
-                    : searchKeyword.trim() || filterDateFrom || filterDateTo || filterStatus
-                    ? "No hay pedidos que coincidan con los filtros o búsqueda"
-                    : "No hay pedidos"}
+                    : "No hay pedidos que coincidan con el filtro"}
                 </p>
               ) : (
                 filteredActivities.map((activity) => (
