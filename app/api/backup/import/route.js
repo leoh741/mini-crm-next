@@ -16,6 +16,8 @@ import TeamMember from '../../../../models/TeamMember';
 import ActivityList from '../../../../models/ActivityList';
 import Activity from '../../../../models/Activity';
 import Report from '../../../../models/Report';
+import SocialClient from '../../../../models/SocialClient';
+import SocialPost from '../../../../models/SocialPost';
 
 export async function POST(request) {
   // PROTECCIÓN CRÍTICA: Bloquear importaciones desde desarrollo local si se conecta a base remota
@@ -112,7 +114,9 @@ export async function POST(request) {
       TeamMember,
       ActivityList,
       Activity,
-      Report
+      Report,
+      SocialClient,
+      SocialPost
     });
     logDatabaseState('BEFORE_IMPORT', countsBefore);
     logOperation('IMPORT_START', {
@@ -201,6 +205,8 @@ export async function POST(request) {
     let activityLists = []; // Inicializar activityLists como array vacío para compatibilidad con backups antiguos
     let activities = []; // Inicializar activities como array vacío para compatibilidad con backups antiguos
     let informes = []; // Inicializar informes como array vacío para compatibilidad con backups antiguos
+    let redesClientes = null;
+    let redesPublicaciones = null;
 
     // Función helper para parsear strings JSON que pueden estar doblemente serializados
     const parseJsonField = (field, fieldName) => {
@@ -234,7 +240,8 @@ export async function POST(request) {
         // Para campos de array (clientes, usuarios, presupuestos, reuniones, tareas, equipo, activityLists, activities, informes)
         if (fieldName.includes('clientes') || fieldName.includes('usuarios') || fieldName.includes('presupuestos') || 
             fieldName.includes('reuniones') || fieldName.includes('tareas') || fieldName.includes('equipo') ||
-            fieldName.includes('activityLists') || fieldName.includes('activities') || fieldName.includes('informes')) {
+            fieldName.includes('activityLists') || fieldName.includes('activities') || fieldName.includes('informes') ||
+            fieldName.includes('redes')) {
           return [];
         }
         // Para campos de objeto (pagosMensuales, gastos, ingresos)
@@ -279,6 +286,12 @@ export async function POST(request) {
         informes = parseJsonField(body.informes, 'informes');
       } else {
         informes = []; // Backup antiguo sin informes
+      }
+      if (body.redesClientes !== undefined && body.redesClientes !== null) {
+        redesClientes = parseJsonField(body.redesClientes, 'redesClientes');
+      }
+      if (body.redesPublicaciones !== undefined && body.redesPublicaciones !== null) {
+        redesPublicaciones = parseJsonField(body.redesPublicaciones, 'redesPublicaciones');
       }
       
       console.log(`[BACKUP IMPORT] [${timestamp}] Datos parseados:`);
@@ -931,17 +944,37 @@ export async function POST(request) {
                                  documentosExistentes.tareas + documentosExistentes.equipo +
                                  documentosExistentes.activityLists + documentosExistentes.activities + documentosExistentes.informes;
     
-    if (totalDatosExistentes > 0 && totalDatosPreparados < totalDatosExistentes) {
+    const advertenciasTempranas = [];
+    if (Array.isArray(redesClientes)) {
+      const existentesRedes = await SocialClient.countDocuments();
+      if (existentesRedes > redesClientes.length) {
+        advertenciasTempranas.push(`Clientes de redes: Tienes ${existentesRedes} pero el backup solo tiene ${redesClientes.length} (pérdida de ${existentesRedes - redesClientes.length} clientes de redes)`);
+      }
+    }
+    if (Array.isArray(redesPublicaciones)) {
+      const existentesPosts = await SocialPost.countDocuments();
+      if (existentesPosts > redesPublicaciones.length) {
+        advertenciasTempranas.push(`Publicaciones de redes: Tienes ${existentesPosts} pero el backup solo tiene ${redesPublicaciones.length} (pérdida de ${existentesPosts - redesPublicaciones.length} publicaciones)`);
+      }
+    }
+
+    const hayMenosDatosGenerales = totalDatosExistentes > 0 && totalDatosPreparados < totalDatosExistentes;
+    if (hayMenosDatosGenerales || advertenciasTempranas.length > 0) {
       console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ ADVERTENCIA: El backup tiene MENOS datos (${totalDatosPreparados}) que los existentes (${totalDatosExistentes})`);
       if (!body.confirmDataLoss || body.confirmDataLoss !== true) {
         return NextResponse.json(
           {
             success: false,
-            error: `ADVERTENCIA: El backup contiene MENOS datos (${totalDatosPreparados} items) que los existentes (${totalDatosExistentes} items). Si continúas, perderás información. Para continuar, agrega "confirmDataLoss": true además de las otras confirmaciones.`,
+            error: hayMenosDatosGenerales
+              ? `ADVERTENCIA: El backup contiene MENOS datos (${totalDatosPreparados} items) que los existentes (${totalDatosExistentes} items). Si continúas, perderás información. Para continuar, agrega "confirmDataLoss": true además de las otras confirmaciones.`
+              : 'ADVERTENCIA: El backup de redes tiene menos datos que los existentes. Si continúas, perderás esa cartera. Para continuar, agrega "confirmDataLoss": true además de las otras confirmaciones.',
             requiereConfirmacion: true,
             advertencias: [
-              `El backup tiene ${totalDatosPreparados} items pero existen ${totalDatosExistentes} items en la base de datos`,
-              `Pérdida estimada: ${totalDatosExistentes - totalDatosPreparados} items`
+              ...(hayMenosDatosGenerales ? [
+                `El backup tiene ${totalDatosPreparados} items pero existen ${totalDatosExistentes} items en la base de datos`,
+                `Pérdida estimada: ${totalDatosExistentes - totalDatosPreparados} items`
+              ] : []),
+              ...advertenciasTempranas
             ],
             datosExistentes: documentosExistentes,
             datosPreparados: {
@@ -1049,6 +1082,26 @@ export async function POST(request) {
       hayPerdidaPotencial = true;
       advertenciasPerdida.push(`Actividades: Tienes ${documentosExistentes.activities} pero el backup solo tiene ${documentosAImportar.activities} (pérdida de ${documentosExistentes.activities - documentosAImportar.activities} actividades)`);
     }
+
+    if (Array.isArray(redesClientes)) {
+      const existentesRedes = await SocialClient.countDocuments();
+      documentosExistentes.redesClientes = existentesRedes;
+      documentosAImportar.redesClientes = redesClientes.length;
+      if (existentesRedes > 0 && redesClientes.length < existentesRedes) {
+        hayPerdidaPotencial = true;
+        advertenciasPerdida.push(`Clientes de redes: Tienes ${existentesRedes} pero el backup solo tiene ${redesClientes.length} (pérdida de ${existentesRedes - redesClientes.length} clientes de redes)`);
+      }
+    }
+
+    if (Array.isArray(redesPublicaciones)) {
+      const existentesPosts = await SocialPost.countDocuments();
+      documentosExistentes.redesPublicaciones = existentesPosts;
+      documentosAImportar.redesPublicaciones = redesPublicaciones.length;
+      if (existentesPosts > 0 && redesPublicaciones.length < existentesPosts) {
+        hayPerdidaPotencial = true;
+        advertenciasPerdida.push(`Publicaciones de redes: Tienes ${existentesPosts} pero el backup solo tiene ${redesPublicaciones.length} (pérdida de ${existentesPosts - redesPublicaciones.length} publicaciones)`);
+      }
+    }
     
     // Si hay pérdida potencial significativa, requerir confirmación adicional
     if (hayPerdidaPotencial) {
@@ -1076,7 +1129,7 @@ export async function POST(request) {
     // PROTECCIÓN CRÍTICA: Crear backup automático ANTES de borrar cualquier cosa
     console.log(`[BACKUP IMPORT] [${timestamp}] 🔒 Creando backup automático de seguridad antes de importar...`);
     try {
-      const [clientesExistentes, pagosExistentes, gastosExistentes, ingresosExistentes, presupuestosExistentes, reunionesExistentes, tareasExistentes, equipoExistentes, activityListsExistentes, activitiesExistentes] = await Promise.all([
+      const [clientesExistentes, pagosExistentes, gastosExistentes, ingresosExistentes, presupuestosExistentes, reunionesExistentes, tareasExistentes, equipoExistentes, activityListsExistentes, activitiesExistentes, redesClientesExistentes, redesPublicacionesExistentes] = await Promise.all([
         Client.find({}).lean(),
         MonthlyPayment.find({}).lean(),
         Expense.find({}).lean(),
@@ -1091,7 +1144,9 @@ export async function POST(request) {
           .populate('createdBy', 'nombre email crmId')
           .populate({ path: 'completedBy', select: 'nombre email crmId', strictPopulate: false })
           .populate('list', 'name color')
-          .lean()
+          .lean(),
+        SocialClient.find({}).lean(),
+        SocialPost.find({}).lean()
       ]);
       
       // Formatear para backup (igual que en export)
@@ -1276,6 +1331,34 @@ export async function POST(request) {
         updatedAt: activity.updatedAt || null
       }));
       
+      const redesClientesBackup = redesClientesExistentes.map((cliente) => ({
+        id: cliente._id.toString(),
+        nombre: cliente.nombre,
+        notas: cliente.notas || '',
+        driveUrl: cliente.driveUrl || '',
+        activo: cliente.activo !== false,
+        owner: cliente.owner?.toString() || null,
+        createdAt: cliente.createdAt || null,
+        updatedAt: cliente.updatedAt || null
+      }));
+      const redesPublicacionesBackup = redesPublicacionesExistentes.map((post) => ({
+        id: post._id.toString(),
+        cliente: post.cliente?.toString() || null,
+        owner: post.owner?.toString() || null,
+        tipo: post.tipo,
+        plataforma: post.plataforma,
+        fecha: post.fecha || null,
+        hora: post.hora || '09:00',
+        titulo: post.titulo,
+        copy: post.copy || '',
+        linkMaterial: post.linkMaterial || '',
+        estado: post.estado || 'programado',
+        completedAt: post.completedAt || null,
+        completedBy: post.completedBy?.toString() || null,
+        createdAt: post.createdAt || null,
+        updatedAt: post.updatedAt || null
+      }));
+
       backupAutomatico = {
         clientes: JSON.stringify(clientesBackup),
         pagosMensuales: JSON.stringify(pagosMensualesBackup),
@@ -1287,8 +1370,10 @@ export async function POST(request) {
         equipo: JSON.stringify(equipoBackup),
         activityLists: JSON.stringify(activityListsBackup),
         activities: JSON.stringify(activitiesBackup),
+        redesClientes: JSON.stringify(redesClientesBackup),
+        redesPublicaciones: JSON.stringify(redesPublicacionesBackup),
         fechaExportacion: new Date().toISOString(),
-        version: '2.6',
+        version: '2.7',
         tipo: 'backup_automatico_pre_importacion'
       };
       
@@ -2404,6 +2489,85 @@ export async function POST(request) {
       console.warn(`[BACKUP IMPORT] [${timestamp}] ⚠️ No se importaron informes: informesPreparados.length=${informesPreparados?.length || 0}, tieneInformes=${tieneInformes}`);
     }
 
+    if (Array.isArray(redesClientes) || Array.isArray(redesPublicaciones)) {
+      const objectIdDe = (valor) => {
+        const texto = valor && typeof valor === 'object' ? (valor._id || valor.id || '') : valor;
+        return texto && mongoose.Types.ObjectId.isValid(String(texto)) ? new mongoose.Types.ObjectId(String(texto)) : null;
+      };
+      const clientesRedes = Array.isArray(redesClientes) ? redesClientes.map((cliente) => {
+        const owner = objectIdDe(cliente.owner);
+        if (!cliente?.nombre || !owner) return null;
+        const doc = {
+          nombre: String(cliente.nombre).trim(),
+          notas: String(cliente.notas || '').trim(),
+          driveUrl: String(cliente.driveUrl || '').trim(),
+          activo: cliente.activo !== false,
+          owner
+        };
+        const id = objectIdDe(cliente.id || cliente._id);
+        if (id) doc._id = id;
+        const creado = cliente.createdAt ? new Date(cliente.createdAt) : null;
+        const actualizado = cliente.updatedAt ? new Date(cliente.updatedAt) : null;
+        if (creado && !Number.isNaN(creado.getTime())) doc.createdAt = creado;
+        if (actualizado && !Number.isNaN(actualizado.getTime())) doc.updatedAt = actualizado;
+        return doc;
+      }).filter(Boolean) : null;
+      const publicacionesRedes = Array.isArray(redesPublicaciones) ? redesPublicaciones.map((post) => {
+        const cliente = objectIdDe(post.cliente);
+        const owner = objectIdDe(post.owner);
+        if (!post?.titulo || !cliente || !owner) return null;
+        const doc = {
+          cliente,
+          owner,
+          tipo: ['reel', 'story', 'post', 'carrusel', 'tiktok', 'otro'].includes(post.tipo) ? post.tipo : 'post',
+          plataforma: ['instagram', 'facebook', 'tiktok', 'otra'].includes(post.plataforma) ? post.plataforma : 'instagram',
+          fecha: post.fecha ? new Date(post.fecha) : null,
+          hora: String(post.hora || '09:00').trim(),
+          titulo: String(post.titulo).trim(),
+          copy: String(post.copy || '').trim(),
+          linkMaterial: String(post.linkMaterial || '').trim(),
+          estado: post.estado === 'hecho' ? 'hecho' : 'programado',
+          completedAt: post.completedAt ? new Date(post.completedAt) : null,
+          completedBy: objectIdDe(post.completedBy)
+        };
+        if (!doc.fecha || Number.isNaN(doc.fecha.getTime())) return null;
+        const id = objectIdDe(post.id || post._id);
+        if (id) doc._id = id;
+        const creado = post.createdAt ? new Date(post.createdAt) : null;
+        const actualizado = post.updatedAt ? new Date(post.updatedAt) : null;
+        if (creado && !Number.isNaN(creado.getTime())) doc.createdAt = creado;
+        if (actualizado && !Number.isNaN(actualizado.getTime())) doc.updatedAt = actualizado;
+        return doc;
+      }).filter(Boolean) : null;
+
+      if (Array.isArray(redesClientes) && clientesRedes && clientesRedes.length !== redesClientes.length) {
+        throw new Error(`Hay ${redesClientes.length - clientesRedes.length} clientes de redes inválidos en el backup. La cartera de RRSS no se modificó.`);
+      }
+      if (Array.isArray(redesPublicaciones) && publicacionesRedes && publicacionesRedes.length !== redesPublicaciones.length) {
+        throw new Error(`Hay ${redesPublicaciones.length - publicacionesRedes.length} publicaciones de redes inválidas en el backup. La cartera de RRSS no se modificó.`);
+      }
+
+      if (clientesRedes) {
+        await SocialClient.deleteMany({});
+        if (clientesRedes.length > 0) await SocialClient.insertMany(clientesRedes);
+        const guardados = await SocialClient.countDocuments();
+        if (guardados !== clientesRedes.length) {
+          throw new Error(`Se esperaban ${clientesRedes.length} clientes de redes y quedaron ${guardados}.`);
+        }
+        resultados.redesClientes = clientesRedes.length;
+      }
+      if (publicacionesRedes) {
+        await SocialPost.deleteMany({});
+        if (publicacionesRedes.length > 0) await SocialPost.insertMany(publicacionesRedes);
+        const guardadas = await SocialPost.countDocuments();
+        if (guardadas !== publicacionesRedes.length) {
+          throw new Error(`Se esperaban ${publicacionesRedes.length} publicaciones de redes y quedaron ${guardadas}.`);
+        }
+        resultados.redesPublicaciones = publicacionesRedes.length;
+      }
+      console.log(`[BACKUP IMPORT] [${timestamp}] ✅ RRSS importado: ${resultados.redesClientes || 0} clientes, ${resultados.redesPublicaciones || 0} publicaciones`);
+    }
+
     // PROTECCIÓN CRÍTICA: Esperar un momento para que MongoDB persista todos los cambios
     await new Promise(resolve => setTimeout(resolve, 500));
     
@@ -2467,7 +2631,9 @@ export async function POST(request) {
       TeamMember,
       ActivityList,
       Activity,
-      Report
+      Report,
+      SocialClient,
+      SocialPost
     });
     logDatabaseState('AFTER_IMPORT', countsAfter);
     
@@ -2528,7 +2694,10 @@ export async function POST(request) {
       Task,
       TeamMember,
       ActivityList,
-      Activity
+      Activity,
+      Report,
+      SocialClient,
+      SocialPost
     });
     
     // Comparar con countsAfter

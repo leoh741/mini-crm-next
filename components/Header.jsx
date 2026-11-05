@@ -4,13 +4,15 @@ import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { getUsuarioActual, logout, esAdmin } from "../lib/authUtils";
+import { getUsuarioActual, logout, esAdmin, esCM, puedeAccederRedes } from "../lib/authUtils";
 
 function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const [usuario, setUsuario] = useState(null);
   const [esAdminUser, setEsAdminUser] = useState(false);
+  const [esCMUser, setEsCMUser] = useState(false);
+  const [puedeRedes, setPuedeRedes] = useState(false);
   const [menuAbierto, setMenuAbierto] = useState(false);
   
   // No mostrar header en páginas compartidas
@@ -22,6 +24,8 @@ function Header() {
     const usuarioActual = getUsuarioActual();
     setUsuario(usuarioActual);
     setEsAdminUser(esAdmin());
+    setEsCMUser(esCM());
+    setPuedeRedes(puedeAccederRedes());
   }, [pathname]);
 
   useEffect(() => {
@@ -97,7 +101,7 @@ function Header() {
       }}
     >
       <div className="flex justify-between items-center gap-2 px-3 py-2.5 md:px-4 md:py-4 min-h-[56px] md:min-h-0 w-full" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
-        <div className="flex items-center min-w-0 overflow-hidden flex-1" style={{ minWidth: 0, maxWidth: 'calc(100% - 60px)' }}>
+        <div className="flex items-center shrink-0">
           <Link href="/" onClick={() => setMenuAbierto(false)} className="min-w-0 flex items-center">
             {/* Logo en móvil y desktop, con tamaño reducido en móvil */}
             <Image 
@@ -114,7 +118,7 @@ function Header() {
         </div>
         
         {/* Menú desktop */}
-        <nav className="hidden md:flex gap-4 text-sm items-center flex-shrink-0">
+        <nav className="hidden md:flex gap-x-2.5 text-xs xl:gap-x-3 xl:text-sm items-center min-w-0 flex-1 overflow-x-auto [&_a]:shrink-0 [&_a]:whitespace-nowrap">
           {/* Solo mostrar enlaces de admin para administradores */}
           {esAdminUser && (
             <>
@@ -123,10 +127,16 @@ function Header() {
               </Link>
             </>
           )}
-          {/* Actividades visible para todos los usuarios autenticados */}
-          <Link href="/activities" prefetch={true} className={pathname?.startsWith("/activities") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
-            Pedidos
-          </Link>
+          {!esCMUser && (
+            <Link href="/activities" prefetch={true} className={pathname?.startsWith("/activities") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
+              Pedidos
+            </Link>
+          )}
+          {puedeRedes && (
+            <Link href="/redes" prefetch={true} className={pathname?.startsWith("/redes") ? "text-fuchsia-300" : "text-slate-300 hover:text-white"}>
+              RRSS
+            </Link>
+          )}
           {esAdminUser && (
             <>
               <Link href="/clientes" prefetch={true} className={pathname?.startsWith("/clientes") ? "text-blue-300" : "text-slate-300 hover:text-white"}>
@@ -161,18 +171,18 @@ function Header() {
               </Link>
             </>
           )}
-          {usuario && (
-            <div className="flex items-center gap-3 ml-4 pl-4 border-l border-blue-800">
-              <span className="text-xs text-slate-300 hidden lg:inline">{usuario.nombre}</span>
-              <button
-                onClick={handleLogout}
-                className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-xs font-medium"
-              >
-                Salir
-              </button>
-            </div>
-          )}
         </nav>
+        {usuario && (
+          <div className="hidden md:flex items-center gap-2 shrink-0 pl-2 border-l border-blue-800">
+            <span className="text-xs text-slate-300 hidden xl:inline">{usuario.nombre}</span>
+            <button
+              onClick={handleLogout}
+              className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-xs font-medium"
+            >
+              Salir
+            </button>
+          </div>
+        )}
 
         {/* Botón hamburguesa móvil */}
         <button
@@ -214,14 +224,24 @@ function Header() {
                 </Link>
               </>
             )}
-            {/* Actividades visible para todos los usuarios autenticados */}
-            <Link 
-              href="/activities" 
-              className={`px-4 py-3 ${pathname?.startsWith("/activities") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
-              onClick={() => setMenuAbierto(false)}
-            >
-              Pedidos
-            </Link>
+            {!esCMUser && (
+              <Link 
+                href="/activities" 
+                className={`px-4 py-3 ${pathname?.startsWith("/activities") ? "text-blue-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
+                onClick={() => setMenuAbierto(false)}
+              >
+                Pedidos
+              </Link>
+            )}
+            {puedeRedes && (
+              <Link
+                href="/redes"
+                className={`px-4 py-3 ${pathname?.startsWith("/redes") ? "text-fuchsia-300 bg-blue-900/50" : "text-slate-300"} hover:bg-blue-900/30`}
+                onClick={() => setMenuAbierto(false)}
+              >
+                RRSS
+              </Link>
+            )}
             {esAdminUser && (
               <>
                 <Link 

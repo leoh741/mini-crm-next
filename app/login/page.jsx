@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { login } from "../../lib/authUtils";
-import { estaAutenticado } from "../../lib/authUtils";
+import { login, estaAutenticado, getSesionActual } from "../../lib/authUtils";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,7 +18,8 @@ export default function LoginPage() {
     
     // Si ya está autenticado, redirigir al inicio
     if (estaAutenticado()) {
-      router.push("/");
+      const sesion = getSesionActual();
+      router.push(sesion?.rol === "cm" ? "/redes" : "/");
       return;
     }
     
@@ -36,8 +36,8 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await login(email, password);
-      router.push("/");
+      const sesion = await login(email, password);
+      router.push(sesion?.rol === "cm" ? "/redes" : "/");
       router.refresh();
     } catch (err) {
       console.error('Error en login:', err);

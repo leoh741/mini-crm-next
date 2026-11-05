@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { getActivityLists, createActivityList, updateActivityList, deleteActivityList } from "../../lib/activitiesUtils";
 import { getActivities, createActivity, updateActivity, deleteActivity, reorderActivities } from "../../lib/activitiesUtils";
 import { getUsuarioActual, puedeGestionarActividades, esAdmin } from "../../lib/authUtils";
+import { actividadCaeEnRango } from "../../lib/fechaActividad";
 import { getUsuarios } from "../../lib/usuariosUtils";
 import ProtectedRoute from "../../components/ProtectedRoute";
 import { Icons } from "../../components/Icons";
@@ -543,15 +544,16 @@ function ActivitiesPageContent() {
     }
 
     if (filterDateFrom || filterDateTo) {
-      const fromMs = filterDateFrom ? Date.parse(`${filterDateFrom}T00:00:00.000Z`) : null;
-      const toMs = filterDateTo ? Date.parse(`${filterDateTo}T23:59:59.999Z`) : null;
       const useCompletedAt = filterStatus === "completada";
 
       filtered = filtered.filter(a => {
-        const raw = useCompletedAt ? (a.completedAt || a.updatedAt || a.createdAt) : a.dueDate;
+        if (!useCompletedAt) return actividadCaeEnRango(a, filterDateFrom, filterDateTo);
+        const raw = a.completedAt || a.updatedAt || a.createdAt;
         if (!raw) return false;
         const ms = new Date(raw).getTime();
         if (Number.isNaN(ms)) return false;
+        const fromMs = filterDateFrom ? Date.parse(`${filterDateFrom}T00:00:00.000Z`) : null;
+        const toMs = filterDateTo ? Date.parse(`${filterDateTo}T23:59:59.999Z`) : null;
         if (fromMs !== null && ms < fromMs) return false;
         if (toMs !== null && ms > toMs) return false;
         return true;
@@ -1448,7 +1450,7 @@ function ActivitiesPageContent() {
                   <p className="text-[11px] text-slate-500 md:pb-2">
                     {filterStatus === "completada"
                       ? "El rango filtra por fecha de completado (historial incluido)"
-                      : "El rango filtra por fecha de vencimiento"}
+                      : "El rango filtra por vencimiento. Si no tiene, usa la fecha del nombre (05 11 = 05/11)"}
                   </p>
                 </div>
               </div>

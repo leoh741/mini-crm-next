@@ -74,8 +74,11 @@ Estados operativos del MVP:
 - Acceso desde menú (Admin y CM).
 - CM solo ve este módulo.
 
-5.2 Cartera de clientes del CM
-- Alta / edición de sus clientes de redes.
+5.2 Cartera de clientes de redes
+- Solo el admin crea clientes, les carga el Drive general del contenido
+  y asigna (o cambia) el responsable: un community manager o, si hace
+  falta, un administrador.
+- El CM no crea clientes: ve los que le asignaron y abre su Drive.
 - Admin ve todos; puede filtrar por CM.
 
 5.3 Calendario por cliente
@@ -122,14 +125,15 @@ Fuera del MVP (fase 2+):
 - Acceso de coordinador a Redes.
 
 --------------------------------------------------------------------------------
-8. DECISIÓN PENDIENTE ANTES DE CODEAR
+8. DECISIÓN CERRADA (2026-11-05)
 --------------------------------------------------------------------------------
 Origen del "cliente de redes":
 A) Vincular a un Cliente existente del CRM + asignar CM responsable.
 B) Cartera propia dentro de Redes (más aislada; recomendable si el CM
    no debe ver el resto del CRM).
 
-Pendiente de cerrar al momento de implementar.
+Se implementa B. El CM no ve el resto del CRM, así que su cartera vive
+dentro de RRSS y no se mezcla con Clientes.
 
 --------------------------------------------------------------------------------
 9. CASOS BORDE A TENER EN CUENTA

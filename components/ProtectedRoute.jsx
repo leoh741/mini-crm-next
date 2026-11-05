@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { estaAutenticado, esAdmin, getUsuarioActual } from "../lib/authUtils";
+import { estaAutenticado, esAdmin, esCM, getUsuarioActual } from "../lib/authUtils";
 
 // Rutas públicas que no requieren autenticación
 const PUBLIC_ROUTES = ['/login', '/registro'];
@@ -77,6 +77,7 @@ export default function ProtectedRoute({ children }) {
 
       // Si está autenticado, verificar permisos según la ruta
       const isAdminUser = esAdmin();
+      const isCMUser = esCM();
       const currentPath = pathname;
       const sesion = getUsuarioActual();
       console.log('[ProtectedRoute] Verificando acceso:', { 
@@ -90,6 +91,18 @@ export default function ProtectedRoute({ children }) {
       if (PUBLIC_ROUTES.some(route => currentPath.startsWith(route))) {
         console.log('[ProtectedRoute] Ruta pública:', currentPath);
         setTieneAcceso(true);
+      }
+      else if (currentPath.startsWith('/redes')) {
+        if (isAdminUser || isCMUser) {
+          setTieneAcceso(true);
+        } else {
+          router.push(isAdminUser ? "/" : "/activities");
+          setTieneAcceso(false);
+        }
+      }
+      else if (isCMUser) {
+        router.push("/redes");
+        setTieneAcceso(false);
       }
       // Verificar si la ruta es accesible para todos los usuarios (VERIFICAR PRIMERO ANTES DE ADMIN_ONLY)
       else if (ALL_USER_ROUTES.some(route => currentPath.startsWith(route))) {

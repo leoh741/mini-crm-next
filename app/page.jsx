@@ -526,6 +526,20 @@ function HomePageContent() {
           </div>
         </Link>
 
+        <Link href="/redes" className="group" prefetch={true}>
+          <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-fuchsia-600 via-fuchsia-700 to-fuchsia-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-fuchsia-500/20 flex flex-col justify-between">
+            <div className="flex items-start justify-between mb-2">
+              <Icons.Tag className="text-3xl group-hover:scale-110 transition-transform duration-300" />
+              <div className="w-1.5 h-1.5 bg-fuchsia-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">RRSS</h3>
+              <p className="text-xs text-fuchsia-100/90">Calendario de redes</p>
+            </div>
+            <div className="absolute bottom-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mb-12 group-hover:scale-150 transition-transform duration-500"></div>
+          </div>
+        </Link>
+
         <Link href="/activities" className="group" prefetch={true}>
           <div className="relative w-full min-h-[130px] p-4 bg-gradient-to-br from-teal-600 via-teal-700 to-teal-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-teal-500/20 flex flex-col justify-between">
             <div className="flex items-start justify-between mb-2">

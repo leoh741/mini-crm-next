@@ -4,6 +4,7 @@ import Activity from '../../../models/Activity';
 import ActivityList from '../../../models/ActivityList';
 import { getCurrentUserId, getCurrentUserRole } from '../../../lib/auth';
 import { updateUserLastSeen } from '../../../lib/userActivity';
+import { actividadCaeEnRango } from '../../../lib/fechaActividad';
 import mongoose from 'mongoose';
 
 // "YYYY-MM-DD" se guarda a las 12:00 UTC para que el día no cambie según la zona horaria
@@ -160,10 +161,16 @@ export async function GET(request) {
       ? dateFieldParam
       : (status === 'completada' ? 'completedAt' : 'dueDate');
 
+    const rangoVencimiento = {};
     if (dueDate && /^\d{4}-\d{2}-\d{2}$/.test(dueDate) && !dateFrom && !dateTo) {
       const start = parseDayStartUTC(dueDate);
       const end = parseDayEndUTC(dueDate);
-      andConditions.push({ [dateField]: { $gte: start, $lte: end } });
+      if (dateField === 'dueDate') {
+        rangoVencimiento.$gte = start;
+        rangoVencimiento.$lte = end;
+      } else {
+        andConditions.push({ [dateField]: { $gte: start, $lte: end } });
+      }
     } else if (dateFrom || dateTo) {
       const range = {};
       const start = parseDayStartUTC(dateFrom);
@@ -171,8 +178,24 @@ export async function GET(request) {
       if (start) range.$gte = start;
       if (end) range.$lte = end;
       if (Object.keys(range).length > 0) {
-        andConditions.push({ [dateField]: range });
+        if (dateField === 'dueDate') {
+          Object.assign(rangoVencimiento, range);
+        } else {
+          andConditions.push({ [dateField]: range });
+        }
       }
+    }
+
+    // Sin vencimiento, la fecha puede estar en el título ("05 11" = 05/11).
+    // Se traen también las que no tienen fecha y se descartan abajo.
+    if (Object.keys(rangoVencimiento).length > 0) {
+      andConditions.push({
+        $or: [
+          { dueDate: rangoVencimiento },
+          { dueDate: null },
+          { dueDate: { $exists: false } }
+        ]
+      });
     }
 
     if (andConditions.length > 0) {
@@ -200,7 +223,7 @@ export async function GET(request) {
       }
     }
 
-    const activities = await Activity.find(query)
+    let activities = await Activity.find(query)
       .populate('assignee', 'nombre email')
       .populate('createdBy', 'nombre email')
       .populate({ path: 'completedBy', select: 'nombre email', strictPopulate: false })
@@ -208,6 +231,12 @@ export async function GET(request) {
       .sort({ order: 1, createdAt: -1 })
       .lean()
       .maxTimeMS(15000);
+
+    if (Object.keys(rangoVencimiento).length > 0) {
+      const desde = dateFrom || dueDate;
+      const hasta = dateTo || dueDate;
+      activities = activities.filter((actividad) => actividadCaeEnRango(actividad, desde, hasta));
+    }
     
     return NextResponse.json({ success: true, data: activities }, {
       headers: {
