@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { getTareas, crearTarea, eliminarTarea, actualizarTarea } from "../../lib/tareasUtils";
 import ProtectedRoute from "../../components/ProtectedRoute";
 import { Icons } from "../../components/Icons";
@@ -27,9 +27,19 @@ function TareasPageContent() {
     asignados: []
   });
   const [nuevoAsignado, setNuevoAsignado] = useState("");
+  const tareasLoadIdRef = useRef(0);
+  const tareasLoadingRef = useRef(false);
+  const guardandoRef = useRef(false);
 
   useEffect(() => {
     cargarTareas(true);
+
+    // Recargar tareas cada 15 s (silencioso: no mostrar error si falla un poll)
+    const tareasInterval = setInterval(() => {
+      cargarTareas(false, { silent: true });
+    }, 15000);
+
+    return () => clearInterval(tareasInterval);
   }, []);
 
   const aplicarTareaEnLista = (tareaActualizada) => {
@@ -47,16 +57,28 @@ function TareasPageContent() {
     setTareas((prev) => prev.filter((t) => t.tareaId !== tareaId));
   };
 
-  const cargarTareas = async (esInicial = false) => {
+  const cargarTareas = async (esInicial = false, { silent = false } = {}) => {
+    if (silent && (tareasLoadingRef.current || guardandoRef.current)) return;
+
+    const requestId = ++tareasLoadIdRef.current;
+    tareasLoadingRef.current = true;
+
     try {
       if (esInicial) setLoading(true);
-      setError("");
+      if (!silent) setError("");
       const datos = await getTareas(null, null, null, false, false);
+      if (requestId !== tareasLoadIdRef.current) return;
       setTareas(datos);
     } catch (err) {
+      if (requestId !== tareasLoadIdRef.current) return;
       console.error('Error al cargar tareas:', err);
-      setError("Error al cargar las tareas.");
+      if (!silent) {
+        setError("Error al cargar las tareas.");
+      }
     } finally {
+      if (requestId === tareasLoadIdRef.current) {
+        tareasLoadingRef.current = false;
+      }
       if (esInicial) setLoading(false);
     }
   };
@@ -200,6 +222,7 @@ function TareasPageContent() {
 
     try {
       setGuardando(true);
+      guardandoRef.current = true;
       setError("");
       
       // Asegurarse de que el título esté presente
@@ -262,6 +285,7 @@ function TareasPageContent() {
     } catch (err) {
       setError(err.message || "Error al guardar la tarea");
     } finally {
+      guardandoRef.current = false;
       setGuardando(false);
     }
   };
@@ -270,6 +294,7 @@ function TareasPageContent() {
     if (!mostrarConfirmacion) return;
     try {
       setGuardando(true);
+      guardandoRef.current = true;
       const tareaId = mostrarConfirmacion;
       await eliminarTarea(tareaId);
       quitarTareaDeLista(tareaId);
@@ -277,6 +302,7 @@ function TareasPageContent() {
     } catch (err) {
       setError(err.message || "Error al eliminar");
     } finally {
+      guardandoRef.current = false;
       setGuardando(false);
     }
   };
@@ -299,6 +325,7 @@ function TareasPageContent() {
       )
     );
 
+    guardandoRef.current = true;
     try {
       const actualizada = await actualizarTarea(tarea.tareaId, { estado: nuevoEstado });
       if (actualizada) aplicarTareaEnLista(actualizada);
@@ -311,6 +338,8 @@ function TareasPageContent() {
         )
       );
       setError(err.message || "Error al actualizar estado");
+    } finally {
+      guardandoRef.current = false;
     }
   };
 

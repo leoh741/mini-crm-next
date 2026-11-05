@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { actualizarCliente, limpiarCacheClientes } from "../lib/clientesUtils";
 import { Icons } from "./Icons";
 import { getTagColor, asignarColoresUnicos } from "../lib/tagColors";
@@ -72,136 +73,56 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
     setEtiquetasCliente(cliente.etiquetas || []);
   }, [cliente.etiquetas]);
 
-  // Ajustar posición del panel cuando se muestra
-  useEffect(() => {
-    if (mostrarPanel && panelRef.current && panelContentRef.current) {
-      const buttonRect = panelRef.current.getBoundingClientRect();
-      const footerHeight = 60;
-      const viewportHeight = window.innerHeight;
-      const viewportWidth = window.innerWidth;
-      const spaceBelow = viewportHeight - buttonRect.bottom;
-      const spaceAbove = buttonRect.top;
-      const spaceRight = viewportWidth - buttonRect.right;
-      const panelHeight = 300;
-      const panelWidth = 256;
-      const isMobile = viewportWidth < 640;
-      const margin = 16;
-      
-      if (isMobile) {
-        // Móvil: usar fixed para evitar problemas de overflow
-        panelContentRef.current.style.position = 'fixed';
-        const panelWidthActual = Math.min(panelWidth, viewportWidth - (margin * 2));
-        panelContentRef.current.style.width = `${panelWidthActual}px`;
-        
-        // Posición horizontal: alinear con el borde derecho del botón
-        let leftPos = buttonRect.right - panelWidthActual;
-        
-        // Si se sale por la izquierda, ajustar
-        if (leftPos < margin) {
-          leftPos = margin;
-        }
-        
-        // Si se sale por la derecha, ajustar
-        if (leftPos + panelWidthActual > viewportWidth - margin) {
-          leftPos = viewportWidth - panelWidthActual - margin;
-        }
-        
-        panelContentRef.current.style.left = `${leftPos}px`;
-        panelContentRef.current.style.right = 'auto';
-        
-        // Posición vertical: SIEMPRE mostrar el panel usando solo 'top' (más confiable)
-        const topMargin = 20;
-        const bottomMargin = footerHeight + 20;
-        const minPanelHeight = 150;
-        const buttonSpacing = 8;
-        
-        // Calcular espacio disponible de forma más simple
-        const spaceBelowUsable = Math.max(0, viewportHeight - buttonRect.bottom - buttonSpacing - bottomMargin);
-        const spaceAboveUsable = Math.max(0, buttonRect.top - topMargin - buttonSpacing);
-        
-        let topPosition;
-        let maxHeight;
-        
-        // Estrategia simple: intentar abajo primero, si no cabe, arriba
-        if (spaceBelowUsable >= minPanelHeight) {
-          // Mostrar abajo: hay espacio suficiente
-          topPosition = buttonRect.bottom + buttonSpacing;
-          maxHeight = spaceBelowUsable;
-        } else if (spaceAboveUsable >= minPanelHeight) {
-          // Mostrar arriba: no hay espacio abajo pero sí arriba
-          // Posicionar el panel para que termine justo antes del botón
-          maxHeight = Math.min(panelHeight, spaceAboveUsable);
-          topPosition = buttonRect.top - maxHeight - buttonSpacing;
-          // Asegurar que no se salga del top
-          if (topPosition < topMargin) {
-            topPosition = topMargin;
-            maxHeight = buttonRect.top - topPosition - buttonSpacing;
-          }
-        } else {
-          // No hay espacio suficiente en ninguna dirección
-          // Usar la que tenga más espacio (aunque sea poco)
-          if (spaceAboveUsable > spaceBelowUsable) {
-            // Mostrar arriba con el espacio disponible
-            maxHeight = Math.max(minPanelHeight, spaceAboveUsable);
-            topPosition = buttonRect.top - maxHeight - buttonSpacing;
-            if (topPosition < topMargin) {
-              topPosition = topMargin;
-              maxHeight = Math.max(minPanelHeight, buttonRect.top - topPosition - buttonSpacing);
-            }
-          } else {
-            // Mostrar abajo con el espacio disponible
-            topPosition = buttonRect.bottom + buttonSpacing;
-            maxHeight = Math.max(minPanelHeight, spaceBelowUsable);
-          }
-        }
-        
-        // Verificación final: asegurar que el panel quepa en el viewport
-        const maxPossibleHeight = viewportHeight - topPosition - bottomMargin;
-        if (maxHeight > maxPossibleHeight) {
-          maxHeight = Math.max(minPanelHeight, maxPossibleHeight);
-        }
-        if (topPosition + maxHeight > viewportHeight - bottomMargin) {
-          maxHeight = Math.max(minPanelHeight, viewportHeight - topPosition - bottomMargin);
-        }
-        
-        // Aplicar estilos
-        panelContentRef.current.style.top = `${Math.max(topMargin, topPosition)}px`;
-        panelContentRef.current.style.bottom = '';
-        panelContentRef.current.style.maxHeight = `${maxHeight}px`;
-        panelContentRef.current.style.overflowY = 'auto';
-      } else {
-        // Desktop: las clases de Tailwind (absolute right-0 top-full mt-2) ya posicionan el panel
-        // Solo ajustar cuando sea necesario para evitar que se salga del viewport
-        
-        // Limpiar estilos inline que puedan interferir con las clases
-        panelContentRef.current.style.width = '';
-        panelContentRef.current.style.maxHeight = '';
-        panelContentRef.current.style.overflowY = '';
-        
-        // Posición vertical: ajustar solo si necesitamos mostrarlo arriba
-        if (spaceBelow < panelHeight + 20 && spaceAbove > spaceBelow) {
-          panelContentRef.current.style.top = 'auto';
-          panelContentRef.current.style.bottom = `${buttonRect.height + 8}px`;
-        } else {
-          // Remover estilos inline para que las clases top-full mt-2 funcionen
-          panelContentRef.current.style.removeProperty('top');
-          panelContentRef.current.style.removeProperty('bottom');
-        }
-        
-        // Posición horizontal: ajustar solo si se sale por la derecha
-        if (spaceRight < panelWidth && buttonRect.left > panelWidth) {
-          // Mostrar a la izquierda del botón
-          panelContentRef.current.style.right = 'auto';
-          panelContentRef.current.style.left = '0';
-          panelContentRef.current.style.transform = 'translateX(-100%)';
-        } else {
-          // Remover estilos inline para que la clase right-0 funcione
-          panelContentRef.current.style.removeProperty('right');
-          panelContentRef.current.style.removeProperty('left');
-          panelContentRef.current.style.removeProperty('transform');
-        }
-      }
+  const colocarPanel = () => {
+    const ancla = panelRef.current;
+    const panel = panelContentRef.current;
+    if (!ancla || !panel) return;
+
+    const boton = ancla.getBoundingClientRect();
+    const margen = 12;
+    const espacioHeader = 76;
+    const espacioFooter = 64;
+    const separacion = 6;
+    const ancho = Math.min(256, window.innerWidth - margen * 2);
+    let izquierda = boton.right - ancho;
+    izquierda = Math.max(margen, Math.min(izquierda, window.innerWidth - ancho - margen));
+
+    const espacioAbajo = window.innerHeight - boton.bottom - separacion - espacioFooter;
+    const espacioArriba = boton.top - separacion - espacioHeader;
+    const abrirArriba = espacioAbajo < 200 && espacioArriba > espacioAbajo;
+
+    panel.style.position = "fixed";
+    panel.style.width = `${ancho}px`;
+    panel.style.left = `${izquierda}px`;
+    panel.style.right = "auto";
+    panel.style.transform = "none";
+    panel.style.margin = "0";
+    panel.style.zIndex = "200";
+    panel.style.overflowY = "auto";
+
+    const libre = Math.max(0, abrirArriba ? espacioArriba : espacioAbajo);
+
+    if (abrirArriba) {
+      panel.style.top = "auto";
+      panel.style.bottom = `${window.innerHeight - boton.top + separacion}px`;
+    } else {
+      panel.style.bottom = "auto";
+      panel.style.top = `${boton.bottom + separacion}px`;
     }
+    panel.style.maxHeight = `${Math.min(320, libre)}px`;
+  };
+
+  useLayoutEffect(() => {
+    if (!mostrarPanel) return undefined;
+
+    colocarPanel();
+    const actualizar = () => colocarPanel();
+    window.addEventListener("resize", actualizar);
+    window.addEventListener("scroll", actualizar, true);
+    return () => {
+      window.removeEventListener("resize", actualizar);
+      window.removeEventListener("scroll", actualizar, true);
+    };
   }, [mostrarPanel]);
 
   const toggleEtiqueta = async (e, etiqueta) => {
@@ -325,7 +246,7 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
         <Icons.Tag className="text-slate-400 hover:text-blue-400" />
       </button>
 
-      {mostrarPanel && (
+      {mostrarPanel && typeof document !== "undefined" && createPortal(
         <>
           {/* Overlay para cerrar al hacer click fuera y cubrir otros elementos */}
           <div 
@@ -339,7 +260,7 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
           />
           <div 
             ref={panelContentRef}
-            className="absolute right-0 top-full mt-2 z-[200] w-64 max-w-[calc(100vw-2rem)] sm:max-w-none bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-3 mb-4" 
+            className="fixed z-[200] bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-3" 
             style={{ 
               backgroundColor: 'rgb(30 41 55)', 
               zIndex: 200, 
@@ -417,7 +338,8 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
             <p>Click en una etiqueta para aplicarla o removerla</p>
           </div>
         </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   );

@@ -224,36 +224,58 @@ function HomePageContent() {
                 Digital Space CRM+Gestión
               </p>
             </div>
+            <div className="flex flex-wrap items-center gap-1.5">
             <a 
               href="https://drive.google.com/drive/folders/1V0yno1ceB-F1vfOFNWtpulphCYnBVCBz" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 rounded-lg text-xs font-medium text-white transition-colors duration-200 border border-sky-500/30 shadow-sm hover:shadow-md"
+              className="inline-flex items-center gap-1 px-2 py-1 bg-sky-600 hover:bg-sky-700 rounded-md text-[11px] font-medium text-white transition-colors duration-200 border border-sky-500/30 sm:gap-1.5 sm:px-3 sm:py-1.5 sm:rounded-lg sm:text-xs"
               title="Abrir Drive Digital Space"
             >
-              <Icons.Folder className="text-sm" />
+              <Icons.Folder className="w-3 h-3 shrink-0" />
               <span>Drive</span>
             </a>
             <a 
               href="https://donweb.com/" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-orange-50 rounded-lg text-xs font-semibold text-orange-600 transition-colors duration-200 border border-orange-200 shadow-sm hover:shadow-md"
+              className="inline-flex items-center gap-1 px-2 py-1 bg-white hover:bg-orange-50 rounded-md text-[11px] font-semibold text-orange-600 transition-colors duration-200 border border-orange-200 sm:gap-1.5 sm:px-3 sm:py-1.5 sm:rounded-lg sm:text-xs"
               title="Abrir Don Web"
             >
-              <Icons.Link className="text-sm" />
+              <Icons.Link className="w-3 h-3 shrink-0" />
               <span>Don Web</span>
             </a>
             <a 
               href="https://dash.cloudflare.com/" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 rounded-lg text-xs font-medium text-white transition-colors duration-200 border border-orange-500/30 shadow-sm hover:shadow-md"
+              className="inline-flex items-center gap-1 px-2 py-1 bg-orange-600 hover:bg-orange-700 rounded-md text-[11px] font-medium text-white transition-colors duration-200 border border-orange-500/30 sm:gap-1.5 sm:px-3 sm:py-1.5 sm:rounded-lg sm:text-xs"
               title="Abrir Cloudflare"
             >
-              <Icons.Link className="text-sm" />
+              <Icons.Link className="w-3 h-3 shrink-0" />
               <span>Cloudflare</span>
             </a>
+            <a 
+              href="https://docs.google.com/spreadsheets/d/1Z692jkzMGXxxjArLC2mGKut8uVg7acP8O0s6SV8iZe8/edit?gid=1793276013#gid=1793276013" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-600 hover:bg-emerald-700 rounded-md text-[11px] font-medium text-white transition-colors duration-200 border border-emerald-500/30 sm:gap-1.5 sm:px-3 sm:py-1.5 sm:rounded-lg sm:text-xs"
+              title="Abrir Datos DS"
+            >
+              <Icons.Link className="w-3 h-3 shrink-0" />
+              <span>Datos DS</span>
+            </a>
+            <a 
+              href="https://sso.godaddy.com/?app=account&path=%2Fmyrenewalsapi%2Fv1%2Fredirects%2Flogin" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2 py-1 bg-green-800 hover:bg-green-900 rounded-md text-[11px] font-medium text-white transition-colors duration-200 border border-green-600/40 sm:gap-1.5 sm:px-3 sm:py-1.5 sm:rounded-lg sm:text-xs"
+              title="Abrir GoDaddy"
+            >
+              <Icons.Link className="w-3 h-3 shrink-0" />
+              <span>GoDaddy</span>
+            </a>
+            </div>
           </div>
           <div className="px-3 py-1.5 bg-slate-800 rounded-lg border border-slate-700 w-full sm:w-auto">
             <p className="text-xs text-slate-300 font-medium text-center sm:text-left" suppressHydrationWarning>
