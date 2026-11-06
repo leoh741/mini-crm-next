@@ -48,6 +48,11 @@ export async function GET(request) {
     // completedDays: incluir completadas solo de los últimos N días (tablero liviano)
     // history=true: incluir historial completo de completadas (búsqueda / filtro explícito)
     const history = searchParams.get('history') === 'true';
+    // En completadas, la página pide un tope (los más recientes) y va ampliando.
+    const limitRaw = searchParams.get('limit');
+    const limit = limitRaw !== null && limitRaw !== ''
+      ? Math.min(500, Math.max(1, parseInt(limitRaw, 10) || 50))
+      : null;
     const completedDaysRaw = searchParams.get('completedDays');
     const completedDays = completedDaysRaw !== null && completedDaysRaw !== ''
       ? Math.max(0, parseInt(completedDaysRaw, 10) || 0)
@@ -229,14 +234,30 @@ export async function GET(request) {
       }
     }
 
-    let activities = await Activity.find(query)
+    const paginarCompletadas = status === 'completada' && limit !== null;
+    let activitiesQuery = Activity.find(query)
       .populate('assignee', 'nombre email')
       .populate('createdBy', 'nombre email')
       .populate({ path: 'completedBy', select: 'nombre email', strictPopulate: false })
       .populate('list', 'name color')
-      .sort({ order: 1, createdAt: -1 })
+      .sort(paginarCompletadas
+        ? { completedAt: -1, updatedAt: -1, _id: -1 }
+        : { order: 1, createdAt: -1 })
       .lean()
       .maxTimeMS(15000);
+
+    if (paginarCompletadas) {
+      activitiesQuery = activitiesQuery.limit(limit + 1);
+    }
+
+    let activities = await activitiesQuery;
+    let hasMore = false;
+    let total = null;
+    if (paginarCompletadas) {
+      hasMore = activities.length > limit;
+      if (hasMore) activities = activities.slice(0, limit);
+      total = await Activity.countDocuments(query).maxTimeMS(15000);
+    }
 
     if (Object.keys(rangoVencimiento).length > 0) {
       const desde = dateFrom || dueDate;
@@ -244,7 +265,7 @@ export async function GET(request) {
       activities = activities.filter((actividad) => actividadCaeEnRango(actividad, desde, hasta));
     }
     
-    return NextResponse.json({ success: true, data: activities }, {
+    return NextResponse.json({ success: true, data: activities, hasMore, total }, {
       headers: {
         'Cache-Control': 'no-store',
         'Content-Type': 'application/json'

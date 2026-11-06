@@ -43,6 +43,9 @@ function ActivitiesPageContent() {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cargandoPedidos, setCargandoPedidos] = useState(false);
+  const [cargandoMas, setCargandoMas] = useState(false);
+  const [hayMasCompletadas, setHayMasCompletadas] = useState(false);
+  const [totalCompletadas, setTotalCompletadas] = useState(null);
   const [error, setError] = useState("");
   const [filterStatus, setFilterStatus] = useState("pendiente");
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -92,6 +95,8 @@ function ActivitiesPageContent() {
   const didDropRef = useRef(false);
   const activitiesLoadIdRef = useRef(0);
   const activitiesLoadingRef = useRef(false);
+  const limiteCompletadasRef = useRef(50);
+  const loadActivitiesRef = useRef(null);
   // Cronómetro client-side (autoritativo en pantalla). El server solo persiste.
   // baseMs = acumulado al pausar; runStartedAt = Date.now() del tramo actual en curso
   const timerMemoryRef = useRef({});
@@ -260,10 +265,13 @@ function ActivitiesPageContent() {
   }, [searchKeyword]);
 
   useEffect(() => {
+    limiteCompletadasRef.current = 50;
     if (selectedListId) {
       loadActivities(selectedListId);
     } else {
       setActivities([]);
+      setHayMasCompletadas(false);
+      setTotalCompletadas(null);
     }
   }, [selectedListId, filterStatus, debouncedSearch, filterDateFrom, filterDateTo]);
 
@@ -273,7 +281,7 @@ function ActivitiesPageContent() {
 
     // Recargar actividades cada 15 s (silencioso: no mostrar error si falla un poll)
     const activitiesInterval = setInterval(() => {
-      loadActivities(selectedListId, { silent: true });
+      loadActivitiesRef.current?.(selectedListId, { silent: true });
     }, 15000);
 
     return () => clearInterval(activitiesInterval);
@@ -438,19 +446,22 @@ function ActivitiesPageContent() {
       // Completadas: filtrar por fecha de completado; resto: por vencimiento
       filters.dateField = filterStatus === "completada" ? "completedAt" : "dueDate";
     }
+    if (filterStatus === "completada") {
+      // Siempre de a 50: el historial completo se pide con "Cargar más".
+      filters.status = "completada";
+      filters.limit = limiteCompletadasRef.current || 50;
+      return filters;
+    }
+
     if (hasSearch || hasDateRange) {
       filters.history = true;
-      if (filterStatus === "completada") filters.status = "completada";
-      else if (filterStatus === "pendiente") filters.status = "pendiente";
+      if (filterStatus === "pendiente") filters.status = "pendiente";
       return filters;
     }
 
     if (filterStatus === "pendiente") {
       // Tablero: solo activas (no carga historial de completadas)
       filters.status = "pendiente";
-    } else if (filterStatus === "completada") {
-      filters.status = "completada";
-      filters.completedDays = 30;
     } else {
       // "Todos": activas + completadas recientes
       filters.completedDays = 14;
@@ -483,7 +494,7 @@ function ActivitiesPageContent() {
     setActivities((prev) => prev.filter((a) => a.id !== activityId));
   };
 
-  const loadActivities = async (listId, { silent = false } = {}) => {
+  const loadActivities = async (listId, { silent = false, more = false } = {}) => {
     if (!listId) return;
     if (silent && activitiesLoadingRef.current) return;
 
@@ -491,17 +502,20 @@ function ActivitiesPageContent() {
     activitiesLoadingRef.current = true;
 
     try {
-      if (!silent) {
+      if (!silent && !more) {
         setError("");
         setCargandoPedidos(true);
       }
-      const activitiesData = await getActivities(listId, buildActivityFilters());
+      if (more) setCargandoMas(true);
+      const { items, hasMore, total } = await getActivities(listId, buildActivityFilters());
 
       // Ignorar respuestas obsoletas si el usuario cambió de lista/filtro
       if (requestId !== activitiesLoadIdRef.current) return;
 
       // Fusionar cronómetro local para que el poll no reinicie el contador
-      setActivities(activitiesData.map(hydrateTimerFromActivity));
+      setActivities(items.map(hydrateTimerFromActivity));
+      setHayMasCompletadas(hasMore);
+      setTotalCompletadas(total);
     } catch (err) {
       if (requestId !== activitiesLoadIdRef.current) return;
 
@@ -518,8 +532,17 @@ function ActivitiesPageContent() {
       if (requestId === activitiesLoadIdRef.current) {
         activitiesLoadingRef.current = false;
         if (!silent) setCargandoPedidos(false);
+        setCargandoMas(false);
       }
     }
+  };
+
+  loadActivitiesRef.current = loadActivities;
+
+  const cargarMasCompletadas = () => {
+    if (cargandoMas || !hayMasCompletadas || !selectedListId) return;
+    limiteCompletadasRef.current = Math.min(500, (limiteCompletadasRef.current || 50) + 50);
+    loadActivities(selectedListId, { more: true });
   };
 
   const selectedList = useMemo(() => {
@@ -563,6 +586,11 @@ function ActivitiesPageContent() {
         if (toMs !== null && ms > toMs) return false;
         return true;
       });
+    }
+
+    if (filterStatus === "completada") {
+      const fecha = (pedido) => new Date(pedido.completedAt || pedido.updatedAt || pedido.createdAt || 0).getTime();
+      return filtered.sort((a, b) => fecha(b) - fecha(a));
     }
 
     return filtered.sort((a, b) => {
@@ -1457,7 +1485,7 @@ function ActivitiesPageContent() {
                 <div className="flex flex-col justify-end">
                   <p className="text-[11px] text-slate-500 md:pb-2">
                     {filterStatus === "completada"
-                      ? "El rango filtra por fecha de completado (historial incluido)"
+                      ? "Se muestran los 50 más recientes. El rango filtra por fecha de completado."
                       : "El rango filtra por vencimiento. Si no tiene, usa la fecha del nombre (05 11 = 05/11) o la de creación"}
                   </p>
                 </div>
@@ -1821,6 +1849,25 @@ function ActivitiesPageContent() {
                     </div>
                   </div>
                 ))
+              )}
+              {filterStatus === "completada" && !mostrandoCarga && filteredActivities.length > 0 && (hayMasCompletadas || filteredActivities.length >= 50) && (
+                <div className="pt-3 pb-2 text-center">
+                  <p className="text-xs text-slate-400 mb-2">
+                    {hayMasCompletadas
+                      ? `Mostrando los ${filteredActivities.length} más recientes${typeof totalCompletadas === "number" ? ` de ${totalCompletadas}` : ""}.`
+                      : "Ya se muestran todos los pedidos completados de esta lista."}
+                  </p>
+                  {hayMasCompletadas && (
+                    <button
+                      type="button"
+                      onClick={cargarMasCompletadas}
+                      disabled={cargandoMas}
+                      className="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-60 border border-slate-600 rounded-lg text-sm text-slate-100"
+                    >
+                      {cargandoMas ? "Cargando..." : "Cargar más"}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </>
