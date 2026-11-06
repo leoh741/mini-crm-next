@@ -85,7 +85,7 @@ function Header() {
 
   return (
     <header 
-      className="fixed top-0 left-0 right-0 z-50 border-b w-full" 
+      className="fixed top-0 left-0 right-0 z-50 flex w-full max-h-[calc(100dvh-4.5rem)] flex-col border-b" 
       style={{ 
         maxWidth: '100vw', 
         overflow: 'hidden', 
@@ -100,7 +100,7 @@ function Header() {
         backdropFilter: 'none'
       }}
     >
-      <div className="flex justify-between items-center gap-2 px-3 py-2.5 md:px-4 md:py-4 min-h-[56px] md:min-h-0 w-full" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
+      <div className="flex w-full shrink-0 items-center justify-between gap-2 px-3 py-2.5 md:px-4 md:py-4 min-h-[56px] md:min-h-0" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
         <div className="flex items-center shrink-0">
           <Link href="/" onClick={() => setMenuAbierto(false)} className="min-w-0 flex items-center">
             {/* Logo en móvil y desktop, con tamaño reducido en móvil */}
@@ -212,8 +212,8 @@ function Header() {
 
       {/* Menú móvil desplegable */}
       {menuAbierto && (
-        <nav className="min-[1120px]:hidden border-t" style={{ borderColor: '#0f1d5a', backgroundColor: '#142678' }}>
-          <div className="flex flex-col">
+        <nav className="flex min-h-0 flex-1 flex-col overflow-hidden border-t min-[1120px]:hidden" style={{ borderColor: '#0f1d5a', backgroundColor: '#142678' }}>
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
             {/* Solo mostrar enlaces de admin para administradores */}
             {esAdminUser && (
               <>
@@ -321,18 +321,18 @@ function Header() {
                 </Link>
               </>
             )}
-            {usuario && (
-              <div className="px-4 py-3 border-t border-blue-900">
-                <div className="text-xs text-slate-400 mb-2">{usuario.nombre}</div>
-                <button
-                  onClick={handleLogout}
-                  className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-sm font-medium"
-                >
-                  Cerrar Sesión
-                </button>
-              </div>
-            )}
           </div>
+          {usuario && (
+            <div className="shrink-0 border-t border-blue-900 bg-[#142678] px-4 py-3">
+              <div className="mb-2 truncate text-xs text-slate-400">{usuario.nombre}</div>
+              <button
+                onClick={handleLogout}
+                className="w-full rounded bg-red-600 px-4 py-2.5 text-sm font-medium hover:bg-red-700"
+              >
+                Cerrar Sesión
+              </button>
+            </div>
+          )}
         </nav>
       )}
     </header>
