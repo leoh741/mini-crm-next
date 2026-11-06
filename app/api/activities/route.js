@@ -532,8 +532,8 @@ export async function PATCH(request) {
     // Verificar si solo se está cambiando el estado (y es un cambio permitido para usuarios normales)
     const onlyChangingStatus = body.status !== undefined && 
       Object.keys(body).filter(k => k !== 'id' && k !== 'status').length === 0;
-    const isStatusChangeAllowed = onlyChangingStatus && 
-      (body.status === 'en_proceso' || body.status === 'pendiente' || body.status === 'completada');
+    const isStatusChangeAllowed = onlyChangingStatus &&
+      (body.status === 'en_proceso' || body.status === 'pendiente');
     
     // Si es admin, permitir siempre
     if (userRole === 'admin') {
@@ -541,8 +541,13 @@ export async function PATCH(request) {
     } else if (userRole === 'coordinador') {
       console.log('[API Activities PATCH] Coordinador detectado - acceso permitido');
     } else if (isAssignedToUser && isStatusChangeAllowed) {
-      // Usuario normal puede cambiar estado a en_proceso o pendiente si está asignado
+      // El diseñador asignado puede iniciar, pausar y reanudar. No puede finalizar.
       console.log('[API Activities PATCH] Usuario asignado cambiando estado permitido');
+    } else if (body.status === 'completada') {
+      return NextResponse.json(
+        { success: false, error: 'Solo un administrador o un coordinador puede finalizar un pedido.' },
+        { status: 403 }
+      );
     } else {
       console.log('[API Activities PATCH] Acceso denegado. Rol:', userRole, 'Asignado:', isAssignedToUser, 'Solo estado:', onlyChangingStatus);
       return NextResponse.json(

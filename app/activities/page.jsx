@@ -1750,7 +1750,7 @@ function ActivitiesPageContent() {
                       </div>
                       
                       {/* Botones de acción */}
-                      {(puedeGestionar || puedePonerEnProceso(activity) || puedePausarActividad(activity) || (activity.status === "en_proceso" && esActividadAsignada(activity))) && (
+                      {(puedeGestionar || puedePonerEnProceso(activity) || puedePausarActividad(activity)) && (
                         <div className="flex items-center gap-1 flex-shrink-0">
                           {/* Botón "En Proceso" - visible para admin/coordinador o usuario asignado cuando está pendiente */}
                           {activity.status === "pendiente" && puedePonerEnProceso(activity) && (
@@ -1775,8 +1775,8 @@ function ActivitiesPageContent() {
                                   <Icons.Pause className="w-3 h-3 md:w-3.5 md:h-3.5" />
                                 </button>
                               )}
-                              {/* Completar: admin/coordinador o usuario asignado */}
-                              {(puedeGestionar || esActividadAsignada(activity)) && (
+                              {/* Completar: solo admin o coordinador */}
+                              {puedeGestionar && (
                                 <button
                                   onClick={() => handleCompleteActivity(activity)}
                                   className="px-1.5 py-0.5 md:px-2 md:py-1 bg-green-600 hover:bg-green-700 rounded text-[10px] md:text-xs font-medium"
