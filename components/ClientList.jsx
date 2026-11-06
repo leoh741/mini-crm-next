@@ -33,7 +33,7 @@ function ClientList({ clientes, todosLosClientes, onClientUpdate }) {
         return (
         <div
           key={clienteId}
-          className="relative flex items-center border border-slate-700 rounded-md px-3 py-1.5 pr-10 hover:bg-slate-800 transition"
+          className="relative flex items-center border border-slate-700 rounded-md px-3 py-3 pr-12 min-h-[3.25rem] hover:bg-slate-800 transition"
         >
           <Link
             href={`/clientes/${clienteId}`}
@@ -50,7 +50,7 @@ function ClientList({ clientes, todosLosClientes, onClientUpdate }) {
                   {cliente.etiquetas.slice(0, 5).map((etiqueta, etiquetaIndex) => (
                     <span
                       key={etiquetaIndex}
-                      className={`px-1.5 py-0.5 rounded text-[11px] leading-none border ${getTagColor(etiqueta, todasLasEtiquetas)}`}
+                      className={`px-2 py-0.5 rounded text-xs leading-tight border ${getTagColor(etiqueta, todasLasEtiquetas)}`}
                     >
                       {capitalizarEtiqueta(etiqueta)}
                     </span>

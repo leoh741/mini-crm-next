@@ -54,11 +54,20 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
     etiquetasDisponibles = Array.from(new Set(etiquetasDeTodos)).sort();
   }
 
-  // Cerrar panel al hacer click fuera
+  const cerrarPanel = () => {
+    setMostrarPanel(false);
+    if (onPanelToggle) onPanelToggle(false);
+  };
+
+  // El panel se dibuja en un portal, fuera del botón. Si no se tiene en
+  // cuenta, el clic en una etiqueta se interpreta como "afuera" y el panel
+  // se cierra antes de que la selección llegue a aplicarse.
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (panelRef.current && !panelRef.current.contains(event.target)) {
-        setMostrarPanel(false);
+      const dentroDelBoton = panelRef.current?.contains(event.target);
+      const dentroDelPanel = panelContentRef.current?.contains(event.target);
+      if (!dentroDelBoton && !dentroDelPanel) {
+        cerrarPanel();
       }
     };
 
@@ -125,25 +134,26 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
     };
   }, [mostrarPanel]);
 
+  const normalizarEtiquetas = (lista) => Array.from(new Set(
+    (lista || [])
+      .map((item) => String(item || "").trim().toLowerCase())
+      .filter(Boolean)
+  ));
+
   const toggleEtiqueta = async (e, etiqueta) => {
     e.preventDefault();
     e.stopPropagation();
     
     if (actualizando || creandoEtiqueta) return;
 
-    // Usar el estado actual más reciente
-    const etiquetasActuales = etiquetasCliente.length > 0 ? etiquetasCliente : (cliente.etiquetas || []);
-    const etiquetaLower = etiqueta.toLowerCase();
+    const etiquetasActuales = normalizarEtiquetas(etiquetasCliente);
+    const etiquetaLower = String(etiqueta || "").trim().toLowerCase();
+    if (!etiquetaLower) return;
     const tieneEtiqueta = etiquetasActuales.includes(etiquetaLower);
     
-    let nuevasEtiquetas;
-    if (tieneEtiqueta) {
-      // Remover etiqueta
-      nuevasEtiquetas = etiquetasActuales.filter(e => e !== etiquetaLower);
-    } else {
-      // Agregar etiqueta
-      nuevasEtiquetas = [...etiquetasActuales, etiquetaLower];
-    }
+    const nuevasEtiquetas = tieneEtiqueta
+      ? etiquetasActuales.filter((item) => item !== etiquetaLower)
+      : [...etiquetasActuales, etiquetaLower];
 
     // Actualización optimista inmediata
     setEtiquetasCliente(nuevasEtiquetas);
@@ -155,12 +165,8 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
       
       if (resultado) {
         limpiarCacheClientes();
-        // Actualizar el cliente local para reflejar el cambio
         if (onUpdate) {
-          // Pequeño delay para asegurar que el servidor procesó el cambio
-          setTimeout(() => {
-            onUpdate();
-          }, 100);
+          onUpdate(clienteId, nuevasEtiquetas);
         }
       } else {
         // Revertir si falla
@@ -190,7 +196,7 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
     }
 
     setCreandoEtiqueta(true);
-    const nuevasEtiquetas = [...etiquetasCliente, etiquetaLower];
+    const nuevasEtiquetas = normalizarEtiquetas([...etiquetasCliente, etiquetaLower]);
     
     // Actualización optimista
     setEtiquetasCliente(nuevasEtiquetas);
@@ -203,7 +209,7 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
       if (resultado) {
         limpiarCacheClientes();
         if (onUpdate) {
-          onUpdate();
+          onUpdate(clienteId, nuevasEtiquetas);
         }
       } else {
         // Revertir si falla
@@ -251,15 +257,14 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
           {/* Overlay para cerrar al hacer click fuera y cubrir otros elementos */}
           <div 
             className="fixed inset-0 z-[150] bg-transparent"
-            onClick={() => {
-              setMostrarPanel(false);
-              if (onPanelToggle) {
-                onPanelToggle(false);
-              }
+            onMouseDown={(e) => {
+              e.preventDefault();
+              cerrarPanel();
             }}
           />
           <div 
             ref={panelContentRef}
+            onMouseDown={(e) => e.stopPropagation()}
             className="fixed z-[200] bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-3" 
             style={{ 
               backgroundColor: 'rgb(30 41 55)', 
@@ -312,10 +317,12 @@ export default function QuickTagManager({ cliente, onUpdate, todasLasEtiquetas =
               <p className="text-xs text-slate-400 mb-2">Etiquetas disponibles:</p>
               <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto relative z-10 bg-slate-800 rounded">
                 {etiquetasDisponibles.map((etiqueta) => {
-                  const tieneEtiqueta = etiquetasCliente.includes(etiqueta.toLowerCase());
+                  const tieneEtiqueta = normalizarEtiquetas(etiquetasCliente).includes(String(etiqueta).trim().toLowerCase());
                   return (
                     <button
+                      type="button"
                       key={etiqueta}
+                      onMouseDown={(e) => e.stopPropagation()}
                       onClick={(e) => toggleEtiqueta(e, etiqueta)}
                       disabled={actualizando || creandoEtiqueta}
                       className={`px-2 py-1 rounded text-xs border transition-all relative z-10 ${

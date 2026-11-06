@@ -206,17 +206,15 @@ function ClientesPageContent() {
         <ClientList 
           clientes={clientesFiltrados}
           todosLosClientes={clientes}
-          onClientUpdate={() => {
-            // Recargar clientes después de actualizar etiquetas
-            const cargarClientes = async () => {
-              try {
-                const clientesData = await getClientes(true);
-                setClientes(clientesData || []);
-              } catch (err) {
-                console.error('Error al recargar clientes:', err);
+          onClientUpdate={(clienteId, etiquetas) => {
+            if (!clienteId || !Array.isArray(etiquetas)) return;
+            setClientes((prev) => prev.map((cliente) => {
+              const id = cliente.id || cliente._id || cliente.crmId;
+              if (id === clienteId || cliente._id === clienteId || cliente.id === clienteId) {
+                return { ...cliente, etiquetas };
               }
-            };
-            cargarClientes();
+              return cliente;
+            }));
           }}
         />
       )}
